@@ -1,30 +1,64 @@
-# Android Application Foundation
+# PocketDev — Architecture
 
-## Stack Decision
-- **Language:** Kotlin
-- **UI Framework:** Jetpack Compose (declarative, modern, no XML)
-- **Architecture:** MVVM with a single `MainActivity` hosting a NavHost
-- **Min SDK:** 29 (Android 10)
-- **Target SDK:** 35 (Android 15)
-- **Compile SDK:** 35
+> Status: Milestone 1 (Android foundation). Physical layout will evolve.
 
-## Module Structure
-Single `:app` module for now. Will split into feature modules as the app grows:
-- `:app` — Main application, navigation, theme
-- `:core-ui` — Shared Compose components, theme
-- `:core-data` — Repositories, data sources
-- `:feature-dashboard` — Dashboard screen
-- `:feature-projects` — Project list/management
-- `:feature-settings` — Settings screen
+## Module layout
 
-## Screens (initial shell)
-1. **Dashboard** — Overview of runtime status, quick actions
-2. **Projects** — List of projects, create/open
-3. **Settings** — App preferences, runtime config, about
+| Module | Type | Purpose |
+| --- | --- | --- |
+| `:app` | Android application (Compose) | UI shell, navigation, screens, Android-specific wiring |
+| `:core` | Pure Kotlin/JVM library | Domain logic with no Android dependencies: validation, path safety, project registry, state machines, redaction |
 
-## Navigation
-- Bottom navigation bar with 3 tabs: Dashboard, Projects, Settings
-- NavHost manages back stack
+Keeping `:core` Android-free means its logic is testable on a plain JVM in CI, fast and
+without an emulator.
 
-## Runtime Bootstrap
-No runtime integration yet. The bootstrap manager will be added in Milestone 3.
+Planned modules (later milestones):
+
+| Module | Purpose |
+| --- | --- |
+| `:runtime` | Termux-derived bootstrap manager, safe extraction, health checks |
+| `:terminal` | PTY host and terminal session management |
+| `:ai` | OpenCode process supervision + API client + event mapping |
+| `:workspace` | File explorer operations, editor file synchronization, Git |
+
+## Layer boundaries (master prompt §4.1)
+
+- UI must not touch runtime internals directly.
+- Runtime exposes a small API (state + commands) consumed by the app.
+- Terminal sessions are owned by a dedicated subsystem.
+- OpenCode lifecycle is owned by a dedicated controller.
+- Every subsystem shares one project identity and one on-disk root
+  (`Project` in `:core`).
+
+## Current data flow (Milestone 1)
+
+```
+MainActivity
+  └── PocketDevTheme (theme from AppContainer)
+        └── PocketDevApp (NavHost + bottom bar)
+              ├── DashboardScreen   <- ProjectsViewModel.uiState (count), DashboardViewModel.runtimeState
+              ├── ProjectsScreen    <- ProjectsViewModel (ProjectStore in :core)
+              └── SettingsScreen    <- SettingsViewModel (theme mode persisted; API key in memory only)
+```
+
+`AppContainer` (in `:app`) owns `projectsRoot` (app-private `files/<app>/projects`),
+the `ProjectStore` registry (`files/<app>/state/projects.tsv`), and the theme preference.
+
+## Key decisions
+
+1. **Kotlin + Jetpack Compose.** No existing codebase constraint existed (fresh
+   repository), so the modern first-party stack was chosen for maintainability and
+   testability.
+2. **Pure-Kotlin `:core`.** Enables fast JVM unit tests in CI without emulator cost.
+3. **TSV project registry with atomic writes.** Dependency-free and honest for
+   Milestone 1; replaced by a richer store when per-project session state is added.
+4. **No simulated runtime/AI state.** The dashboard reports `NotInstalled` until a
+   real runtime controller exists.
+5. **GitHub Actions as the only build/test environment.** See `docs/CI_CD.md`.
+
+## Security boundaries
+
+- `PathSafety` rejects absolute paths, drive letters, `..`, empty segments, and NUL.
+- Project deletion only deletes directories provably inside `projectsRoot`.
+- API keys are not persisted anywhere yet (settings screen states this explicitly).
+- `SecretRedaction` provides log-safe redaction utilities for later use.
