@@ -1,0 +1,46 @@
+# Android / Gradle
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# Gradle wrapper is committed intentionally; do NOT ignore gradle-wrapper.jar.
+# (Uncomment only if you decide to vendor it differently.)
+
+# Keystores and secrets — NEVER commit
+*.jks
+*.keystore
+*.p12
+*.pem
+*.env
+.env
+secrets/
+signing/
+
+# Build outputs
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+
+# Logs
+*.log
+logs/
+
+# Runtime payloads (large, checksum-verified downloads — not committed)
+runtime/payloads/
+*.tar.xz
+*.tar.gz
+
+# OS
+Thumbs.db

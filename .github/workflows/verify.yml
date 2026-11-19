@@ -1,0 +1,45 @@
+name: verify
+
+# Required pull-request gate. Milestone 0: prove GitHub Actions executes on this repo.
+# Later milestones add lint, unit tests, debug APK build, and artifact upload.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege by default.
+permissions:
+  contents: read
+
+# Cancel obsolete runs on the same ref.
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bootstrap:
+    name: Bootstrap — confirm runner works
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4  # actions/checkout v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Report environment
+        run: |
+          echo "Runner OS: $RUNNER_OS"
+          echo "Runner arch: $RUNNER_ARCH"
+          uname -a
+          echo "Git: $(git --version)"
+          echo "Space:"
+          df -h /
+
+      - name: Confirm checkout
+        run: |
+          test -f docs/PROJECT_AUDIT.md
+          echo "Repository checkout verified."
