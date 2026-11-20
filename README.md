@@ -7,7 +7,8 @@ version-control real software projects directly on an Android device — with a 
 terminal, an integrated Bionic runtime, a code editor, Git, package management, and
 an AI coding agent (OpenCode Bionic).
 
-> Status: early scaffolding (Milestone 0). Not yet usable.
+> Status: Milestone 1 — Android foundation (Compose shell, `:core` domain module,
+> CI build/test/lint, emulator launch + navigation tests). Not yet usable.
 
 ## Principles
 

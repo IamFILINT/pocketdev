@@ -18,9 +18,9 @@ Checklist state is updated as work lands.
 - [x] `:core` domain module with unit tests
 - [x] Compose app shell: dashboard, projects, settings; Material 3 theme
 - [x] Project create/delete with validation and safe directory handling
-- [x] CI: lint + unit tests + debug APK build + artifacts
+- [x] CI: lint + unit tests + debug APK build + artifacts (run 44670913592)
+- [x] Emulator launch/navigation test workflow (run 44672914788 — 3/3 passed)
 - [ ] PR merged with green `verify` run
-- [ ] Emulator launch/navigation test workflow
 
 **Exit criteria:** CI build, unit tests, lint pass; emulator launch test passes.
 
