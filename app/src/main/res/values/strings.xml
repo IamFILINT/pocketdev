@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PocketDev</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_projects">Projects</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">PocketDev</string>
+    <string name="dashboard_subtitle">AI-powered development workstation</string>
+    <string name="dashboard_runtime_title">Runtime</string>
+    <string name="dashboard_agent_title">AI agent</string>
+    <string name="dashboard_projects_title">Projects</string>
+    <string name="dashboard_runtime_not_installed">Not installed</string>
+    <string name="dashboard_runtime_hint">The integrated Android/Bionic runtime is provisioned in a later milestone. This screen reflects real state only — nothing is simulated.</string>
+    <string name="dashboard_agent_not_installed">Not installed</string>
+    <string name="dashboard_agent_hint">OpenCode Bionic will be provisioned and supervised in a later milestone.</string>
+    <string name="dashboard_project_count">%1$d project(s)</string>
+    <string name="dashboard_version">Version %1$s</string>
+    <string name="dashboard_runtime_checking">Checking device…</string>
+    <string name="dashboard_runtime_downloading">Downloading (%1$d%%)</string>
+    <string name="dashboard_runtime_verifying">Verifying artifact…</string>
+    <string name="dashboard_runtime_extracting">Extracting runtime…</string>
+    <string name="dashboard_runtime_updating">Updating…</string>
+    <string name="dashboard_runtime_ready">Ready (%1$s)</string>
+    <string name="dashboard_runtime_failed">Failed at %1$s: %2$s</string>
+
+    <!-- Projects -->
+    <string name="projects_title">Projects</string>
+    <string name="projects_empty_title">No projects yet</string>
+    <string name="projects_empty_body">Create a project to start working in your workspace.</string>
+    <string name="projects_create">New project</string>
+    <string name="projects_name_label">Project name</string>
+    <string name="projects_create_action">Create</string>
+    <string name="projects_cancel_action">Cancel</string>
+    <string name="projects_delete">Delete</string>
+    <string name="projects_root_label">Location: %1$s</string>
+    <string name="projects_name_error_empty">Enter a project name.</string>
+    <string name="projects_name_error_too_long">Name is too long (max %1$d characters).</string>
+    <string name="projects_name_error_characters">Name contains invalid characters.</string>
+    <string name="projects_name_error_reserved">That name is reserved.</string>
+    <string name="projects_name_error_whitespace">Remove leading or trailing spaces.</string>
+    <string name="projects_name_error_hidden">Names cannot start with a dot.</string>
+    <string name="projects_created">Project created.</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance_title">Appearance</string>
+    <string name="settings_theme_system">Follow system</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_ai_title">AI provider</string>
+    <string name="settings_ai_key_label">API key</string>
+    <string name="settings_ai_key_placeholder">Paste a provider API key</string>
+    <string name="settings_ai_key_warning">Keys are held in memory only for now. Encrypted, Keystore-backed persistence is added with the AI integration milestone; nothing is written to disk yet.</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_body">PocketDev is built and tested exclusively on GitHub Actions. This device is the control surface, not the build server.</string>
+    <string name="settings_delete_all_title">Workspace</string>
+    <string name="settings_workspace_body">Projects are stored in app-private storage at %1$s</string>
+    <string name="settings_clear_projects">Delete all projects from registry</string>
+</resources>

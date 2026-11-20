@@ -10,32 +10,32 @@ build/test fallback is permitted.
 
 ## Workflows
 
-### `verify.yml` — required pull-request gate (Milestone 0)
-
-**Status:** scaffolded; currently proves GitHub Actions executes on this repo.
+### `verify.yml` — required pull-request gate
 
 Triggers:
 - `pull_request` to `main`
 - `push` to `main`
 - `workflow_dispatch`
 
-Jobs (current):
-- `bootstrap` — a trivial job that confirms the runner works and reports environment.
+Steps: checkout → Gradle wrapper validation → JDK 17 (Temurin) → Gradle setup →
+Android SDK (`platforms;android-37.0`, `build-tools;36.0.0`/`37.0.0`) →
+`./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug` → upload unit-test
+reports, lint report, and debug APK artifacts.
 
-Planned jobs (added as the project grows):
-1. Repository/config validation
-2. Formatting checks
-3. Android lint
-4. Unit tests
-5. Kotlin/static analysis (when Kotlin is introduced)
-6. Dependency/license inventory validation
-7. Debug APK compilation
-8. Upload reports + debug APK as artifacts
+Evidence: run `44623877843` (Milestone 0), run `44670913592` (Milestone 1 green).
+
+### `android-emulator.yml` — instrumentation gate (Milestone 1)
+
+Boots an x86_64 API 30 emulator with KVM enabled via
+`ReactiveCircus/android-emulator-runner` (pinned SHA) and runs
+`./gradlew connectedDebugAndroidTest`. Tests cover app launch plus
+dashboard → projects → settings navigation. On failure the job uploads the
+instrumentation reports and an emulator screenshot.
+
+Evidence: run `44672914788` (3/3 tests passed).
 
 ### Planned (later milestones)
 
-- `android-emulator-tests.yml` — instrumentation/UI tests on x86_64 emulator via
-  `ReactiveCircus/android-emulator-runner` (pinned to an immutable SHA).
 - `native-runtime-ci.yml` — native/runtime pipeline (NDK/Clang/Rust/Zig cross-compile,
   ELF verification, OpenCode Bionic artifact acquisition).
 - `release.yml` — signed APK + GitHub Release, gated on approved tags/dispatch.

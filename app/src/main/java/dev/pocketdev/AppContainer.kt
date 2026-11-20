@@ -1,0 +1,44 @@
+package dev.pocketdev
+
+import android.content.Context
+import dev.pocketdev.core.workspace.ProjectStore
+import dev.pocketdev.settings.ThemeMode
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
+
+/**
+ * Process-wide object graph for the app shell.
+ *
+ * Only non-secret state is persisted here. API keys are deliberately held in memory
+ * until the Keystore-backed secret store is implemented.
+ */
+class AppContainer(context: Context) {
+
+    private val appContext = context.applicationContext
+
+    /** Directory that contains every project's on-disk workspace. */
+    val projectsRoot: File = File(appContext.filesDir, "projects").apply { mkdirs() }
+
+    /** Registry of project metadata (id, name, root, createdAt). */
+    val projectStore: ProjectStore = ProjectStore(File(appContext.filesDir, "state"))
+
+    private val preferences =
+        appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+
+    private val _themeMode = MutableStateFlow(
+        ThemeMode.fromStorage(preferences.getString(KEY_THEME_MODE, null)),
+    )
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        preferences.edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
+
+    private companion object {
+        const val PREFERENCES_NAME = "pocketdev.settings"
+        const val KEY_THEME_MODE = "theme_mode"
+    }
+}
