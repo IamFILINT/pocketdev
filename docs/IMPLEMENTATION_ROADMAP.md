@@ -14,7 +14,7 @@ Checklist state is updated as work lands.
 
 ## Milestone 1 — Android foundation 🚧
 
-- [x] Gradle wrapper (8.14.8, checksum-pinned), AGP 8.13.2, Kotlin 2.4.21
+- [x] Gradle wrapper (9.3.1, checksum-pinned), AGP 9.1.1, Kotlin 2.4.21, compileSdk 37
 - [x] `:core` domain module with unit tests
 - [x] Compose app shell: dashboard, projects, settings; Material 3 theme
 - [x] Project create/delete with validation and safe directory handling

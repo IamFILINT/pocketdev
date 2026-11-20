@@ -6,13 +6,14 @@
 
 | Component | Version | Notes |
 | --- | --- | --- |
-| Gradle wrapper | 8.14.8 | Distribution checksum pinned in `gradle-wrapper.properties` |
-| Android Gradle Plugin | 8.13.2 | Last stable 8.x line |
+| Gradle wrapper | 9.3.1 | Distribution checksum pinned in `gradle-wrapper.properties` |
+| Android Gradle Plugin | 9.1.1 | Required minimum for the 2026.11 AndroidX line; `android.newDsl=false` and `android.builtInKotlin=false` in `gradle.properties` keep the AGP 8.x DSL and external Kotlin Android plugin |
 | Kotlin | 2.4.21 | Includes Compose compiler plugin |
 | JDK (CI) | Temurin 17 | Toolchain for all modules |
-| compileSdk / targetSdk | 36 | Android 16 |
+| compileSdk | 37 | `platforms;android-37.0` (minor-versioned package; no bare `android-37`) |
+| targetSdk | 36 | Android 16; runtime behavior opt-in unchanged |
 | minSdk | 29 | Android 10 (per master prompt §2.5) |
-| Build tools (CI) | 36.0.0 | Installed by `verify.yml` |
+| Build tools (CI) | 36.0.0, 37.0.0 | Installed by `verify.yml` |
 
 ## Runtime dependencies (`:app`)
 
