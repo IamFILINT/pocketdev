@@ -4,6 +4,13 @@ name: arm64-spike
 # runner can boot an ARM64 Android emulator and run PocketDev in it. Manual dispatch
 # only — this is a measurement, not a pull-request gate. Every verdict produced here is
 # recorded honestly in docs/ARM64_FEASIBILITY.md.
+#
+# Matrix rationale:
+# - ubuntu-24.04-arm probes whether a *native* ARM64 host can run the Android emulator
+#   (Google is expected to ship no emulator host package for linux-aarch64, and the
+#   runner has no /dev/kvm — both are recorded as measured facts, not assumptions).
+# - ubuntu-latest (x86_64) runs an arm64-v8a *guest* image under software emulation;
+#   this is the leg that can actually exercise ARM64 ABI behavior in CI.
 
 on:
   workflow_dispatch:
@@ -19,12 +26,10 @@ jobs:
   spike:
     name: Spike (${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        # ubuntu-24.04-arm is the GitHub-hosted ARM64 Linux runner; ubuntu-latest is
-        # the x86_64 control that runs the same ARM64 system image unaccelerated.
         runner: [ubuntu-24.04-arm, ubuntu-latest]
     env:
       ANDROID_API_CANDIDATES: >-
@@ -44,7 +49,23 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407  # android-actions/setup-android v3
         with:
-          packages: "platform-tools"
+          # Same package set as android-emulator.yml so assembleDebug works.
+          packages: "platforms;android-37.0 build-tools;36.0.0 build-tools;37.0.0 platform-tools"
+
+      - name: Enable KVM (x86_64 runners only)
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+              | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+            echo "kvm_permissions=enabled"
+          else
+            echo "kvm_permissions=skipped (no /dev/kvm on this runner)"
+          fi
+
+      - name: Install emulator host libraries
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpulse0 || true
 
       - name: Probe host and emulator binary
         id: probe
@@ -64,11 +85,24 @@ jobs:
           echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
           echo "AVDMANAGER=$AVDMANAGER" >> "$GITHUB_ENV"
 
-          yes | "$SDKMANAGER" --install 'emulator' > spike-out/sdk-emulator.log 2>&1 \
-            || echo "sdkmanager emulator install FAILED (see spike-out/sdk-emulator.log)" | tee -a spike-out/host-probe.txt
+          # Accept licenses once. 'yes' exits 141 (SIGPIPE) under pipefail, so it must
+          # not be used to gate install success — plain sdkmanager afterwards is
+          # non-interactive and returns a truthful exit code.
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
 
           EMULATOR="$ANDROID_HOME/emulator/emulator"
           echo "EMULATOR=$EMULATOR" >> "$GITHUB_ENV"
+          if [ -x "$EMULATOR" ]; then
+            echo "emulator=present (preinstalled on runner)" | tee -a spike-out/host-probe.txt
+          else
+            echo "emulator=missing; attempting sdkmanager install" | tee -a spike-out/host-probe.txt
+            if "$SDKMANAGER" --install 'emulator' > spike-out/sdk-emulator.log 2>&1; then
+              echo "emulator=installed via sdkmanager" | tee -a spike-out/host-probe.txt
+            else
+              echo "emulator=sdkmanager install FAILED (see spike-out/sdk-emulator.log)" | tee -a spike-out/host-probe.txt
+            fi
+          fi
+
           if [ -x "$EMULATOR" ]; then
             set +e
             "$EMULATOR" -version > spike-out/emulator-version.txt 2>&1
@@ -76,7 +110,7 @@ jobs:
             "$EMULATOR" -accel-check > spike-out/accel-check.txt 2>&1
             echo "accel_check_exit=$?" | tee -a spike-out/host-probe.txt
             set -e
-            head -c 200 spike-out/emulator-version.txt | tee -a spike-out/host-probe.txt || true
+            head -c 300 spike-out/emulator-version.txt | tee -a spike-out/host-probe.txt || true
           else
             echo "emulator binary missing" | tee -a spike-out/host-probe.txt
           fi
@@ -90,11 +124,17 @@ jobs:
           for candidate in $ANDROID_API_CANDIDATES; do
             i=$((i + 1))
             echo "Trying $candidate"
-            if yes | "$SDKMANAGER" "$candidate" > "spike-out/sdk-image-$i.log" 2>&1; then
+            if "$SDKMANAGER" "$candidate" > "spike-out/sdk-image-$i.log" 2>&1; then
               IMG="$candidate"
               break
             fi
-            echo "  unavailable: $(tail -2 "spike-out/sdk-image-$i.log" | tr '\n' ' ')"
+            # A pre-existing complete package also counts (idempotent reruns).
+            PKG_DIR="$ANDROID_HOME/system-images/$(echo "$candidate" | cut -d';' -f2- | tr ';' '/')"
+            if [ -f "$PKG_DIR/package.xml" ]; then
+              IMG="$candidate"
+              break
+            fi
+            echo "  unavailable: $(tr '\r' '\n' < "spike-out/sdk-image-$i.log" | grep -E 'Failed|Error|Warning' | tail -2 | tr '\n' ' ')"
           done
           echo "image=$IMG" | tee spike-out/image.txt
           echo "IMG=$IMG" >> "$GITHUB_ENV"
@@ -105,7 +145,7 @@ jobs:
           set -euo pipefail
           echo no | "$AVDMANAGER" create avd -n spike -k "$IMG" --force 2>&1 | tee spike-out/avd-create.txt
 
-      - name: Boot emulator (headless, 25 min budget)
+      - name: Boot emulator (headless, 35 min budget)
         id: boot
         if: env.IMG != ''
         run: |
@@ -116,7 +156,7 @@ jobs:
           EMU_PID=$!
           echo "emulator_pid=$EMU_PID"
           adb start-server
-          for i in $(seq 1 150); do
+          for i in $(seq 1 210); do
             if adb devices 2>/dev/null | grep -Eq '^emulator-[0-9]+[[:space:]]+device$'; then
               boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
               if [ "$boot" = "1" ]; then BOOTED=1; echo "booted after ${i}0s"; break; fi
@@ -163,13 +203,19 @@ jobs:
           ACCEL="$(grep accel_check_exit spike-out/host-probe.txt 2>/dev/null | tail -1 || echo 'accel_check_exit=unknown')"
           VEXEC="$(grep emulator_version_exit spike-out/host-probe.txt 2>/dev/null | tail -1 || echo 'emulator_version_exit=unknown')"
 
-          [ -n "$IMG" ] && Q1="YES ($IMG)" || Q1="NO (no arm64-v8a system image installable)"
+          if [ -n "$IMG" ]; then
+            Q1="YES ($IMG)"
+          else
+            Q1="NO (no arm64-v8a system image installable on this runner; see sdk-image-*.log)"
+          fi
           if grep -q 'accel_check_exit=0' spike-out/host-probe.txt 2>/dev/null; then
-            Q2="YES ($ACCEL)"
+            Q2="YES ($ACCEL; /dev/kvm usable)"
+          elif [ ! -e /dev/kvm ]; then
+            Q2="NO (no /dev/kvm on this runner; $VEXEC)"
           else
             Q2="NO/UNKNOWN ($ACCEL; $VEXEC)"
           fi
-          [ "$BOOTED" = "1" ] && Q3="YES (boot_completed=1 within 25 min)" || Q3="NO (did not boot within budget or emulator failed to start)"
+          [ "$BOOTED" = "1" ] && Q3="YES (boot_completed=1 within 35 min)" || Q3="NO (did not boot within budget or emulator failed to start)"
           if [ "$BOOTED" = "1" ]; then
             [ "$APP_LAUNCHED" = "yes" ] && Q4="YES" || Q4="NO (installed/launched but not resumed; see spike-out/)"
           else
