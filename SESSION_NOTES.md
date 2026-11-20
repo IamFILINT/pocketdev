@@ -25,3 +25,26 @@
 
 ### Operating rule (from master prompt)
 - **All builds/tests/analysis/package ops run in GitHub Actions. Never on the phone.**
+## Session 2 — 2026-11-20
+
+### Milestone 1 completed (PR #1 merged, merge commit `5105004`)
+- Root causes of red CI, fixed in sequence:
+  1. AndroidX 2026.11 requires AGP ≥9.1.0 + compileSdk 37 → AGP 9.1.1,
+     Gradle 9.3.1 (SHA-256 pinned), compileSdk 37.
+  2. AGP 9 DSL/Kotlin migration avoided via `android.newDsl=false` and
+     `android.builtInKotlin=false` in `gradle.properties`.
+  3. API 37 platform is `platforms;android-37.0` (minor-versioned); there is no
+     bare `platforms;android-37`.
+  4. Deleted unused duplicate UI shell `dev/pocketdev/app/*` (used icons absent
+     from `material-icons-core`).
+  5. Emulator test exposed a real crash: manifest lacked
+     `android:name=".PocketDevApplication"` → added.
+- New CI gate: `.github/workflows/android-emulator.yml` (API 30 x86_64, KVM,
+  `connectedDebugAndroidTest`, 3 Compose navigation tests).
+- Evidence: `verify` 44673636850, `android-emulator` 44673636885 (3/3 passed).
+- Wrapper jar was NOT regenerated (only `distributionUrl`/SHA changed) — the
+  bootstrap jar is version-agnostic; wrapper-validation still passes.
+
+### Next
+- Milestone 2: runtime architecture audit, integration ADR, license inventory,
+  ARM64 emulator feasibility spike.

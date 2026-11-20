@@ -12,7 +12,7 @@ Checklist state is updated as work lands.
 
 **Exit evidence:** workflow run 44623877843.
 
-## Milestone 1 — Android foundation 🚧
+## Milestone 1 — Android foundation ✅
 
 - [x] Gradle wrapper (9.3.1, checksum-pinned), AGP 9.1.1, Kotlin 2.4.21, compileSdk 37
 - [x] `:core` domain module with unit tests
@@ -20,9 +20,10 @@ Checklist state is updated as work lands.
 - [x] Project create/delete with validation and safe directory handling
 - [x] CI: lint + unit tests + debug APK build + artifacts (run 44670913592)
 - [x] Emulator launch/navigation test workflow (run 44672914788 — 3/3 passed)
-- [ ] PR merged with green `verify` run
+- [x] PR #1 merged (merge commit `5105004`)
 
-**Exit criteria:** CI build, unit tests, lint pass; emulator launch test passes.
+**Exit evidence:** `verify` run 44673636850 and `android-emulator` run 44673636885
+(3/3 instrumentation tests passed), both green on the final PR commit.
 
 ## Milestone 2 — Runtime architecture and feasibility
 
