@@ -34,6 +34,22 @@ instrumentation reports and an emulator screenshot.
 
 Evidence: run `44672914788` (3/3 tests passed).
 
+### `arm64-spike.yml` — ARM64 feasibility spike (Milestone 2, prompt §5.4)
+
+Manual `workflow_dispatch` only — a measurement, **not** a merge gate. Runs a matrix
+of `ubuntu-24.04-arm` (GitHub-hosted ARM64 Linux runner) and `ubuntu-latest` (x86_64
+control) and, for each:
+
+1. probes host arch, `/dev/kvm`, and whether the emulator binary can even execute;
+2. installs the first available `arm64-v8a` system image (API 30 → 34 → 35);
+3. boots a headless AVD with a 25-minute budget;
+4. if booted: builds, installs, and launches the debug APK, then records ABI,
+   Bionic (`toybox`), `linker64`, and app-data write evidence;
+5. writes an explicit YES/NO verdict for each §5.4 question to the step summary and
+   a `spike-<runner>` artifact.
+
+The human-readable verdict is recorded in `docs/ARM64_FEASIBILITY.md`.
+
 ### Planned (later milestones)
 
 - `native-runtime-ci.yml` — native/runtime pipeline (NDK/Clang/Rust/Zig cross-compile,

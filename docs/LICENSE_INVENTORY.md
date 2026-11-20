@@ -18,13 +18,18 @@ a license until that review is complete.
 | JUnit 4 | Eclipse Public License 1.0 | Test-only; not redistributed in APK |
 | Gradle / AGP | Apache-2.0 | Build-time only |
 
-## Planned components (not yet integrated)
+## Planned components (audited in `docs/TERMUX_AUDIT.md`, Milestone 2)
 
-| Component | License (stated by upstream) | Notes |
+| Component | License (stated by upstream) | PocketDev posture |
 | --- | --- | --- |
-| Termux app | GPLv3-only with listed exceptions | File-level audit required before reuse |
-| `termux-shared` | Separate license with file-level exceptions | Audit required |
-| Termux bootstrap / packages | Per-package licenses | Inventory each default-installed package |
+| Termux app (`:app` module) | GPLv3-only | **Not reused** — no app fork (ADR-0001) |
+| `termux-shared` default | MIT | Not linked; only copied if a file is proven necessary |
+| `termux-shared` → `com/termux/shared/termux/*` | **GPLv3-only** (exceptions: `TermuxConstants.java`, `TermuxPropertyConstants.java` = MIT) | **Excluded** — copying would make PocketDev a GPLv3 combined work |
+| `termux-shared` → `file/filesystem/*` | GPLv2 + Classpath exception | Excluded unless required |
+| `terminal-emulator`, `terminal-view` | Apache-2.0 | **Approved for reuse** (ADR-0001) with attribution |
+| `termux-exec` | Apache-2.0 (verify at pinned commit) | Candidate for the exec/LD_PRELOAD chain; vendor only with header preservation |
+| Termux bootstrap archives (release assets) | Built from individually licensed packages | **Downloaded at first run, never bundled in the APK**; pin tag + SHA-256; not redistributed by PocketDev |
+| Individual Termux packages (installed on demand) | Per-package | Installed by the user, never silently (prompt §8.6); repository strategy deferred to ADR-0002 |
 | OpenCode Bionic | MIT (per upstream README) | Audit bundled third-party components independently |
 | Upstream OpenCode | MIT (per upstream) | Verify at pinned commit |
 | Bun Termux | MIT (verify) | Verify at pinned commit |
@@ -33,7 +38,15 @@ a license until that review is complete.
 
 ## Distribution implications
 
-- If GPLv3 Termux application code is reused/combined, distribution obligations may
-  extend to PocketDev's corresponding source. Analyze the exact combination model
-  (derivative vs. separate process) with qualified counsel before release.
-- Maintain `THIRD_PARTY_NOTICES.md` generated from this inventory at release time.
+- **No GPLv3 file is planned for reuse**, so PocketDev's own code can remain under a
+  permissive license if desired; the choice stays open until ADR-0002 (Milestone 3)
+  confirms the runtime strategy. Copying any GPLv3 `termux-shared` file reverses
+  this — treat such a copy as a license decision requiring explicit approval.
+- Bootstrap binaries are fetched from upstream at runtime and stored in app-private
+  storage; PocketDev does not redistribute them in the APK. If the distribution
+  model ever changes (bundling), re-run this review — bundled third-party binaries
+  carry their own source-availability obligations.
+- Using Termux's package mirrors from a non-`com.termux` app conflicts with upstream
+  intent (audit §C4) — no repository is configured until ADR-0002 decides this.
+- Maintain `THIRD_PARTY_NOTICES.md` generated from this inventory at release time,
+  including Apache-2.0 notices for the terminal-emulator/terminal-view files.

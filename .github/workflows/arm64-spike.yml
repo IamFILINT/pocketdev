@@ -1,0 +1,217 @@
+name: arm64-spike
+
+# Milestone 2 feasibility spike (master prompt §5.4): determine whether a GitHub-hosted
+# runner can boot an ARM64 Android emulator and run PocketDev in it. Manual dispatch
+# only — this is a measurement, not a pull-request gate. Every verdict produced here is
+# recorded honestly in docs/ARM64_FEASIBILITY.md.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arm64-spike-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  spike:
+    name: Spike (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-24.04-arm is the GitHub-hosted ARM64 Linux runner; ubuntu-latest is
+        # the x86_64 control that runs the same ARM64 system image unaccelerated.
+        runner: [ubuntu-24.04-arm, ubuntu-latest]
+    env:
+      ANDROID_API_CANDIDATES: >-
+        system-images;android-30;google_apis;arm64-v8a
+        system-images;android-34;google_apis;arm64-v8a
+        system-images;android-35;google_apis;arm64-v8a
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # actions/checkout v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961  # actions/setup-java v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407  # android-actions/setup-android v3
+        with:
+          packages: "platform-tools"
+
+      - name: Probe host and emulator binary
+        id: probe
+        run: |
+          set -euo pipefail
+          mkdir -p spike-out
+          {
+            echo "runner=${{ matrix.runner }}"
+            echo "host_arch=$(uname -m)"
+            echo "kvm_node=$(ls -l /dev/kvm 2>&1 || true)"
+            echo "groups=$(groups)"
+          } | tee spike-out/host-probe.txt
+
+          SDKMANAGER="$(command -v sdkmanager || find "$ANDROID_HOME" -name sdkmanager -type f -path '*bin*' | head -1)"
+          AVDMANAGER="${SDKMANAGER/sdkmanager/avdmanager}"
+          echo "sdkmanager=$SDKMANAGER" | tee -a spike-out/host-probe.txt
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+          echo "AVDMANAGER=$AVDMANAGER" >> "$GITHUB_ENV"
+
+          yes | "$SDKMANAGER" --install 'emulator' > spike-out/sdk-emulator.log 2>&1 \
+            || echo "sdkmanager emulator install FAILED (see spike-out/sdk-emulator.log)" | tee -a spike-out/host-probe.txt
+
+          EMULATOR="$ANDROID_HOME/emulator/emulator"
+          echo "EMULATOR=$EMULATOR" >> "$GITHUB_ENV"
+          if [ -x "$EMULATOR" ]; then
+            set +e
+            "$EMULATOR" -version > spike-out/emulator-version.txt 2>&1
+            echo "emulator_version_exit=$?" | tee -a spike-out/host-probe.txt
+            "$EMULATOR" -accel-check > spike-out/accel-check.txt 2>&1
+            echo "accel_check_exit=$?" | tee -a spike-out/host-probe.txt
+            set -e
+            head -c 200 spike-out/emulator-version.txt | tee -a spike-out/host-probe.txt || true
+          else
+            echo "emulator binary missing" | tee -a spike-out/host-probe.txt
+          fi
+
+      - name: Install ARM64 system image
+        id: image
+        run: |
+          set -euo pipefail
+          IMG=""
+          i=0
+          for candidate in $ANDROID_API_CANDIDATES; do
+            i=$((i + 1))
+            echo "Trying $candidate"
+            if yes | "$SDKMANAGER" "$candidate" > "spike-out/sdk-image-$i.log" 2>&1; then
+              IMG="$candidate"
+              break
+            fi
+            echo "  unavailable: $(tail -2 "spike-out/sdk-image-$i.log" | tr '\n' ' ')"
+          done
+          echo "image=$IMG" | tee spike-out/image.txt
+          echo "IMG=$IMG" >> "$GITHUB_ENV"
+
+      - name: Create AVD
+        if: env.IMG != ''
+        run: |
+          set -euo pipefail
+          echo no | "$AVDMANAGER" create avd -n spike -k "$IMG" --force 2>&1 | tee spike-out/avd-create.txt
+
+      - name: Boot emulator (headless, 25 min budget)
+        id: boot
+        if: env.IMG != ''
+        run: |
+          set -uo pipefail
+          BOOTED=0
+          "$EMULATOR" -avd spike -no-window -no-audio -no-boot-anim -no-snapshot \
+            -gpu swiftshader_indirect -verbose > emulator.log 2>&1 &
+          EMU_PID=$!
+          echo "emulator_pid=$EMU_PID"
+          adb start-server
+          for i in $(seq 1 150); do
+            if adb devices 2>/dev/null | grep -Eq '^emulator-[0-9]+[[:space:]]+device$'; then
+              boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              if [ "$boot" = "1" ]; then BOOTED=1; echo "booted after ${i}0s"; break; fi
+            fi
+            if ! kill -0 "$EMU_PID" 2>/dev/null; then
+              echo "emulator process exited early"
+              break
+            fi
+            sleep 10
+          done
+          echo "BOOTED=$BOOTED" | tee spike-out/boot.txt
+          echo "BOOTED=$BOOTED" >> "$GITHUB_ENV"
+
+      - name: Build, install, and launch the app
+        id: app
+        if: env.BOOTED == '1'
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace assembleDebug > spike-out/gradle.log 2>&1
+          APK="$(ls app/build/outputs/apk/debug/*.apk | head -1)"
+          adb install -r "$APK" > spike-out/install.txt 2>&1
+          adb shell am start -n dev.pocketdev/.MainActivity > spike-out/launch.txt 2>&1
+          sleep 10
+          adb shell dumpsys activity activities > spike-out/activities.txt 2>&1
+          if grep -q dev.pocketdev spike-out/activities.txt; then
+            echo "APP_LAUNCHED=yes" | tee spike-out/app.txt
+          else
+            echo "APP_LAUNCHED=no" | tee spike-out/app.txt
+          fi
+          {
+            echo "abi=$(adb shell getprop ro.product.cpu.abi | tr -d '\r')"
+            echo "toybox_uname=$(adb shell /system/bin/toybox uname -m 2>&1 | tr -d '\r')"
+            echo "linker64=$(adb shell ls -l /system/bin/linker64 2>&1 | tr -d '\r')"
+            echo "data_dir_write=$(adb shell run-as dev.pocketdev sh -c 'mkdir -p /data/data/dev.pocketdev/files/usr/bin && echo write-ok' 2>&1 | tr -d '\r')"
+          } | tee spike-out/bionic-env.txt
+
+      - name: Record verdict
+        if: always()
+        run: |
+          set -uo pipefail
+          BOOTED="${BOOTED:-0}"
+          APP_LAUNCHED="${APP_LAUNCHED:-n/a}"
+          IMG="${IMG:-}"
+          ACCEL="$(grep accel_check_exit spike-out/host-probe.txt 2>/dev/null | tail -1 || echo 'accel_check_exit=unknown')"
+          VEXEC="$(grep emulator_version_exit spike-out/host-probe.txt 2>/dev/null | tail -1 || echo 'emulator_version_exit=unknown')"
+
+          [ -n "$IMG" ] && Q1="YES ($IMG)" || Q1="NO (no arm64-v8a system image installable)"
+          if grep -q 'accel_check_exit=0' spike-out/host-probe.txt 2>/dev/null; then
+            Q2="YES ($ACCEL)"
+          else
+            Q2="NO/UNKNOWN ($ACCEL; $VEXEC)"
+          fi
+          [ "$BOOTED" = "1" ] && Q3="YES (boot_completed=1 within 25 min)" || Q3="NO (did not boot within budget or emulator failed to start)"
+          if [ "$BOOTED" = "1" ]; then
+            [ "$APP_LAUNCHED" = "yes" ] && Q4="YES" || Q4="NO (installed/launched but not resumed; see spike-out/)"
+          else
+            Q4="N/A (emulator did not boot)"
+          fi
+          Q5="N/A — no OpenCode Bionic artifact exists yet (Milestone 4); proxy evidence below"
+          if [ "$BOOTED" = "1" ]; then
+            Q6="PARTIAL — see bionic-env.txt (abi, toybox exec, linker64, data-dir write)"
+          else
+            Q6="N/A (emulator did not boot)"
+          fi
+
+          SUMMARY="$(cat <<EOF
+          ## ARM64 spike verdict — \`${{ matrix.runner }}\`
+
+          | # | Question | Verdict |
+          | --- | --- | --- |
+          | 1 | Compatible ARM64 AVD/system image available? | $Q1 |
+          | 2 | Runner provides needed virtualization/KVM? | $Q2 |
+          | 3 | Emulator boots reliably headless in Actions? | $Q3 |
+          | 4 | App installs and runs in that emulator? | $Q4 |
+          | 5 | Bionic OpenCode binary executes? | $Q5 |
+          | 6 | Required Android/Termux filesystem/linker behavior? | $Q6 |
+
+          Host: \`$(uname -m)\` / runner \`${{ matrix.runner }}\`
+          EOF
+          )"
+          printf '%s\n' "$SUMMARY" | tee spike-out/verdict.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload spike evidence
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # actions/upload-artifact v5
+        with:
+          name: spike-${{ matrix.runner }}
+          path: |
+            spike-out/
+            emulator.log
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Stop emulator
+        if: always()
+        run: |
+          pkill -f qemu-system || true
+          pkill -f "$ANDROID_HOME/emulator" || true

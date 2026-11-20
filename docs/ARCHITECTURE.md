@@ -55,6 +55,11 @@ the `ProjectStore` registry (`files/<app>/state/projects.tsv`), and the theme pr
 4. **No simulated runtime/AI state.** The dashboard reports `NotInstalled` until a
    real runtime controller exists.
 5. **GitHub Actions as the only build/test environment.** See `docs/CI_CD.md`.
+6. **Runtime integration strategy decided in ADR-0001** (`docs/adr/`): a
+   PocketDev-owned runtime manager provisions a pinned Termux bootstrap into
+   app-private storage; no Termux app fork, no second APK. The prefix/package-name
+   sub-problem is explicitly deferred to ADR-0002, gated on an in-CI spike
+   (`docs/TERMUX_AUDIT.md`, `docs/BOOTSTRAP_LAYOUT.md`).
 
 ## Security boundaries
 
