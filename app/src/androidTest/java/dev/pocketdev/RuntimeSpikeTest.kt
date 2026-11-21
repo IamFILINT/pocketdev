@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit
  */
 class RuntimeSpikeTest {
 
-    private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = instrumentation.targetContext
     private val report = mutableListOf<String>()
 
     private data class ExecResult(val finished: Boolean, val exit: Int, val output: String) {
@@ -37,6 +38,10 @@ class RuntimeSpikeTest {
 
     @Test
     fun pinnedBootstrapRunsThroughTheSystemLinker() {
+        org.junit.Assume.assumeTrue(
+            "ADR-0002 spike runs only with runtimeSpike=true (see runtime-spike.yml)",
+            InstrumentationRegistry.getArguments().getString("runtimeSpike") == "true",
+        )
         val paths = RuntimePaths(context.filesDir).apply { ensureBaseDirectories() }
         val manager = BootstrapManager(
             filesDir = context.filesDir,

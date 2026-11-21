@@ -62,7 +62,8 @@ jobs:
           script: |
             set -o pipefail
             ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest \
-              -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest
+              -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest \
+              -Pandroid.testInstrumentationRunnerArguments.runtimeSpike=true
             adb pull /sdcard/Android/data/dev.pocketdev/files/spike-report.txt runtime-spike-report.txt || true
             cat runtime-spike-report.txt || true
 
