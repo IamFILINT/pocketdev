@@ -2,7 +2,7 @@
 
 | # | Risk | Impact | Likelihood | Mitigation | Status |
 | --- | --- | --- | --- | --- | --- |
-| R1 | No reliable ARM64 Android environment in GitHub Actions | Bionic runtime never validated end-to-end | High | Feasibility spike (Milestone 2); document coverage gaps honestly; static ELF checks otherwise | Open |
+| R1 | No reliable ARM64 Android environment in GitHub Actions | Bionic runtime never validated end-to-end | High | **Measured (Milestone 2, `docs/ARM64_FEASIBILITY.md`):** x86_64 runners reject ARM64 guests (emulator 37.3.10 arch check); `ubuntu-24.04-arm` has no emulator package and no `/dev/kvm`. Functional runtime tests run on `x86_64` API 30; ABI-agnostic design + static ELF checks; ARM64 device proof deferred | Open — accepted gap |
 | R2 | Device storage nearly full (~4.5 GB free) | Cannot hold large artifacts locally | Medium | Never build locally; keep only source on device; clean project downloads | Mitigated by policy |
 | R3 | FUSE storage quirks (`safe.directory`, symlink semantics) | Git/runtime extraction oddities | Medium | `safe.directory` configured; test extraction on app-private ext4 storage | Partially mitigated |
 | R4 | Termux GPLv3 + file-level exceptions complicate licensing | Distribution/legal exposure | Medium | File-level license inventory before redistribution; keep components modular | Open |
