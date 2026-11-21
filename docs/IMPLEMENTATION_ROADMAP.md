@@ -32,8 +32,9 @@ Checklist state is updated as work lands.
 - [x] License inventory for reused components
 - [x] Bootstrap/storage layout design
 - [x] ARM64 Android emulator feasibility spike in Actions
-  — measured: no GitHub-hosted runner can boot an ARM64 emulator
-  (`docs/ARM64_FEASIBILITY.md`); functional CI stays on `x86_64` API 30
+  — measured: no GitHub-hosted runner can build or boot Android on ARM64 with the
+  stock toolchain (`docs/ARM64_FEASIBILITY.md`); functional CI stays on `x86_64`
+  API 30 and ARM64 stays cross-compiled/static
 
 ## Milestone 3 — Runtime bootstrap
 

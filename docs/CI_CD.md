@@ -50,9 +50,10 @@ control) and, for each:
 
 The human-readable verdict is recorded in `docs/ARM64_FEASIBILITY.md`.
 
-**Measured result (run `44862773422`):** no GitHub-hosted runner can boot an ARM64
-emulator — x86_64 hosts reject ARM64 guests (emulator arch check), and
-`ubuntu-24.04-arm` has neither an emulator host package nor `/dev/kvm`.
+**Measured result (runs `44862773422`, `44866937289`):** no GitHub-hosted runner can
+build or boot Android on ARM64 with the stock toolchain — x86_64 hosts reject ARM64
+guests (emulator arch check), `ubuntu-24.04-arm` has neither an emulator host package
+nor `/dev/kvm`, and its build fails because `aapt2` ships x86_64-only.
 
 ### Planned (later milestones)
 

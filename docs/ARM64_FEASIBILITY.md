@@ -10,7 +10,8 @@ and run PocketDev in it?** Measured — not assumed — with
 | --- | --- | --- |
 | 1 | `44762039967` | Workflow bugs produced false NOs (`yes \| sdkmanager` → SIGPIPE 141 under `pipefail`); fixed in PR #3 |
 | 2 | `44768697070` | x86_64 leg: image + KVM OK, AVD created but not discoverable by the emulator; fixed in PR #4 |
-| 3 | `44862773422` | Final measurement — verdicts below |
+| 3 | `44862773422` | Emulator verdicts measured (see below) |
+| 4 | `44866937289` | Adds the native-runner `assembleDebug` probe — ARM64 toolchain verdicts below |
 
 Evidence artifacts for run 3: `spike-ubuntu-24.04-arm`, `spike-ubuntu-latest`
 (`sdk-*.log`, `host-probe.txt`, `emulator.log`, `verdict.md`).
@@ -39,16 +40,43 @@ Host facts: `host_arch=aarch64`, `kvm_node=ls: cannot access '/dev/kvm'`,
 AVD creation itself succeeded (`-list-avds` → `spike`), and `libpulse0` was needed
 for the preinstalled emulator binary to run at all.
 
+## Can the native ARM64 runner at least *build* the APK?
+
+No — measured (run `44866937289`, step "Build debug APK on the native ARM64
+runner"):
+
+```
+AAPT2 aapt2-9.1.1-14792394-linux Daemon #0: Unexpected error output:
+/home/runner/.gradle/caches/.../aapt2-9.1.1-14792394-linux/aapt2:
+1: Syntax error: ")" unexpected
+...
+AAPT2 ... Daemon startup failed
+BUILD FAILED in 2m 18s
+```
+
+`aapt2` (needed by every resource-processing task) is only published as an
+x86_64 Linux binary. On an aarch64 host the kernel rejects it and the shell
+falls back to parsing it as a script, hence the "Syntax error". Gradle, the JDK
+and Kotlin compile fine on aarch64; the stock Android toolchain does not.
+
+Google's own download page confirms the shape of the gap: Android Studio and
+the command-line tools are offered for Windows, macOS (Intel **and** ARM),
+"Linux (64-bit)" and ChromeOS — there is no Linux ARM64 package, and
+`developer.android.com` documents VM acceleration only where the VM and host
+architectures match.
+
 ## Answer
 
-**No GitHub-hosted runner can boot an ARM64 Android emulator today.**
+**No GitHub-hosted runner can build *or* boot Android on ARM64 with the stock
+toolchain today.**
 
 - x86_64 runners run the Android emulator well (Milestone 1 gate proves API 30
   `x86_64` boots and passes instrumentation tests), but current emulator releases
   require the system image architecture to match the host — cross-architecture
   guests are rejected at startup.
-- ARM64 runners cannot run the emulator at all: Google publishes no emulator host
-  package for `linux-aarch64` and the runners expose no `/dev/kvm`.
+- ARM64 (`ubuntu-24.04-arm`) runners cannot run the emulator at all: Google
+  publishes no emulator host package for `linux-aarch64` and the runners expose
+  no `/dev/kvm`. They also cannot run `aapt2`, so even `assembleDebug` fails.
 
 Older emulator builds that still contained the cross-architecture QEMU/TCG path
 were considered and **rejected as a CI gate**: an unpinned, obsolete, unpatchable
@@ -60,15 +88,18 @@ reliable gate for a project whose CI is its only build/test environment.
 1. **Functional runtime validation stays on `x86_64` API 30** (already proven
    green in `android-emulator.yml`). Milestone 3 bootstrap integration tests will
    run there.
-2. **ARM64-specific behavior cannot be validated in CI.** Design must stay
+2. **ARM64 builds and device tests stay cross-compiled/static on `x86_64`** (prompt
+   §5.4 fallback): ARM64 ABI artifacts are produced by the normal x86_64 build and
+   validated with static ELF/dependency checks, never executed.
+3. **ARM64-specific behavior cannot be validated in CI.** Design must stay
    ABI-agnostic; anything ABI-sensitive (Bionic/linker assumptions in §5.4 Q5–Q6,
    Termux bootstrap binaries) is validated with static checks plus documented
    gaps, per risk register R1/R11.
-3. If ARM64 device proof becomes mandatory later, the options are a physical
+4. If ARM64 device proof becomes mandatory later, the options are a physical
    device via a self-hosted runner (excluded by the master prompt's
    never-build-on-the-phone rule), a credentialed device farm (billing), or
-   revisiting this file if Google ships `linux-aarch64` emulator packages or
-   re-enables cross-architecture guests.
+   revisiting this file if Google ships `linux-aarch64` tooling or re-enables
+   cross-architecture guests.
 
 **Revisit trigger:** a new emulator release that lists `linux-aarch64` host
 packages in the SDK repository, or docs restoring cross-arch support.

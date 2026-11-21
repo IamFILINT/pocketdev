@@ -262,7 +262,10 @@ jobs:
           else
             Q6="N/A (emulator did not boot)"
           fi
-          ARM64_BUILD="$(cut -d= -f2 spike-out/arm64-build.txt 2>/dev/null | head -1)"
+          ARM64_BUILD=""
+          if [ -f spike-out/arm64-build.txt ]; then
+            ARM64_BUILD="$(cut -d= -f2 spike-out/arm64-build.txt | head -1)"
+          fi
           [ -n "$ARM64_BUILD" ] && BUILD_LINE="**ARM64 APK build on this native runner: $ARM64_BUILD**" || BUILD_LINE="ARM64 APK build: n/a on this leg"
 
           SUMMARY="$(cat <<EOF
