@@ -50,6 +50,10 @@ control) and, for each:
 
 The human-readable verdict is recorded in `docs/ARM64_FEASIBILITY.md`.
 
+**Measured result (run `44862773422`):** no GitHub-hosted runner can boot an ARM64
+emulator — x86_64 hosts reject ARM64 guests (emulator arch check), and
+`ubuntu-24.04-arm` has neither an emulator host package nor `/dev/kvm`.
+
 ### Planned (later milestones)
 
 - `native-runtime-ci.yml` — native/runtime pipeline (NDK/Clang/Rust/Zig cross-compile,

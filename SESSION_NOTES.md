@@ -48,3 +48,26 @@
 ### Next
 - Milestone 2: runtime architecture audit, integration ADR, license inventory,
   ARM64 emulator feasibility spike.
+
+## Session 3 — 2026-11-21
+
+### Milestone 2 completed
+- PR #2 merged (`e1ce1e7`): Termux audit, ADR-0001, bootstrap/storage layout,
+  `BootstrapManifest`/`BootstrapArtifact` model + unit tests, arm64-spike workflow.
+- PR #3 (`2cc922d`) and PR #4 (`27b6f3a`): spike fixes after real evidence —
+  1. `yes | sdkmanager` exits 141 (SIGPIPE) under `pipefail` → installs were
+     false-negatives; replaced with a one-shot `--licenses` and plain installs.
+  2. Missing `libpulse0` broke the preinstalled emulator binary; KVM needed the
+     same udev snippet as `android-emulator.yml`.
+  3. `avdmanager` and the emulator resolve different default AVD homes; pin
+     `ANDROID_AVD_HOME` and locate `spike.ini` defensively.
+- ARM64 feasibility measured (runs `44762039967`, `44768697070`, `44862773422`):
+  - `ubuntu-latest` (x86_64): image installs, KVM usable, but emulator 37.3.10
+    refuses ARM64 guests (`System image must match the host architecture`).
+  - `ubuntu-24.04-arm`: no `emulator` package for `linux-aarch64`, no `/dev/kvm`.
+  - Verdict + consequences in `docs/ARM64_FEASIBILITY.md`; risk R1 updated.
+- Functional CI remains `x86_64` API 30 (M1 gate green).
+
+### Next
+- Milestone 3: pinned bootstrap metadata + checksum verification, safe extraction,
+  resumable init + health checks, unit tests; then ADR-0002 prefix spike.

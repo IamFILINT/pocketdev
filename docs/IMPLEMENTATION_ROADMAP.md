@@ -27,11 +27,13 @@ Checklist state is updated as work lands.
 
 ## Milestone 2 — Runtime architecture and feasibility
 
-- [ ] Audit Termux components (app, `termux-shared`, bootstrap artifacts)
-- [ ] Choose integration strategy (ADR)
-- [ ] License inventory for reused components
-- [ ] Bootstrap/storage layout design
-- [ ] ARM64 Android emulator feasibility spike in Actions
+- [x] Audit Termux components (app, `termux-shared`, bootstrap artifacts)
+- [x] Choose integration strategy (ADR)
+- [x] License inventory for reused components
+- [x] Bootstrap/storage layout design
+- [x] ARM64 Android emulator feasibility spike in Actions
+  — measured: no GitHub-hosted runner can boot an ARM64 emulator
+  (`docs/ARM64_FEASIBILITY.md`); functional CI stays on `x86_64` API 30
 
 ## Milestone 3 — Runtime bootstrap
 
