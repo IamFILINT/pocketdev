@@ -116,9 +116,11 @@ class RuntimeSpikeTest {
         val tools = exec(environment, linker, bash.absolutePath, "-c", "command -v apt; command -v dpkg; command -v pkg")
         report("package-tools", tools.output.trim().replace('\n', ','))
 
-        val reportFile = File(context.getExternalFilesDir(null), "spike-report.txt")
-        reportFile.parentFile?.mkdirs()
-        reportFile.writeText(report.joinToString("\n"))
+        val text = report.joinToString("\n")
+        File(context.filesDir, "spike-report.txt").writeText(text)
+        context.getExternalFilesDir(null)?.let { external ->
+            File(external, "spike-report.txt").writeText(text)
+        }
     }
 
     private fun exec(environment: Map<String, String>, vararg command: String): ExecResult =

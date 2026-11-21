@@ -52,6 +52,12 @@ Honest scope: health checks are structural only — real Bionic execution stays
 unverified because no ARM64 Android environment exists in Actions
 (`docs/ARM64_FEASIBILITY.md`).
 
+**Post-M3 gate (ADR-0002, decided 2026-11-21):** x86_64 API 30 spike run
+`44876316131` proved relocation via `linker64` (`bash`/`ls` run; direct exec
+blocked by W^X) and showed stock `termux-exec` cannot handle our prefix. Next
+work: build a prefix-targeted `termux-exec` 2.5.0 preload in CI and prove shebang
+exec before the `:runtime` Android wiring lands.
+
 ## Milestone 4 — OpenCode Bionic provisioning
 
 - [ ] Pin upstream release/commit + checksums in a manifest

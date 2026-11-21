@@ -105,9 +105,12 @@ Ordered, resumable, idempotent steps. Each step records progress in
   the new rootfs passes health checks; rollback = rename `usr.prev` back.
 - Project data (`files/state`, `files/home/projects`) is never part of an update.
 
-## 4. Deferred to ADR-0002 (Milestone 3 spike inputs)
+## 4. Resolved by ADR-0002 (2026-11-21)
 
-- Whether stock `com.termux`-built binaries run correctly under our prefix with
-  linker64 + `LD_PRELOAD` path rewriting (compiled-in prefixes, apt, Python).
-- Whether `apt install` is offered at all, and against which repository.
-- Exact relocation rules applied at step 6 (text rewrite vs runtime interception).
+- **Stock binaries under our prefix:** proven via `linker64` + `LD_LIBRARY_PATH`
+  (`bash`, `ls` exit 0 on the API 30 emulator); direct `execve` is blocked by
+  W^X. Shebang exec needs a prefix-built `termux-exec` preload — decided.
+- **Relocation rules:** no binary rewriting; absolute `SYMLINKS.txt` targets are
+  rewritten to relative links at extraction (implemented in `BootstrapArchive`).
+- **Still open:** `apt install` / repository policy (audit §C4) remains deferred
+  until the rebuilt preload is verified in CI.

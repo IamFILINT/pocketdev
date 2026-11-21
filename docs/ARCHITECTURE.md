@@ -64,8 +64,9 @@ MainActivity
 7. **Runtime integration strategy decided in ADR-0001** (`docs/adr/`): a
    PocketDev-owned runtime manager provisions a pinned Termux bootstrap into
    app-private storage; no Termux app fork, no second APK. The prefix/package-name
-   sub-problem is explicitly deferred to ADR-0002, gated on an in-CI spike
-   (`docs/TERMUX_AUDIT.md`, `docs/BOOTSTRAP_LAYOUT.md`).
+   sub-problem is decided in ADR-0002 from measured emulator evidence: keep the
+   PocketDev prefix, launch via `/system/bin/linker64`, and ship a prefix-built
+   `termux-exec` preload for shebang/`exec` (`docs/adr/0002-…`).
 
 ## Security boundaries
 
