@@ -61,7 +61,7 @@ jobs:
             -camera-back none -camera-front none
           script: |
             ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest -Pandroid.testInstrumentationRunnerArguments.runtimeSpike=true
-            adb pull /sdcard/Android/data/dev.pocketdev/files/spike-report.txt runtime-spike-report.txt || true
+            adb shell run-as dev.pocketdev cat files/spike-report.txt > runtime-spike-report.txt || true
             cat runtime-spike-report.txt || true
 
       - name: Upload spike artifacts

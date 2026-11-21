@@ -106,3 +106,30 @@
 ### Next
 - ADR-0002: prefix-relocation + W^X exec spike on the x86_64 API 30 emulator
   (input for whether a runtime can boot there for functional tests).
+
+## Session 5 — 2026-11-21
+
+### ADR-0002 spike (risks R11/R12)
+- Pinned the x86_64 bootstrap (33,058,188 B, SHA-256
+  `fb95765f2ffb4cf5648891199dedb820ed19a63334352fb0bc69b7b7c917e002`) for the
+  emulator only; aarch64 remains the shipped pin.
+- Spike runs and fixes:
+  - `44875058681`: emulator booted, but the workflow's `\` line continuations
+    were passed literally to `sh` (`Task '\' not found`).
+  - `44875631930`: extraction failed on 20 absolute `SYMLINKS.txt` targets
+    (`/data/data/com.termux/files/usr/...`); fixed by rewriting them to relative
+    links inside the extraction root (works in staging and after the swap).
+  - `44876316131`: **success.** Provisioned `Ready` on the emulator, then:
+    direct exec **blocked** (W^X); `linker64 + bash` and `linker64 + ls` exit 0;
+    shebang exec fails (126, `bad interpreter`) with and without stock
+    `termux-exec` 2.5.0 — its binary hardcodes the Termux prefix.
+- `docs/adr/0002-prefix-and-exec-strategy.md`: keep our prefix, launch through
+  `linker64`, ship a **prefix-built** `termux-exec` (Apache-2.0, pinned commit
+  `2cd0ba6b…`, built with `TERMUX_APP__PACKAGE_NAME=dev.pocketdev`); no binary
+  rewriting; package manager stays disabled.
+- `RuntimeSpikeTest` is opt-in (`runtimeSpike=true`), so the normal emulator gate
+  stays fast; report is now written to `filesDir` and pulled with `run-as`.
+
+### Next
+- Build the prefix-targeted `termux-exec` preload in CI (pinned commit) and
+  extend the spike with a shebang-exec assertion before wiring `:runtime`.
