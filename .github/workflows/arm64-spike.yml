@@ -143,14 +143,34 @@ jobs:
         if: env.IMG != ''
         run: |
           set -euo pipefail
-          echo no | "$AVDMANAGER" create avd -n spike -k "$IMG" --force 2>&1 | tee spike-out/avd-create.txt
+          # avdmanager and emulator disagree about the default AVD location on some
+          # runners (avdmanager may use $ANDROID_SDK_HOME/.android/avd, while the
+          # emulator searches $ANDROID_AVD_HOME and $ANDROID_SDK_HOME/avd). Pin the
+          # AVD home explicitly and hand the same value to the boot step.
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | "$AVDMANAGER" create avd -n spike -k "$IMG" --force > spike-out/avd-create.txt 2>&1 || true
+          tr '\r' '\n' < spike-out/avd-create.txt | grep -vE '^\s*$|^\[' | tail -8
+          INI="$(find "$HOME" "$ANDROID_HOME" -maxdepth 6 -name 'spike.ini' 2>/dev/null | head -1)"
+          if [ -n "$INI" ]; then
+            AVD_HOME="$(dirname "$INI")"
+            echo "avd_home=$AVD_HOME" | tee -a spike-out/avd-create.txt
+            echo "ANDROID_AVD_HOME=$AVD_HOME" >> "$GITHUB_ENV"
+            echo "AVD_OK=yes" >> "$GITHUB_ENV"
+          else
+            echo "AVD_OK=no (no spike.ini found under \$HOME or \$ANDROID_HOME)" | tee -a spike-out/avd-create.txt
+            echo "AVD_OK=no" >> "$GITHUB_ENV"
+          fi
+          ls -la "$ANDROID_AVD_HOME" >> spike-out/avd-create.txt 2>&1 || true
 
       - name: Boot emulator (headless, 35 min budget)
         id: boot
-        if: env.IMG != ''
+        if: env.IMG != '' && env.AVD_OK == 'yes'
         run: |
           set -uo pipefail
           BOOTED=0
+          echo "avd_home=${ANDROID_AVD_HOME:-unset}"
+          "$EMULATOR" -list-avds | tee spike-out/avd-list.txt || true
           "$EMULATOR" -avd spike -no-window -no-audio -no-boot-anim -no-snapshot \
             -gpu swiftshader_indirect -verbose > emulator.log 2>&1 &
           EMU_PID=$!
@@ -215,7 +235,8 @@ jobs:
           else
             Q2="NO/UNKNOWN ($ACCEL; $VEXEC)"
           fi
-          [ "$BOOTED" = "1" ] && Q3="YES (boot_completed=1 within 35 min)" || Q3="NO (did not boot within budget or emulator failed to start)"
+          AVD_OK="${AVD_OK:-n/a}"
+          [ "$BOOTED" = "1" ] && Q3="YES (boot_completed=1 within 35 min)" || { [ "$AVD_OK" = "no" ] && Q3="NO (AVD could not be created/located)" || Q3="NO (did not boot within budget or emulator failed to start)"; }
           if [ "$BOOTED" = "1" ]; then
             [ "$APP_LAUNCHED" = "yes" ] && Q4="YES" || Q4="NO (installed/launched but not resumed; see spike-out/)"
           else
