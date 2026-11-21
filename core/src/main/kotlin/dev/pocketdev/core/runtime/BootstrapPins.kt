@@ -8,9 +8,9 @@ package dev.pocketdev.core.runtime
  * provisioned by referencing a pin — it is metadata the bootstrap manager verifies
  * before it touches `$PREFIX`.
  *
- * Only `aarch64` is pinned today because that is the product's device target. An
- * `x86_64` pin is deliberately deferred until the ADR-0002 spike decides whether
- * the emulator may host a runtime for functional tests.
+ * `aarch64` is the product's device target. `x86_64` is pinned only for the
+ * ADR-0002 execution spike on the x86_64 API 30 emulator (the only place a Bionic
+ * process can actually run in CI); it is never shipped.
  */
 object BootstrapPins {
 
@@ -24,6 +24,11 @@ object BootstrapPins {
 
     const val AARCH64_SIZE_BYTES: Long = 33_148_806L
 
+    const val X86_64_SHA256: String =
+        "fb95765f2ffb4cf5648891199dedb820ed19a63334352fb0bc69b7b7c917e002"
+
+    const val X86_64_SIZE_BYTES: Long = 33_058_188L
+
     val aarch64: BootstrapArtifact = BootstrapArtifact(
         releaseTag = RELEASE_TAG,
         fileName = "bootstrap-aarch64.zip",
@@ -34,5 +39,15 @@ object BootstrapPins {
         minApiLevel = 24,
     )
 
-    val manifest: BootstrapManifest = BootstrapManifest(RELEASE_TAG, listOf(aarch64))
+    val x86_64: BootstrapArtifact = BootstrapArtifact(
+        releaseTag = RELEASE_TAG,
+        fileName = "bootstrap-x86_64.zip",
+        downloadUrl = "$BASE_URL/bootstrap-x86_64.zip",
+        sha256 = X86_64_SHA256,
+        sizeBytes = X86_64_SIZE_BYTES,
+        abi = Abi.X86_64,
+        minApiLevel = 24,
+    )
+
+    val manifest: BootstrapManifest = BootstrapManifest(RELEASE_TAG, listOf(aarch64, x86_64))
 }

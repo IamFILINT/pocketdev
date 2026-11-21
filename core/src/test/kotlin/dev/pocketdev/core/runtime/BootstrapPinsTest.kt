@@ -2,16 +2,16 @@ package dev.pocketdev.core.runtime
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BootstrapPinsTest {
 
     @Test
-    fun `pinned release exposes exactly one audited artifact`() {
-        assertEquals(1, BootstrapPins.manifest.artifacts.size)
+    fun `pinned release exposes one audited artifact per supported ABI`() {
+        assertEquals(2, BootstrapPins.manifest.artifacts.size)
         assertEquals(BootstrapPins.aarch64, BootstrapPins.manifest.artifactFor(Abi.AARCH64, 30))
+        assertEquals(BootstrapPins.x86_64, BootstrapPins.manifest.artifactFor(Abi.X86_64, 30))
         assertEquals(BootstrapPins.RELEASE_TAG, BootstrapPins.aarch64.releaseTag)
     }
 
@@ -22,8 +22,15 @@ class BootstrapPinsTest {
     }
 
     @Test
-    fun `x86_64 is not pinned yet so the manager fails closed`() {
-        assertNull(BootstrapPins.manifest.artifactFor(Abi.X86_64, 30))
+    fun `x86_64 pin exists only for the emulator spike and is a release asset too`() {
+        val url = BootstrapPins.x86_64.downloadUrl
+        assertTrue(url.startsWith("https://github.com/termux/termux-packages/releases/download/"))
+        assertTrue(url.endsWith("/bootstrap-x86_64.zip"))
+        assertEquals(
+            "fb95765f2ffb4cf5648891199dedb820ed19a63334352fb0bc69b7b7c917e002",
+            BootstrapPins.X86_64_SHA256,
+        )
+        assertEquals(33_058_188L, BootstrapPins.X86_64_SIZE_BYTES)
     }
 
     @Test
