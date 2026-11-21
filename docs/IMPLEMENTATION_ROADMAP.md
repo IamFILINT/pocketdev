@@ -52,11 +52,16 @@ Honest scope: health checks are structural only — real Bionic execution stays
 unverified because no ARM64 Android environment exists in Actions
 (`docs/ARM64_FEASIBILITY.md`).
 
-**Post-M3 gate (ADR-0002, decided 2026-11-21):** x86_64 API 30 spike run
-`44876316131` proved relocation via `linker64` (`bash`/`ls` run; direct exec
-blocked by W^X) and showed stock `termux-exec` cannot handle our prefix. Next
-work: build a prefix-targeted `termux-exec` 2.5.0 preload in CI and prove shebang
-exec before the `:runtime` Android wiring lands.
+**Post-M3 gate (ADR-0002, decided and validated 2026-11-21):** x86_64 API 30 spike
+run `44876316131` proved relocation via `linker64` (`bash`/`ls` run; direct exec
+blocked by W^X). Shebang exec remained blocked with the stock `termux-exec`
+release 2.5.0 because of the compiled-in Termux prefix; a follow-up spike
+(`spike/termux-exec-env`, run `44878997591`) confirmed the stock preload honors
+the `TERMUX_APP__DATA_DIR` / `TERMUX__PREFIX` environment overrides and now
+executes shebang scripts through `/system/bin/linker64` (exit 0, `shebang-ok`).
+The gate is now closed: no custom prefix-built preload is required — the stock
+preload + env override is sufficient for ADR-0002. Next work: `:runtime` Android
+wiring (downloader, env builder, linker-hop launcher, preload deployment).
 
 ## Milestone 4 — OpenCode Bionic provisioning
 

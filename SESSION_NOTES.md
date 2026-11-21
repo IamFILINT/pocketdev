@@ -131,5 +131,6 @@
   stays fast; report is now written to `filesDir` and pulled with `run-as`.
 
 ### Next
-- Build the prefix-targeted `termux-exec` preload in CI (pinned commit) and
-  extend the spike with a shebang-exec assertion before wiring `:runtime`.
+- `:runtime` Android wiring (downloader, env builder, linker-hop launcher,
+  preload deployment of the stock `termux-exec-ld-preload.so` from the pinned
+  bootstrap; env `TERMUX_APP__DATA_DIR`/`TERMUX__PREFIX` override).

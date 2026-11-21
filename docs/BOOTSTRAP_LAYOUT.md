@@ -81,10 +81,14 @@ Ordered, resumable, idempotent steps. Each step records progress in
    | `LD_PRELOAD` | `$PREFIX/lib/libtermux-exec.so` (children only) |
    | `TERM` | inherited (`xterm-256color` default) |
    | `LANG` | `en_US.UTF-8` (as provided by the bootstrap) |
+   | `TERMUX_APP__DATA_DIR` | `<dataDir>` (matches the app's real data dir; `termux-exec` honoree) |
+   | `TERMUX_APP__LEGACY_DATA_DIR` | `<legacyDataDir>` (`/data/data/<packageName>`) |
+   | `TERMUX__PREFIX` | `<dataDir>/files/usr` |
 
-   First process spawn from Java goes through
-   `/system/bin/linker64 $PREFIX/bin/…` (W^X workaround, audit §C2); every
-   subsequent spawn relies on the `LD_PRELOAD` hook.
+First process spawn from Java goes through
+`/system/bin/linker64 $PREFIX/bin/…` (W^X workaround, audit §C2); every
+subsequent spawn relies on the `LD_PRELOAD` hook of the stock `termux-exec`
+preload (`$PREFIX/lib/libtermux-exec.so`, children only).
 
 9. **Package metadata init** — deferred: no repository is configured until
    ADR-0002 decides the package-source strategy (audit §C4). Shipping a broken
@@ -109,8 +113,11 @@ Ordered, resumable, idempotent steps. Each step records progress in
 
 - **Stock binaries under our prefix:** proven via `linker64` + `LD_LIBRARY_PATH`
   (`bash`, `ls` exit 0 on the API 30 emulator); direct `execve` is blocked by
-  W^X. Shebang exec needs a prefix-built `termux-exec` preload — decided.
+  W^X. Shebang exec works with the stock `termux-exec-ld-preload.so` from the
+  pinned bootstrap when `TERMUX_APP__DATA_DIR`/`TERMUX__PREFIX` env match the
+  real layout (spike run `44878997591`: exit 0, `shebang-ok`) — no custom
+  prefix-built preload required.
 - **Relocation rules:** no binary rewriting; absolute `SYMLINKS.txt` targets are
   rewritten to relative links at extraction (implemented in `BootstrapArchive`).
 - **Still open:** `apt install` / repository policy (audit §C4) remains deferred
-  until the rebuilt preload is verified in CI.
+  until repository intent is decided; package operations are not yet exercised.

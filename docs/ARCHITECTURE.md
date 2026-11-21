@@ -65,8 +65,10 @@ MainActivity
    PocketDev-owned runtime manager provisions a pinned Termux bootstrap into
    app-private storage; no Termux app fork, no second APK. The prefix/package-name
    sub-problem is decided in ADR-0002 from measured emulator evidence: keep the
-   PocketDev prefix, launch via `/system/bin/linker64`, and ship a prefix-built
-   `termux-exec` preload for shebang/`exec` (`docs/adr/0002-…`).
+   PocketDev prefix, launch via `/system/bin/linker64`, and use the stock
+   `termux-exec-ld-preload.so` from the pinned bootstrap for shebang/`exec`
+   (`docs/adr/0002-…`); the runtime wires the `TERMUX_APP__DATA_DIR` / `TERMUX__PREFIX`
+   environment overrides so the stock preload targets our prefix.
 
 ## Security boundaries
 
