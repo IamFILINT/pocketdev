@@ -57,6 +57,7 @@ class RuntimeSpikeTest {
         assertTrue("bash missing at $bash", bash.isFile)
         report("bash-mode", "canExecute=${bash.canExecute()} size=${bash.length()}")
 
+        val appDataDir = context.applicationInfo.dataDir
         val environment = mapOf(
             "PREFIX" to prefix.absolutePath,
             "HOME" to paths.home.absolutePath,
@@ -65,8 +66,14 @@ class RuntimeSpikeTest {
             "LD_LIBRARY_PATH" to File(prefix, "lib").absolutePath,
             "TERM" to "xterm-256color",
             "LANG" to "en_US.UTF-8",
+            // Termux app >= 0.119 exports these so termux-exec does not fall
+            // back to its compiled-in com.termux paths (audit §C4).
+            "TERMUX_APP__DATA_DIR" to appDataDir,
+            "TERMUX_APP__LEGACY_DATA_DIR" to "/data/data/${context.packageName}",
+            "TERMUX__PREFIX" to prefix.absolutePath,
         )
         val linker = "/system/bin/linker64"
+        report("termux-env", "dataDir=$appDataDir prefix=${prefix.absolutePath}")
 
         val direct = runCatching {
             ProcessBuilder(File(prefix, "bin/echo").absolutePath, "direct").start().waitFor()
@@ -108,7 +115,7 @@ class RuntimeSpikeTest {
                 script.absolutePath,
             )
             report(
-                "shebang-with-termux-exec",
+                "shebang-with-stock-termux-exec",
                 "lib=${preload.name} exit=${withPreload.exit} out=${withPreload.output.trim().take(200)}",
             )
         }
