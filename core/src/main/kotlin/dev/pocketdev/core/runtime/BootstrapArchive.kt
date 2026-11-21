@@ -39,6 +39,8 @@ data class BootstrapLimits(
  *   to stay inside it;
  * - symlinks are never taken from the zip; they are recreated from
  *   `SYMLINKS.txt` only when both link and target stay inside the prefix;
+ * - absolute targets under the Termux prefix are rewritten to *relative* links
+ *   inside our prefix (relocation without changing the file contents);
  * - entry count and size caps prevent zip bombs;
  * - `bin/`, `libexec/`, `lib/apt/apt-helper` and `lib/apt/methods/` are made
  *   executable, mirroring upstream.
@@ -46,6 +48,9 @@ data class BootstrapLimits(
 object BootstrapArchive {
 
     const val SYMLINKS_FILE = "SYMLINKS.txt"
+
+    /** Prefix Termux binaries and their `SYMLINKS.txt` are built against. */
+    const val TERMUX_DEFAULT_PREFIX = "/data/data/com.termux/files/usr"
 
     private const val SYMLINK_SEPARATOR = '\u2190'
     private const val MAX_SYMLINKS_FILE_BYTES = 1_000_000L
@@ -60,6 +65,7 @@ object BootstrapArchive {
         archive: File,
         destination: File,
         limits: BootstrapLimits = BootstrapLimits(),
+        absoluteTargetAliases: Map<String, String> = mapOf(TERMUX_DEFAULT_PREFIX to ""),
         onProgress: (completedEntries: Int, totalEntries: Int) -> Unit = { _, _ -> },
     ): Result {
         require(archive.isFile) { "archive does not exist: $archive" }
@@ -116,7 +122,7 @@ object BootstrapArchive {
             if (symlinkLines.size > limits.maxSymlinks) {
                 throw BootstrapArchiveException("${symlinkLines.size} symlinks, limit ${limits.maxSymlinks}")
             }
-            symlinkLines.forEach { createSymlink(root, it) }
+            symlinkLines.forEach { createSymlink(root, it, absoluteTargetAliases) }
 
             applyExecutableBits(root)
             return Result(
@@ -150,7 +156,7 @@ object BootstrapArchive {
         return resolved
     }
 
-    private fun createSymlink(root: File, line: String) {
+    private fun createSymlink(root: File, line: String, absoluteTargetAliases: Map<String, String>) {
         val separator = line.indexOf(SYMLINK_SEPARATOR)
         if (separator <= 0) {
             throw BootstrapArchiveException("malformed symlink line: $line")
@@ -163,16 +169,37 @@ object BootstrapArchive {
 
         val linkPath = resolveInside(root, safeRelativePath(linkText))
         val linkParent = linkPath.parent ?: root.toPath()
-        val resolvedTarget = linkParent.resolve(targetText).normalize()
-        if (!resolvedTarget.startsWith(root.toPath())) {
-            throw BootstrapArchiveException("symlink target escapes destination: $line")
+        val alias = absoluteTargetAliases.entries
+            .firstOrNull { targetText == it.key || targetText.startsWith(it.key + "/") }
+
+        val linkTarget: Path
+        if (alias != null) {
+            val suffix = targetText.removePrefix(alias.key).removePrefix("/")
+            val insidePrefix = root.toPath().resolve(alias.value).resolve(suffix).normalize()
+            if (!insidePrefix.startsWith(root.toPath())) {
+                throw BootstrapArchiveException("aliased symlink target escapes destination: $line")
+            }
+            linkTarget = linkParent.relativize(insidePrefix)
+        } else {
+            if (targetText.startsWith("/")) {
+                throw BootstrapArchiveException("symlink target escapes destination: $line")
+            }
+            val resolvedTarget = linkParent.resolve(targetText).normalize()
+            if (!resolvedTarget.startsWith(root.toPath())) {
+                throw BootstrapArchiveException("symlink target escapes destination: $line")
+            }
+            linkTarget = Paths.get(targetText)
+        }
+
+        if (linkTarget.toString().isEmpty()) {
+            throw BootstrapArchiveException("symlink target resolves to the link itself: $line")
         }
         if (Files.exists(linkPath, LinkOption.NOFOLLOW_LINKS)) {
             throw BootstrapArchiveException("symlink path already exists: $linkText")
         }
         Files.createDirectories(linkParent)
         try {
-            Files.createSymbolicLink(linkPath, Paths.get(targetText))
+            Files.createSymbolicLink(linkPath, linkTarget)
         } catch (e: UnsupportedOperationException) {
             throw BootstrapArchiveException("filesystem does not support symlinks", e)
         }
