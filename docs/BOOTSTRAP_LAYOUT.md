@@ -1,8 +1,9 @@
 # PocketDev — Bootstrap & Storage Layout Design
 
-> Milestone 2 design (prompt §8.3–§8.5). Not yet implemented; implementation lands
-> with the `:runtime` module in Milestone 3. Paths are app-private and never on
-> shared/external storage.
+> Milestone 2 design (prompt §8.3–§8.5). Implemented in `:core` in Milestone 3
+> (`RuntimePaths`, `BootstrapArchive`, `BootstrapHealth`, `BootstrapManager`) and
+> wired into `AppContainer`; the Android downloader/exec wiring lands with the
+> `:runtime` module. Paths are app-private and never on shared/external storage.
 
 ## 1. Directory layout
 
@@ -41,9 +42,9 @@ Invariants:
    `:core` (`PathSafety`) keeps proving targets are inside `projectsRoot`.
 3. **Only the bootstrap manager writes under `$PREFIX`.** The UI never mutates the
    rootfs directly.
-4. Migrate the Milestone 1 paths (`files/projects`, `files/state`) to this layout in
-   the first Milestone 3 change — there are no released users yet, so this is a
-   cheap, one-time move with a registry rewrite.
+4. Migrated in Milestone 3: `files/projects` → `files/home/projects`;
+   `files/state` was already canonical. No released users existed, so no registry
+   rewrite was needed.
 
 ## 2. Bootstrap manager (prompt §8.4 → `:runtime`)
 

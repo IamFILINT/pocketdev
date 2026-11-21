@@ -76,3 +76,33 @@
 ### Next
 - Milestone 3: pinned bootstrap metadata + checksum verification, safe extraction,
   resumable init + health checks, unit tests; then ADR-0002 prefix spike.
+
+## Session 4 — 2026-11-21
+
+### Milestone 3 completed (PR #8)
+- Real pin measured, not guessed: `bootstrap-2026.11.15-r1+apt.android-7`,
+  `bootstrap-aarch64.zip`, 33,148,806 bytes, SHA-256
+  `388acf91cc247e7062d80cd8aa791fe72f360515fb78dc54ff45742120facae7`
+  (the release publishes no checksum file, so the digest was computed from the
+  downloaded asset). `x86_64` stays unpinned until ADR-0002.
+- `BootstrapArchive` mirrors upstream `TermuxInstaller` semantics: prefix-root
+  archive + `SYMLINKS.txt` lines (`target←./path`), exec bits on `bin`, `libexec`,
+  `lib/apt/{methods,apt-helper}`; rejects traversal, absolute paths, NUL,
+  backslashes, duplicate entries, oversized/too-many entries, and symlinks whose
+  link or target escapes the prefix.
+- `BootstrapManager`: resumable `.part` download, verify-before-extract,
+  `usr.staging` → swap with `usr.prev` rollback, journaled stages in
+  `files/state/runtime.json`; an interrupted run resumes at the byte offset, a
+  healthy runtime is never overwritten, a bad checksum deletes the artifact.
+- Layout invariant enforced in code: `RuntimePaths` keeps projects/state outside
+  `$PREFIX`; `AppContainer` now uses `files/home/projects`.
+- 37 new JVM tests (checksums, archive safety, health, journal, pins, paths,
+  manager incl. resume/mismatch/rollback/idempotence) — `verify` green on the
+  first push.
+- Honest scope: health checks are **structural**; execution remains unproven in
+  CI (no ARM64 Android environment), so the milestone's "real Bionic execution"
+  clause is documented as open.
+
+### Next
+- ADR-0002: prefix-relocation + W^X exec spike on the x86_64 API 30 emulator
+  (input for whether a runtime can boot there for functional tests).
