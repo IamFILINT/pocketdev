@@ -12,6 +12,6 @@
 | R8 | Emulator tests slow/flaky in CI | Noisy gate, wasted minutes | Medium | Small high-signal matrix; `concurrency` cancellation; diagnostics on failure | Open |
 | R9 | Agent misuses filesystem/commands | Data loss | Medium | Path safety in `:core`; permission model (prompt §10.2); confirmations | Partially mitigated |
 | R10 | Secret leakage into logs | Credential compromise | Low | `SecretRedaction`; never persist keys yet; no secrets in source | Partially mitigated |
-| R11 | Android 10+ W^X: targetSdk 36 app cannot `execve()` files in app data | Bootstrap binaries unrunnable | High | `linker64` first-hop + `termux-exec` `LD_PRELOAD` chain (audit §C2); Milestone 3 spike must prove it in CI before bootstrap work proceeds | Open — spike gated |
-| R12 | Stock Termux packages hardcode `/data/data/com.termux` prefix | Runtime breaks under `dev.pocketdev` data dir | High | ADR-0002 decided by Milestone 3 spike: runtime path rewriting vs. rebuilt packages (audit §C1) | Open — spike gated |
+| R11 | Android 10+ W^X: targetSdk 36 app cannot `execve()` files in app data | Bootstrap binaries unrunnable | High | `linker64` first-hop + `termux-exec` `LD_PRELOAD` chain (audit §C2); ADR-0002 spike must prove it before any runtime is executed (M3 bootstrap itself is structural only) | Open — spike gated |
+| R12 | Stock Termux packages hardcode `/data/data/com.termux` prefix | Runtime breaks under `dev.pocketdev` data dir | High | ADR-0002 (post-M3 spike): runtime path rewriting vs. rebuilt packages (audit §C1) | Open — spike gated |
 | R13 | No entitled package repository for a non-`com.termux` app id | `apt install` unavailable or upstream-hostile | Medium | No repository configured until ADR-0002; upstream intent respected (audit §C4) | Open |

@@ -7,8 +7,22 @@ version-control real software projects directly on an Android device — with a 
 terminal, an integrated Bionic runtime, a code editor, Git, package management, and
 an AI coding agent (OpenCode Bionic).
 
-> Status: Milestone 1 — Android foundation (Compose shell, `:core` domain module,
-> CI build/test/lint, emulator launch + navigation tests). Not yet usable.
+> Status: Milestone 3 — Runtime bootstrap logic (pinned, checksum-verified, safely
+> extracted, resumable). The runtime is not wired to the UI yet and no Bionic
+> process has been executed; the app is not yet usable.
+
+[![verify](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml)
+[![android-emulator](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml)
+
+## Progress
+
+| Milestone | State |
+| --- | --- |
+| 0 — Discovery and CI baseline | Done |
+| 1 — Android foundation | Done |
+| 2 — Runtime architecture and ARM64 feasibility | Done (`docs/ARM64_FEASIBILITY.md`) |
+| 3 — Runtime bootstrap | Done in `:core`; Android wiring next |
+| 4 — OpenCode Bionic provisioning | Not started |
 
 ## Principles
 
@@ -20,9 +34,13 @@ an AI coding agent (OpenCode Bionic).
 
 ## Status
 
-See [`docs/PROJECT_AUDIT.md`](docs/PROJECT_AUDIT.md) for the current audit and
-`SESSION_NOTES.md` for working notes.
+See [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) for the live
+roadmap, [`docs/RISK_REGISTER.md`](docs/RISK_REGISTER.md) for open risks and
+`SESSION_NOTES.md` for working notes. [`docs/PROJECT_AUDIT.md`](docs/PROJECT_AUDIT.md)
+is a historical Milestone 0 snapshot.
 
 ## License
 
-To be determined after the license inventory (see `docs/LICENSE_INVENTORY.md`, pending).
+Not chosen yet. The inventory (`docs/LICENSE_INVENTORY.md`) shows no GPLv3
+component is required by the decided strategy (ADR-0001), but the final license
+decision is still open.

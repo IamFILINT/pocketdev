@@ -1,6 +1,7 @@
 # PocketDev — Architecture
 
-> Status: Milestone 1 (Android foundation). Physical layout will evolve.
+> Status: Milestone 3 (runtime bootstrap logic in `:core`). Physical layout will
+> evolve; Android wiring for the runtime lands with `:runtime`.
 
 ## Module layout
 
@@ -16,7 +17,7 @@ Planned modules (later milestones):
 
 | Module | Purpose |
 | --- | --- |
-| `:runtime` | Termux-derived bootstrap manager, safe extraction, health checks |
+| `:runtime` | Android-side wiring for the bootstrap manager: real downloader, storage probing, environment, process spawn |
 | `:terminal` | PTY host and terminal session management |
 | `:ai` | OpenCode process supervision + API client + event mapping |
 | `:workspace` | File explorer operations, editor file synchronization, Git |
@@ -41,8 +42,9 @@ MainActivity
               └── SettingsScreen    <- SettingsViewModel (theme mode persisted; API key in memory only)
 ```
 
-`AppContainer` (in `:app`) owns `projectsRoot` (app-private `files/<app>/projects`),
-the `ProjectStore` registry (`files/<app>/state/projects.tsv`), and the theme preference.
+`AppContainer` (in `:app`) owns `RuntimePaths` (`:core`): `$PREFIX` at
+`files/usr`, projects at `files/home/projects`, registry at
+`files/state/projects.tsv`, and the theme preference.
 
 ## Key decisions
 
@@ -55,7 +57,11 @@ the `ProjectStore` registry (`files/<app>/state/projects.tsv`), and the theme pr
 4. **No simulated runtime/AI state.** The dashboard reports `NotInstalled` until a
    real runtime controller exists.
 5. **GitHub Actions as the only build/test environment.** See `docs/CI_CD.md`.
-6. **Runtime integration strategy decided in ADR-0001** (`docs/adr/`): a
+6. **Bootstrap logic lives in `:core`.** Pinned metadata, checksum verification,
+   safe extraction, resumable manager and structural health checks are Android-free
+   so they are unit-tested on a plain JVM; execution is not claimed
+   (`docs/ARM64_FEASIBILITY.md`).
+7. **Runtime integration strategy decided in ADR-0001** (`docs/adr/`): a
    PocketDev-owned runtime manager provisions a pinned Termux bootstrap into
    app-private storage; no Termux app fork, no second APK. The prefix/package-name
    sub-problem is explicitly deferred to ADR-0002, gated on an in-CI spike

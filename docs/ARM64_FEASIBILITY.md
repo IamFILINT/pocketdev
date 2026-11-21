@@ -86,8 +86,9 @@ reliable gate for a project whose CI is its only build/test environment.
 ## Consequences for the roadmap
 
 1. **Functional runtime validation stays on `x86_64` API 30** (already proven
-   green in `android-emulator.yml`). Milestone 3 bootstrap integration tests will
-   run there.
+   green in `android-emulator.yml`). Runtime integration tests can only run there
+   once ADR-0002 allows a runtime on the emulator; Milestone 3 itself is covered by
+   JVM unit tests.
 2. **ARM64 builds and device tests stay cross-compiled/static on `x86_64`** (prompt
    §5.4 fallback): ARM64 ABI artifacts are produced by the normal x86_64 build and
    validated with static ELF/dependency checks, never executed.

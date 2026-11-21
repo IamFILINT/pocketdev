@@ -39,8 +39,8 @@ a license until that review is complete.
 ## Distribution implications
 
 - **No GPLv3 file is planned for reuse**, so PocketDev's own code can remain under a
-  permissive license if desired; the choice stays open until ADR-0002 (Milestone 3)
-  confirms the runtime strategy. Copying any GPLv3 `termux-shared` file reverses
+  permissive license if desired; the choice stays open until ADR-0002 (next
+  decision, post-M3) confirms the runtime strategy. Copying any GPLv3 `termux-shared` file reverses
   this — treat such a copy as a license decision requiring explicit approval.
 - Bootstrap binaries are fetched from upstream at runtime and stored in app-private
   storage; PocketDev does not redistribute them in the APK. If the distribution
