@@ -1,6 +1,7 @@
 package dev.pocketdev
 
 import android.content.Context
+import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.workspace.ProjectStore
 import dev.pocketdev.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,11 +19,14 @@ class AppContainer(context: Context) {
 
     private val appContext = context.applicationContext
 
+    /** Canonical layout from docs/BOOTSTRAP_LAYOUT.md; projects live outside $PREFIX. */
+    val paths: RuntimePaths = RuntimePaths(appContext.filesDir).apply { ensureBaseDirectories() }
+
     /** Directory that contains every project's on-disk workspace. */
-    val projectsRoot: File = File(appContext.filesDir, "projects").apply { mkdirs() }
+    val projectsRoot: File = paths.projects
 
     /** Registry of project metadata (id, name, root, createdAt). */
-    val projectStore: ProjectStore = ProjectStore(File(appContext.filesDir, "state"))
+    val projectStore: ProjectStore = ProjectStore(paths.state)
 
     private val preferences =
         appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
