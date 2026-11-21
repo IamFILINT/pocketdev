@@ -46,8 +46,16 @@
 | android-actions/setup-android | v3 | `9fc6c4e9…` |
 | actions/upload-artifact | v5 | `330a01c4…` |
 
+## Pinned but not linked (runtime)
+
+- Termux bootstrap archive `bootstrap-2026.11.15-r1+apt.android-7` /
+  `bootstrap-aarch64.zip` — downloaded at first run, SHA-256 pinned in
+  `BootstrapPins`, never bundled in the APK.
+- `terminal-emulator` / `terminal-view` — approved for reuse (ADR-0001) but no
+  code copied yet.
+
 ## Not yet included (planned)
 
-- Termux app / `termux-shared` components and bootstrap artifacts (Milestone 2)
+- `:runtime` Android downloader/exec wiring (after ADR-0002)
 - OpenCode Bionic binary + Bun Termux + AndroidTUI/OpenTUI (Milestone 4)
 - A real code editor component (Milestone 7)
