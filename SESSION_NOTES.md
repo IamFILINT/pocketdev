@@ -66,6 +66,11 @@
     refuses ARM64 guests (`System image must match the host architecture`).
   - `ubuntu-24.04-arm`: no `emulator` package for `linux-aarch64`, no `/dev/kvm`.
   - Verdict + consequences in `docs/ARM64_FEASIBILITY.md`; risk R1 updated.
+- Follow-up (PR #6, run `44866937289`): the native `ubuntu-24.04-arm` runner
+  cannot even build the APK — `aapt2-…-linux` is an x86_64 binary and fails with
+  `Syntax error: ")" unexpected`. Building, like emulation, requires `x86_64`.
+- Fixed a spike-workflow bug where GitHub's `bash -e` aborted the verdict step
+  when `arm64-build.txt` was absent (x86_64 leg).
 - Functional CI remains `x86_64` API 30 (M1 gate green).
 
 ### Next
