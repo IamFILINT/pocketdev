@@ -115,6 +115,20 @@ jobs:
             echo "emulator binary missing" | tee -a spike-out/host-probe.txt
           fi
 
+      - name: Build debug APK on the native ARM64 runner
+        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+        run: |
+          set -uo pipefail
+          # Building Android apps on linux-aarch64 works (Gradle/JDK are arch-neutral);
+          # this records that separately from the emulator verdict, because the
+          # blocker for ARM64 device tests is the missing emulator host package.
+          if ./gradlew --no-daemon --stacktrace assembleDebug > spike-out/arm64-build.log 2>&1; then
+            echo "arm64_build=SUCCESS" | tee spike-out/arm64-build.txt
+            ls -l app/build/outputs/apk/debug/*.apk | tee -a spike-out/arm64-build.txt
+          else
+            echo "arm64_build=FAILED (see arm64-build.log)" | tee spike-out/arm64-build.txt
+          fi
+
       - name: Install ARM64 system image
         id: image
         run: |
@@ -248,6 +262,8 @@ jobs:
           else
             Q6="N/A (emulator did not boot)"
           fi
+          ARM64_BUILD="$(cut -d= -f2 spike-out/arm64-build.txt 2>/dev/null | head -1)"
+          [ -n "$ARM64_BUILD" ] && BUILD_LINE="**ARM64 APK build on this native runner: $ARM64_BUILD**" || BUILD_LINE="ARM64 APK build: n/a on this leg"
 
           SUMMARY="$(cat <<EOF
           ## ARM64 spike verdict — \`${{ matrix.runner }}\`
@@ -260,6 +276,8 @@ jobs:
           | 4 | App installs and runs in that emulator? | $Q4 |
           | 5 | Bionic OpenCode binary executes? | $Q5 |
           | 6 | Required Android/Termux filesystem/linker behavior? | $Q6 |
+
+          $BUILD_LINE
 
           Host: \`$(uname -m)\` / runner \`${{ matrix.runner }}\`
           EOF
