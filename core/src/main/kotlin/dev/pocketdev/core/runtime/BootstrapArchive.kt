@@ -5,6 +5,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.PosixFilePermission
@@ -171,7 +172,7 @@ object BootstrapArchive {
         }
         Files.createDirectories(linkParent)
         try {
-            Files.createSymbolicLink(linkPath, Path.of(targetText))
+            Files.createSymbolicLink(linkPath, Paths.get(targetText))
         } catch (e: UnsupportedOperationException) {
             throw BootstrapArchiveException("filesystem does not support symlinks", e)
         }
