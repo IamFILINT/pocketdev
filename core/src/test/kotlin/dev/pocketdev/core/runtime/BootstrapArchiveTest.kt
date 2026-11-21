@@ -116,6 +116,25 @@ class BootstrapArchiveTest {
     }
 
     @Test
+    fun `absolute Termux-prefix targets become relative links inside the destination`() {
+        val archive = zip(
+            "share/termux-keyring/key.gpg" to text("k"),
+            "SYMLINKS.txt" to text(
+                "${BootstrapArchive.TERMUX_DEFAULT_PREFIX}/share/termux-keyring/key.gpg←./share/pacman/keyrings/key.gpg\n",
+            ),
+        )
+        val destination = emptyDir("usr.staging")
+
+        BootstrapArchive.extract(archive, destination)
+
+        val link = File(destination, "share/pacman/keyrings/key.gpg")
+        assertTrue(Files.isSymbolicLink(link.toPath()))
+        assertFalse(Files.readSymbolicLink(link.toPath()).isAbsolute)
+        assertTrue(link.canonicalFile.isFile)
+        assertTrue(link.canonicalPath.startsWith(destination.canonicalPath + File.separator))
+    }
+
+    @Test
     fun `rejects malformed symlink lines`() {
         val archive = zip("SYMLINKS.txt" to text("no-separator-here\n"))
         assertThrows(BootstrapArchiveException::class.java) {
