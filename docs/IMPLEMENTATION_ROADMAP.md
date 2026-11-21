@@ -38,10 +38,19 @@ Checklist state is updated as work lands.
 
 ## Milestone 3 — Runtime bootstrap
 
-- [ ] Pinned bootstrap metadata + checksum verification
-- [ ] Safe extraction (zip-slip/symlink defenses)
-- [ ] Resumable initialization + health checks
-- [ ] Unit tests for resume/verify logic
+- [x] Pinned bootstrap metadata + checksum verification (`BootstrapPins`,
+  `BootstrapChecksums`: audited tag/size/SHA-256, fail-closed, artifact deleted)
+- [x] Safe extraction (zip-slip/symlink defenses) (`BootstrapArchive`: traversal/
+  absolute/NUL/backslash rejection, zip-bomb caps, contained `SYMLINKS.txt`
+  re-creation, upstream exec bits)
+- [x] Resumable initialization + health checks (`BootstrapManager`: byte-range
+  resume, verify-before-extract, `usr.prev` rollback, journal; `BootstrapHealth`:
+  structural checks)
+- [x] Unit tests for resume/verify logic (45 new JVM tests, 101 total in `:core`)
+
+Honest scope: health checks are structural only — real Bionic execution stays
+unverified because no ARM64 Android environment exists in Actions
+(`docs/ARM64_FEASIBILITY.md`).
 
 ## Milestone 4 — OpenCode Bionic provisioning
 

@@ -96,7 +96,7 @@
   healthy runtime is never overwritten, a bad checksum deletes the artifact.
 - Layout invariant enforced in code: `RuntimePaths` keeps projects/state outside
   `$PREFIX`; `AppContainer` now uses `files/home/projects`.
-- 37 new JVM tests (checksums, archive safety, health, journal, pins, paths,
+- 45 new JVM tests (checksums, archive safety, health, journal, pins, paths,
   manager incl. resume/mismatch/rollback/idempotence) — `verify` green on the
   first push.
 - Honest scope: health checks are **structural**; execution remains unproven in
