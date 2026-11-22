@@ -28,6 +28,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | ProjectNameValidator | name rules | unit | `core/.../validation/ProjectNameValidatorTest.kt` | verify | Verified |
 | SecretRedaction | redaction | unit | `core/.../security/SecretRedactionTest.kt` | verify | Verified |
 | TaskState machine | transitions | unit | `core/.../ai/TaskStateMachineTest.kt` | verify | Verified |
+| TaskStateMapper | SSE event -> TaskState | unit | `core/.../ai/TaskStateMapperTest.kt` | verify | Verified (PR #26) |
 | OpenCodeServeOutput (data) | URL/password model | unit | (covered by parser test) | verify | Verified |
 | Project (data) | model | unit | (covered by ProjectStore test) | verify | Verified |
 | RuntimeState (data) | model | unit | (covered by state-machine test) | verify | Verified |
