@@ -15,31 +15,39 @@ For each component: responsibilities, expected behavior, dependencies, failure c
 ### Well covered (Verified in CI)
 
 - `:core` bootstrap: pins, artifact, checksums, archive (Zip Slip), journal, manager, health, downloader, paths, state machine — all unit-tested.
-- `:core` agent: pins, installer (checksum/resume/fail-closed), serve-output parser, API client (auth, body, path escaping, real loopback server).
+- `:core` agent: pins, installer (checksum/resume/fail-closed), serve-output parser, API client (auth, body, path escaping, real loopback server), SSE event parser (`ServerSentEvent`/`ServerSentEvents`).
 - `:core` workspace/validation/security: PathSafety, ProjectStore, ProjectNameValidator, SecretRedaction.
-- `:core` ai/state: TaskStateMachine, RuntimeStateMachine.
+- `:core` ai/state: TaskStateMachine, RuntimeStateMachine, TaskStateMapper (SSE -> TaskState).
 - `:core` json: Json reader.
 - `:runtime`: ABI selection, env builder, launcher, preload deployer, server supervision state machine.
-- `:app`: Navigation instrumentation, runtime spike (manual, x86_64).
+- `:app`: Navigation instrumentation, runtime spike (manual, x86_64), ProjectsViewModel/DashboardViewModel/SettingsViewModel/AgentSessionViewModel instrumented tests.
 
 ### Gaps (Pending)
 
 1. Android-bound orchestration (`OpenCodeController`, `RuntimeController`) has no direct tests. Covered indirectly by `:core`/`:runtime` unit tests and manual device runs. Needs Robolectric or instrumented tests to close; not configured today.
 2. `RuntimeExecutionHealthCheck` requires a real linker64 + prefix; only runs on a device/emulator with a provisioned prefix. Structural part (`BootstrapHealth`) is unit-tested.
-3. App ViewModels (`DashboardViewModel`, `ProjectsViewModel`, `SettingsViewModel`) and `AppContainer` are `AndroidViewModel`/Context-bound; no unit tests. Logic is thin (delegates to ProjectStore, ProjectNameValidator, PathSafety which are tested), but provisioning guards and create/delete flows are not directly verified.
+3. `AppContainer` is Context-bound; no unit tests (object graph is trivial wiring).
 4. Compose screens have no instrumentation tests beyond navigation.
-5. Native payload identity (OpenCode aarch64 ELF, bootstrap zip) is not validated in CI. Added `native-runtime-ci.yml` (pending first green run).
-6. ARM64 device execution remains unverifiable in GitHub Actions (risk R1).
+5. ARM64 device execution remains unverifiable in GitHub Actions (risk R1).
+
+### Closed since original audit
+
+- App ViewModels: `ProjectsViewModel` (PR #19), `DashboardViewModel` and `SettingsViewModel` (PR #22) now have instrumented tests.
+- Native payload identity: `native-runtime-ci.yml` is green (run 45006056315).
+- M5 SSE: `ServerSentEvent` parser and `TaskStateMapper` unit-tested (PRs #24, #26); `AgentSessionViewModel` instrumented (PR #28).
 
 ### Defects found during audit
 
-None new. Existing tests pass on `main` (verify 45002125992, android-emulator 45002125996, native-runtime pending).
+None new. Existing tests pass on `main` (verify, android-emulator, native-runtime-ci all green).
 
 ### Actions taken (this audit)
 
 - Added `docs/TEST_COVERAGE.md` (coverage matrix, honest statuses).
-- Added `.github/workflows/native-runtime-ci.yml` (static aarch64 payload verification).
+- Added `.github/workflows/native-runtime-ci.yml` (static aarch64 payload verification) — green.
 - Updated `docs/TESTING.md`, `docs/CI_CD.md`, `docs/IMPLEMENTATION_ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DEPENDENCY_INVENTORY.md`, `README.md`.
+- Added instrumented tests for `ProjectsViewModel`, `DashboardViewModel`, `SettingsViewModel`, `AgentSessionViewModel`.
+- Added unit tests for `TaskStateMapper`, `ServerSentEvent` parser, `RuntimeLauncher`, `RuntimeController.initialStateFrom`.
+- CI triggers updated to run on every branch push (`ci/enforce-triggers-and-docs-consistency`).
 
 ## Phase B plan (historical test completion)
 
@@ -54,10 +62,10 @@ Android-bound items that cannot be unit-tested on a plain JVM will be recorded a
 
 ## Phase C (CI enforcement)
 
-- `verify.yml` already runs lint + unit tests + assembleDebug on every PR/push and uploads artifacts.
+- `verify.yml` runs lint + unit tests + assembleDebug on every PR/push (now `push: branches: ['**']` after CI enforcement task) and uploads artifacts.
 - `android-emulator.yml` runs instrumentation.
-- `native-runtime-ci.yml` added (pending first run).
-- Concurrency + least-privilege already in place.
+- `native-runtime-ci.yml` green (run 45006056315).
+- Concurrency + least-privilege in place; groups are per-ref so unrelated branches do not cancel each other.
 - Remaining: ensure `native-runtime-ci.yml` is required in branch protection (manual GitHub setting, out of repo).
 
 ## Phase D (defect resolution)
