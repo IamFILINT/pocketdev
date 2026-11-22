@@ -61,7 +61,7 @@ class RuntimeController(context: Context) {
     }
 
     private fun freeSpaceBytes(): Long {
-        val statFs = StatFs(appContext.filesDir)
+        val statFs = StatFs(appContext.filesDir.absolutePath)
         return statFs.blockSizeLong * statFs.availableBlocksLong
     }
 }
