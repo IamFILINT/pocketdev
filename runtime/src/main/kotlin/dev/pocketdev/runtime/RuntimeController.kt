@@ -8,6 +8,7 @@ import dev.pocketdev.core.runtime.BootstrapManager
 import dev.pocketdev.core.runtime.HttpBootstrapDownloader
 import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.runtime.RuntimeState
+import java.io.File
 
 /**
  * Android-side runtime wiring (docs/ARCHITECTURE.md): ties the Android-only pieces
