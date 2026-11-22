@@ -178,25 +178,20 @@ object Json {
         }
     }
 
-    // -- Accessor helpers -------------------------------------------------
-
-    fun Any?.asObject(): Map<String, Any?>? = this as? Map<String, Any?>
-
-    fun Any?.asString(): String? = this as? String
-
-    fun Any?.asLong(): Long? = when (this) {
-        is Number -> toLong()
-        else -> null
-    }
-
-    fun Any?.asInt(): Int? = when (this) {
-        is Number -> toInt()
-        else -> null
-    }
-
-    fun Any?.asBoolean(): Boolean? = this as? Boolean
-
-    fun Any?.asArray(): List<Any?>? = this as? List<Any?>
-
-    fun Any?.field(name: String): Any? = (this as? Map<*, *>)?.get(name)
 }
+
+// -- Accessor helpers -------------------------------------------------
+
+fun Any?.asObject(): Map<String, Any?>? = this as? Map<String, Any?>
+
+fun Any?.asString(): String? = this as? String
+
+fun Any?.asLong(): Long? = (this as? Number)?.toLong()
+
+fun Any?.asInt(): Int? = (this as? Number)?.toInt()
+
+fun Any?.asBoolean(): Boolean? = this as? Boolean
+
+fun Any?.asArray(): List<Any?>? = this as? List<Any?>
+
+fun Any?.field(name: String): Any? = (this as? Map<*, *>)?.get(name)

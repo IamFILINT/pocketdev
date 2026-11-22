@@ -1,6 +1,11 @@
 package dev.pocketdev.core.agent
 
 import dev.pocketdev.core.json.Json
+import dev.pocketdev.core.json.asArray
+import dev.pocketdev.core.json.asLong
+import dev.pocketdev.core.json.asObject
+import dev.pocketdev.core.json.asString
+import dev.pocketdev.core.json.field
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -95,14 +100,15 @@ data class OpenCodeSession(
  */
 class OpenCodeApiClient(
     baseUrl: String,
-    password: String,
-    username: String = "opencode",
+    private val password: String,
+    private val username: String = "opencode",
     private val transport: HttpTransport = HttpUrlConnectionTransport(),
 ) {
     val baseUrl: String = baseUrl.trimEnd('/')
 
     init {
         require(password.isNotBlank()) { "password must not be blank" }
+        require(username.isNotBlank()) { "username must not be blank" }
     }
 
     /** Calls `GET /api/info`; used as the health probe for a supervised server. */

@@ -46,7 +46,7 @@ class OpenCodeServeOutputParserTest {
         val parser = OpenCodeServeOutputParser()
         parser.onLine("server listening on http://127.0.0.1:4096")
         assertNull(parser.connection)
-        assertEquals(null, parser.error)
+        assertNull(parser.error)
     }
 
     @Test
