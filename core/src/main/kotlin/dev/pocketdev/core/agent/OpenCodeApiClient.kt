@@ -7,6 +7,8 @@ import dev.pocketdev.core.json.asObject
 import dev.pocketdev.core.json.asString
 import dev.pocketdev.core.json.field
 import java.io.IOException
+import java.io.InputStream
+import java.io.ByteArrayInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -32,6 +34,15 @@ class HttpResponse(
 fun interface HttpTransport {
     @Throws(IOException::class)
     fun execute(request: HttpRequest): HttpResponse
+
+    /**
+     * Opens the response body as a stream. Default implementation buffers via
+     * [execute]; transports that support true streaming override this. Callers
+     * must close the returned stream.
+     */
+    @Throws(IOException::class)
+    fun openStream(request: HttpRequest): InputStream =
+        ByteArrayInputStream(execute(request).body.toByteArray(StandardCharsets.UTF_8))
 }
 
 /** Default [HttpTransport] backed by [HttpURLConnection]. */
@@ -63,6 +74,30 @@ class HttpUrlConnectionTransport(
         } finally {
             connection.disconnect()
         }
+    }
+
+    override fun openStream(request: HttpRequest): InputStream {
+        val connection = URL(request.url).openConnection() as HttpURLConnection
+        connection.requestMethod = request.method
+        connection.connectTimeout = connectTimeoutMs
+        connection.readTimeout = 0
+        connection.instanceFollowRedirects = false
+        request.headers.forEach { (name, value) -> connection.setRequestProperty(name, value) }
+
+        val body = request.body
+        if (body != null) {
+            connection.doOutput = true
+            connection.setFixedLengthStreamingMode(body.size)
+            connection.outputStream.use { it.write(body) }
+        }
+
+        val status = connection.responseCode
+        if (status !in 200..299) {
+            connection.disconnect()
+            throw OpenCodeApiException(status, "${request.method} ${request.url}: HTTP $status")
+        }
+        // Caller owns the stream; closing it releases the connection.
+        return connection.inputStream
     }
 
     private companion object {
@@ -167,6 +202,77 @@ class OpenCodeApiClient(
             append('}')
         }.toString()
         return post("/api/session/${encodePathSegment(sessionId)}/prompt", body).body
+    }
+
+    /**
+     * Opens the OpenCode SSE event stream (`GET /api/event`) and delivers each
+     * parsed event to [onEvent] until the stream closes or [onEvent] returns false.
+     *
+     * Returns the number of events delivered. Blocking: dispatch off the main thread.
+     * The optional [sessionId] filters events to one session when the server supports it.
+     */
+    fun streamEvents(sessionId: String? = null, onEvent: (ServerSentEvent) -> Boolean): Int {
+        val path = if (sessionId == null) "/api/event" else "/api/event?sessionID=${encodePathSegment(sessionId)}"
+        val request = HttpRequest("GET", baseUrl + path, authHeaders())
+        val stream = transport.openStream(request)
+        var delivered = 0
+        try {
+            val reader = stream.bufferedReader(StandardCharsets.UTF_8)
+            val lines = mutableListOf<String>()
+            var current = StringBuilder()
+            // Accumulate a full event (terminated by a blank line) before parsing.
+            val pending = StringBuilder()
+            var eventName: String? = null
+            var id: String? = null
+            val data = StringBuilder()
+            var hasData = false
+
+            fun emit(): Boolean {
+                if (!hasData) return true
+                val ev = ServerSentEvent(event = eventName, data = data.toString(), id = id)
+                delivered++
+                val cont = onEvent(ev)
+                eventName = null
+                id = null
+                data.setLength(0)
+                hasData = false
+                return cont
+            }
+
+            var running = true
+            while (running) {
+                val raw = reader.readLine() ?: break
+                val line = raw.removeSuffix("\r")
+                when {
+                    line.isEmpty() -> {
+                        if (!emit()) { running = false }
+                    }
+                    line.startsWith(":") -> { /* comment */ }
+                    else -> {
+                        val colon = line.indexOf(':')
+                        val field = if (colon < 0) line else line.substring(0, colon)
+                        val value = if (colon < 0) "" else {
+                            val v = line.substring(colon + 1)
+                            if (v.startsWith(" ")) v.substring(1) else v
+                        }
+                        when (field) {
+                            "event" -> eventName = value
+                            "data" -> {
+                                if (hasData) data.append('\n')
+                                data.append(value)
+                                hasData = true
+                            }
+                            "id" -> id = value
+                        }
+                    }
+                }
+            }
+            // Flush a trailing event without a terminating blank line.
+            if (hasData && running) emit()
+        } finally {
+            stream.close()
+        }
+        return delivered
     }
 
     private fun get(path: String): HttpResponse =
