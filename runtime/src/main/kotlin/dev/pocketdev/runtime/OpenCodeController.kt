@@ -4,7 +4,9 @@ import android.content.Context
 import android.os.Build
 import dev.pocketdev.core.agent.AgentInstaller
 import dev.pocketdev.core.agent.AgentState
+import dev.pocketdev.core.agent.OpenCodeApiClient
 import dev.pocketdev.core.agent.OpenCodePins
+import dev.pocketdev.core.agent.OpenCodeServerConnection
 import dev.pocketdev.core.runtime.RuntimePaths
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,10 @@ class OpenCodeController(context: Context) {
         RuntimeEnvBuilder.fromContext(appContext, paths),
     )
 
+    /** Supervises `opencode serve` and captures its loopback URL + password. */
+    private val server = OpenCodeServer(RuntimeProcessLauncher(launcher))
+    val serverState: StateFlow<OpenCodeServerState> = server.state
+
     init {
         _state.value = initialState()
     }
@@ -53,6 +59,35 @@ class OpenCodeController(context: Context) {
         }
         _state.value = result
         return result
+    }
+
+    /**
+     * Starts `opencode serve` inside [projectDir] on 127.0.0.1. Returns immediately with
+     * [OpenCodeServerState.Starting]; the real URL/password arrive asynchronously on
+     * [serverState]. Blocking launch: call off the main thread.
+     */
+    fun startServer(projectDir: File, apiLevel: Int = Build.VERSION.SDK_INT): OpenCodeServerState {
+        val artifact = OpenCodePins.aarch64
+        check(apiLevel >= artifact.minApiLevel) {
+            "OpenCode Bionic requires API ${artifact.minApiLevel}+ (device is $apiLevel)"
+        }
+        check(RuntimeController.abiFor(Build.SUPPORTED_ABIS.toList()) == artifact.abi) {
+            "OpenCode Bionic is only built for ${artifact.abi.ndkAbi}"
+        }
+        check(installer.isInstalled(artifact)) { "OpenCode is not installed; provision it first" }
+        check(projectDir.isDirectory) { "project directory does not exist: $projectDir" }
+        return server.start(installer.binary, projectDir)
+    }
+
+    fun stopServer() = server.stop()
+
+    /** Connection details once [serverState] is [OpenCodeServerState.Listening]. */
+    fun connection(): OpenCodeServerConnection? =
+        (serverState.value as? OpenCodeServerState.Listening)?.connection
+
+    /** A client bound to the running server, or null when it is not listening. */
+    fun newApiClient(): OpenCodeApiClient? = connection()?.let {
+        OpenCodeApiClient(it.baseUrl, it.password)
     }
 
     /**

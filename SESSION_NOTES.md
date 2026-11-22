@@ -183,3 +183,37 @@
   install/retry action and determinate/indeterminate progress.
 - Next: health/API supervision and OpenCode server (`opencode serve`)
   integration, plus a real-device ARM64 run.
+
+## Session 8 — 2026-11-22
+
+### M4 health/API supervision (`opencode serve`)
+- Researched the pinned upstream version instead of guessing: `anomalyco/opencode`
+  tag `v2.3.2` `server-process.ts` prints exactly
+  `server listening on <url>` then `server password <base64url>` in foreground
+  mode; auth is HTTP Basic with fixed username `opencode`
+  (`packages/server/src/auth.ts`). Verified against the release, not `main`.
+- `:core`:
+  - `OpenCodeServeOutputParser` — incremental, tolerant of log/ANSI noise,
+    loopback-only (fail closed on non-loopback URLs), completes once.
+  - `Json` — dependency-free JSON reader (no serialization plugin) reused for
+    client responses and later SSE events.
+  - `OpenCodeApiClient` — `HttpURLConnection` + Basic auth; `/api/info`,
+    `GET /api/session`, `POST /api/session`, `POST /api/session/{id}/prompt`.
+- `:runtime`: `ProcessLauncher`/`RuntimeProcessLauncher` and `OpenCodeServer`
+  (real `Starting`/`Listening`/`Exited`/`Failed` state machine; reader thread
+  drains output so the child cannot block; waiter records exit). Launched as
+  `serve --hostname 127.0.0.1` through the linker hop.
+- `OpenCodeController` exposes `serverState`, `startServer`, `stopServer`,
+  `connection()`, `newApiClient()`; refuses non-ARM64/pre-API-29 devices.
+- ADR-0004 records foreground-vs-stdio/service, loopback binding, and the auth
+  model. Roadmap M4 updated; event plumbing deferred to M5.
+- Tests: parser (documented/ANSI/reordered/incomplete/non-loopback), JSON reader,
+  client (fake transport header/body assertions plus a real loopback
+  `com.sun.net.httpserver.HttpServer`), and the supervisor against `/bin/sh`
+  script processes.
+- Honest scope: ARM64 Bionic execution still cannot run in Actions (R1); CI covers
+  the state machine, auth client and loopback server. Real-device proof remains
+  open.
+- Next: Milestone 5 AI workspace — SSE event stream into UI state, sessions,
+  provider/model settings, permission prompts.
+

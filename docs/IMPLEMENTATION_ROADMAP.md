@@ -76,9 +76,21 @@ supervision and a real-device ARM64 run remain.
 ## Milestone 4 — OpenCode Bionic provisioning
 
 - [x] Pin upstream release/commit + checksums in a manifest (`OpenCodePins`, v2.3.2)
-- [ ] Process launch/stop/health supervision
-- [ ] API client + event plumbing
-- [ ] Deterministic controller tests
+- [x] Process launch/stop/health supervision (`OpenCodeServer`: loopback-only
+      `opencode serve --hostname 127.0.0.1`, readiness parsed from the documented
+      stdout lines, real `Starting`/`Listening`/`Exited`/`Failed` state, child
+      reaped; ADR-0004)
+- [x] API client + auth (`OpenCodeApiClient`: HTTP Basic with upstream's fixed
+      `opencode` username and the captured per-run password; `/api/info`,
+      session list/create/prompt; dependency-free JSON reader; JVM-tested against
+      a real loopback `HttpServer`)
+- [ ] Event plumbing (SSE stream → UI state) — tracked under Milestone 5
+- [x] Deterministic controller/server/parser/client unit tests (`:core`, `:runtime`)
+
+Honest scope: the supervision path is exercised on the CI JVM with a script
+process and the client against a real HTTP server; the actual ARM64 Bionic binary
+still cannot run in Actions (risk R1). Real-device execution remains the accepted
+gap and is not claimed as validated here.
 
 ## Milestone 5 — AI workspace
 
