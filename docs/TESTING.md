@@ -1,5 +1,7 @@
 # PocketDev — Testing
 
+> The binding policy behind this document: `docs/TESTING_POLICY.md` (mandatory testing & continuous verification).
+
 > Maintained by the coding agent. The rule: **every build, test, lint, and analysis
 > run happens on GitHub Actions; never on the Android phone** (master prompt §5, §21).
 
