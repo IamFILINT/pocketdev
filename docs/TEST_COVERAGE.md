@@ -52,7 +52,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | Navigation | launch + nav | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified |
 | Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (manual) |
 | DashboardViewModel | provisioning guards | unit | missing (AndroidViewModel) | - | Pending |
-| ProjectsViewModel | create/delete/validate | unit | missing (AndroidViewModel) | - | Pending |
+| ProjectsViewModel | create/delete/validate | instrumentation | `app/src/androidTest/.../ProjectsViewModelTest.kt` | android-emulator | Verified (PR #19) |
 | SettingsViewModel | theme/api key draft | unit | missing (AndroidViewModel) | - | Pending |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
 | Compose screens | rendering | instrumentation | missing | - | Pending |
