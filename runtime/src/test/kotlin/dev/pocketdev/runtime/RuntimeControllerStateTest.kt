@@ -15,7 +15,7 @@ class RuntimeControllerStateTest {
             preloadDeployed = true,
         )
         assertTrue(state is RuntimeState.Ready)
-        assertEquals("bootstrap-2026.11.15-r1+apt.android-7", (state as RuntimeState.Ready).version)
+        assertEquals("bootstrap-2026.11.15-r1+apt.android-7", (state as RuntimeState.Ready).runtimeVersion)
     }
 
     @Test
@@ -42,4 +42,3 @@ class RuntimeControllerStateTest {
         )
     }
 }
-EOF
