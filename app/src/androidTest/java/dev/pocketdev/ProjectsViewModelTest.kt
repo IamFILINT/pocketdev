@@ -100,4 +100,3 @@ class ProjectsViewModelTest {
         outside.deleteRecursively()
     }
 }
-EOF
