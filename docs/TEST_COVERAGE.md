@@ -61,8 +61,8 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 
 | Artifact | Expected | Test type | Location | Workflow | Status |
 | --- | --- | --- | --- | --- | --- |
-| OpenCode Bionic opencode (aarch64) | size, SHA-256, ELF64 AArch64 | static | `native-runtime-ci.yml` | native-runtime-ci | Pending (workflow added, not yet green) |
-| Termux bootstrap-aarch64.zip | size, SHA-256, zip integrity | static | `native-runtime-ci.yml` | native-runtime-ci | Pending (workflow added, not yet green) |
+| OpenCode Bionic opencode (aarch64) | size, SHA-256, ELF64 AArch64 | static | `native-runtime-ci.yml` | native-runtime-ci | Verified (run 45006056315) |
+| Termux bootstrap-aarch64.zip | size, SHA-256, zip integrity | static | `native-runtime-ci.yml` | native-runtime-ci | Verified (run 45006056315) |
 
 ## Known unverified (honest)
 
