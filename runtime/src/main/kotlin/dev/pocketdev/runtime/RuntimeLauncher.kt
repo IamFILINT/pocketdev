@@ -17,13 +17,21 @@ class RuntimeLauncher(
     private val preload: File? = null,
 ) {
 
+    /** The argv that will be passed to ProcessBuilder (linker64 + program + args). */
+    fun command(program: File, vararg args: String): List<String> =
+        listOf(linker64) + program.absolutePath + args.toList()
+
+    /** The environment that will be applied to the child process. */
+    fun environment(): Map<String, String> =
+        if (preload != null) envBuilder.childEnv(preload) else envBuilder.baseEnv()
+
     /** Starts `program` (absolute path inside $PREFIX) with `args` via the system linker. */
     fun exec(program: File, vararg args: String): Process = execIn(null, program, *args)
 
     /** Like [exec], with an explicit working directory for the child. */
     fun execIn(workingDir: File?, program: File, vararg args: String): Process {
-        val argv = listOf(linker64) + listOf(program.absolutePath) + args
-        val env = if (preload != null) envBuilder.childEnv(preload) else envBuilder.baseEnv()
+        val argv = command(program, *args)
+        val env = environment()
         return ProcessBuilder(argv)
             .redirectErrorStream(true)
             .apply {
@@ -36,8 +44,8 @@ class RuntimeLauncher(
     /** Starts a command given as an absolute program path + args. */
     fun exec(vararg argv: String): Process {
         require(argv.isNotEmpty()) { "argv must not be empty" }
-        val env = if (preload != null) envBuilder.childEnv(preload) else envBuilder.baseEnv()
-        val allArgv = listOf(linker64) + argv
+        val env = environment()
+        val allArgv = listOf(linker64) + argv.toList()
         return ProcessBuilder(allArgv)
             .redirectErrorStream(true)
             .apply { environment().putAll(env) }
