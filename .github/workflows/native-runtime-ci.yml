@@ -1,0 +1,119 @@
+name: Native runtime static verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'core/src/main/kotlin/dev/pocketdev/core/runtime/BootstrapPins.kt'
+      - 'core/src/main/kotlin/dev/pocketdev/core/agent/OpenCodePins.kt'
+      - '.github/workflows/native-runtime-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'core/src/main/kotlin/dev/pocketdev/core/runtime/BootstrapPins.kt'
+      - 'core/src/main/kotlin/dev/pocketdev/core/agent/OpenCodePins.kt'
+      - '.github/workflows/native-runtime-ci.yml'
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-runtime-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify-native-payloads:
+    name: Verify pinned aarch64 payloads (static, x86_64 runner)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq binutils file unzip
+
+      - name: Pin values (mirrored from in-source pins; keep in sync)
+        id: pins
+        run: |
+          echo "oc_tag=v2.3.2" >> "$GITHUB_OUTPUT"
+          echo "oc_sha=ea93b4c42b20af123220f2bb69c9810c3b735c387d23ce78b0145dbb4f1b5f63" >> "$GITHUB_OUTPUT"
+          echo "oc_size=211486984" >> "$GITHUB_OUTPUT"
+          echo "bs_tag=bootstrap-2026.11.15-r1+apt.android-7" >> "$GITHUB_OUTPUT"
+          echo "bs_sha=388acf91cc247e7062d80cd8aa791fe72f360515fb78dc54ff45742120facae7" >> "$GITHUB_OUTPUT"
+          echo "bs_size=33148806" >> "$GITHUB_OUTPUT"
+
+      - name: Download pinned OpenCode Bionic artifact
+        run: |
+          curl -fsSL -o opencode \
+            "https://github.com/bd-loser/opencode-bionic/releases/download/v2.3.2/opencode"
+          curl -fsSL -o SHA256SUMS \
+            "https://github.com/bd-loser/opencode-bionic/releases/download/v2.3.2/SHA256SUMS"
+
+      - name: Verify OpenCode size and SHA-256
+        run: |
+          set -e
+          actual_size=$(stat -c %s opencode)
+          echo "size=$actual_size (expected ${{ steps.pins.outputs.oc_size }})"
+          test "$actual_size" = "${{ steps.pins.outputs.oc_size }}"
+          echo "${{ steps.pins.outputs.oc_sha }}  opencode" | sha256sum -c -
+          grep -q '^ea93b4c42b20af123220f2bb69c9810c3b735c387d23ce78b0145dbb4f1b5f63  opencode$' SHA256SUMS
+          echo "OpenCode digest matches upstream SHA256SUMS and in-source pin."
+
+      - name: Verify OpenCode is a 64-bit AArch64 ELF
+        run: |
+          set -e
+          file opencode
+          file opencode | grep -q 'ELF 64-bit'
+          file opencode | grep -qi 'ARM aarch64'
+          readelf -h opencode | grep -q 'Class:.*ELF64'
+          readelf -h opencode | grep -q 'Machine:.*AArch64'
+          echo "OpenCode ELF: 64-bit AArch64 (matches pinned ABI arm64-v8a)."
+          echo "--- dynamic section (informational) ---"
+          readelf -d opencode | head -40 || true
+
+      - name: Download pinned Termux bootstrap (aarch64)
+        run: |
+          curl -fsSL -o bootstrap-aarch64.zip \
+            "https://github.com/termux/termux-packages/releases/download/bootstrap-2026.11.15-r1%2Bapt.android-7/bootstrap-aarch64.zip"
+
+      - name: Verify bootstrap size and SHA-256
+        run: |
+          set -e
+          actual_size=$(stat -c %s bootstrap-aarch64.zip)
+          echo "size=$actual_size (expected ${{ steps.pins.outputs.bs_size }})"
+          test "$actual_size" = "${{ steps.pins.outputs.bs_size }}"
+          echo "${{ steps.pins.outputs.bs_sha }}  bootstrap-aarch64.zip" | sha256sum -c -
+          echo "Bootstrap digest matches in-source pin."
+
+      - name: Validate bootstrap zip integrity
+        run: |
+          set -e
+          unzip -t bootstrap-aarch64.zip >/tmp/zipcheck.txt
+          tail -3 /tmp/zipcheck.txt
+          test "$(unzip -l bootstrap-aarch64.zip | tail -1 | awk '{print $2}')" -gt 0
+
+      - name: Record evidence
+        run: |
+          {
+            echo "# Native runtime static verification"
+            echo
+            echo "OpenCode Bionic v2.3.2 (aarch64):"
+            file opencode
+            readelf -h opencode | grep -E 'Class:|Machine:|Type:'
+            echo
+            echo "Bootstrap aarch64:"
+            unzip -l bootstrap-aarch64.zip | tail -1
+            echo
+            echo "SHA-256:"
+            sha256sum opencode bootstrap-aarch64.zip
+          } > native-runtime-evidence.txt
+          cat native-runtime-evidence.txt
+
+      - name: Upload evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-runtime-evidence
+          path: native-runtime-evidence.txt
+          if-no-files-found: error

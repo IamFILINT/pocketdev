@@ -73,17 +73,29 @@ class RuntimeController(context: Context) {
         return result
     }
 
-    fun provision(manifest: BootstrapManifest, abi: Abi, apiLevel: Int): RuntimeState =
-        manager.provision(manifest, abi, apiLevel)
+    fun provision(manifest: BootstrapManifest, abi: Abi, apiLevel: Int): RuntimeState {
+        val result = manager.provision(manifest, abi, apiLevel)
+        _state.value = result
+        return result
+    }
+
+    /** Pure predicate used by [initialState]: a completed journal + deployed preload. */
+    internal companion object {
+        fun initialStateFrom(journalCompleted: Boolean, version: String?, preloadDeployed: Boolean): RuntimeState =
+            if (journalCompleted && version != null && preloadDeployed) {
+                RuntimeState.Ready(version)
+            } else {
+                RuntimeState.NotInstalled
+            }
+    }
 
     private fun initialState(): RuntimeState {
         val journal = manager.journalStore.read()
-        val version = journal?.version
-        return if (journal?.completed == true && version != null && preloadDeployer.isDeployed()) {
-            RuntimeState.Ready(version)
-        } else {
-            RuntimeState.NotInstalled
-        }
+        return initialStateFrom(
+            journalCompleted = journal?.completed == true,
+            version = journal?.version,
+            preloadDeployed = preloadDeployer.isDeployed(),
+        )
     }
 
     /** Starts [program] (absolute path inside `$PREFIX`) through `/system/bin/linker64`. */
