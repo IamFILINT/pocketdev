@@ -33,5 +33,7 @@ kotlin {
 dependencies {
     api(project(":core"))
 
+    implementation(libs.kotlinx.coroutines.core)
+
     testImplementation(libs.junit)
 }
