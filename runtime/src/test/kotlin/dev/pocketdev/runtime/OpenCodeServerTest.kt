@@ -25,8 +25,8 @@ class OpenCodeServerTest {
 
     private fun awaitState(
         server: OpenCodeServer,
-        predicate: (OpenCodeServerState) -> Boolean,
         timeoutMs: Long = 10_000,
+        predicate: (OpenCodeServerState) -> Boolean,
     ): OpenCodeServerState {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {

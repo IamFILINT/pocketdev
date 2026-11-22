@@ -182,7 +182,8 @@ object Json {
 
 // -- Accessor helpers -------------------------------------------------
 
-fun Any?.asObject(): Map<String, Any?>? = this as? Map<String, Any?>
+fun Any?.asObject(): Map<String, Any?>? =
+    (this as? Map<*, *>)?.entries?.associate { (key, value) -> key.toString() to value }
 
 fun Any?.asString(): String? = this as? String
 
