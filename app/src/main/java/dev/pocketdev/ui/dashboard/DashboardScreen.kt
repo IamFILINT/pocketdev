@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import dev.pocketdev.BuildConfig
 import dev.pocketdev.R
+import dev.pocketdev.core.agent.AgentState
 import dev.pocketdev.core.runtime.RuntimeState
 
 @Composable
@@ -29,12 +30,18 @@ fun DashboardRoute(
     runtimeState: RuntimeState,
     provisioning: Boolean,
     onInstall: () -> Unit,
+    agentState: AgentState,
+    agentProvisioning: Boolean,
+    onInstallAgent: () -> Unit,
 ) {
     DashboardScreen(
         projectCount = projectCount,
         runtimeState = runtimeState,
         provisioning = provisioning,
         onInstall = onInstall,
+        agentState = agentState,
+        agentProvisioning = agentProvisioning,
+        onInstallAgent = onInstallAgent,
     )
 }
 
@@ -44,6 +51,9 @@ fun DashboardScreen(
     runtimeState: RuntimeState,
     provisioning: Boolean,
     onInstall: () -> Unit,
+    agentState: AgentState,
+    agentProvisioning: Boolean,
+    onInstallAgent: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -85,8 +95,14 @@ fun DashboardScreen(
 
         StatusCard(
             title = stringResource(R.string.dashboard_agent_title),
-            status = stringResource(R.string.dashboard_agent_not_installed),
+            status = agentStatusText(agentState),
             hint = stringResource(R.string.dashboard_agent_hint),
+        )
+
+        AgentAction(
+            agentState = agentState,
+            agentProvisioning = agentProvisioning,
+            onInstall = onInstallAgent,
         )
 
         StatusCard(
@@ -109,6 +125,48 @@ private fun runtimeStatusText(state: RuntimeState): String = when (state) {
     RuntimeState.Updating -> stringResource(R.string.dashboard_runtime_updating)
     is RuntimeState.Failed ->
         stringResource(R.string.dashboard_runtime_failed, state.stage.name, state.message)
+}
+
+@Composable
+private fun AgentAction(
+    agentState: AgentState,
+    agentProvisioning: Boolean,
+    onInstall: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val fraction = (agentState as? AgentState.Downloading)?.fraction
+    val busy = agentProvisioning || agentState is AgentState.Downloading ||
+        agentState is AgentState.Verifying
+
+    if (busy) {
+        if (fraction != null) {
+            LinearProgressIndicator(progress = { fraction }, modifier = modifier.fillMaxWidth())
+        } else {
+            LinearProgressIndicator(modifier = modifier.fillMaxWidth())
+        }
+    }
+
+    if (agentState is AgentState.NotInstalled || agentState is AgentState.Failed) {
+        Button(onClick = onInstall, enabled = !agentProvisioning, modifier = modifier) {
+            Text(
+                text = if (agentState is AgentState.Failed) {
+                    stringResource(R.string.dashboard_agent_retry)
+                } else {
+                    stringResource(R.string.dashboard_agent_install)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun agentStatusText(state: AgentState): String = when (state) {
+    AgentState.NotInstalled -> stringResource(R.string.dashboard_agent_not_installed)
+    is AgentState.Downloading ->
+        stringResource(R.string.dashboard_agent_downloading, (state.fraction * 100).toInt())
+    AgentState.Verifying -> stringResource(R.string.dashboard_agent_verifying)
+    is AgentState.Ready -> stringResource(R.string.dashboard_agent_ready, state.version)
+    is AgentState.Failed -> stringResource(R.string.dashboard_agent_failed, state.message)
 }
 
 @Composable

@@ -18,7 +18,13 @@
     <string name="dashboard_runtime_install">Install runtime</string>
     <string name="dashboard_runtime_retry">Retry installation</string>
     <string name="dashboard_agent_not_installed">Not installed</string>
-    <string name="dashboard_agent_hint">OpenCode Bionic will be provisioned and supervised in a later milestone.</string>
+    <string name="dashboard_agent_hint">Pinned OpenCode Bionic v2.3.2 (ARM64, MIT) is downloaded, SHA-256 verified and started by PocketDev — no Termux app required.</string>
+    <string name="dashboard_agent_install">Install agent</string>
+    <string name="dashboard_agent_retry">Retry agent install</string>
+    <string name="dashboard_agent_downloading">Downloading (%1$d%%)</string>
+    <string name="dashboard_agent_verifying">Verifying…</string>
+    <string name="dashboard_agent_ready">Ready (%1$s)</string>
+    <string name="dashboard_agent_failed">Failed: %1$s</string>
     <string name="dashboard_project_count">%1$d project(s)</string>
     <string name="dashboard_version">Version %1$s</string>
     <string name="dashboard_runtime_checking">Checking device…</string>

@@ -3,6 +3,7 @@ package dev.pocketdev
 import android.content.Context
 import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.workspace.ProjectStore
+import dev.pocketdev.runtime.OpenCodeController
 import dev.pocketdev.runtime.RuntimeController
 import dev.pocketdev.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,9 @@ class AppContainer(context: Context) {
 
     /** Android-side runtime wiring: provisioning, environment, linker-hop launch. */
     val runtime: RuntimeController = RuntimeController(appContext)
+
+    /** OpenCode Bionic acquisition and process control (ADR-0003). */
+    val openCode: OpenCodeController = OpenCodeController(appContext)
 
     private val preferences =
         appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)

@@ -68,11 +68,14 @@ linker-hop launcher (`/system/bin/linker64`), preload deployment checks, and a
 real execution health check (bash + coreutil through the linker) used by the
 bootstrap manager. The dashboard now triggers provisioning (install/retry) and
 renders the live state, which is seeded from the bootstrap journal on restart.
-The remaining Milestone 4 work is the OpenCode Bionic controller.
+OpenCode Bionic is pinned (`v2.3.2`, ARM64, MIT, SHA-256 verified) and
+`OpenCodeController` implements resumable acquisition plus start/stop of the
+binary; the dashboard exposes install/retry and live agent state. Health/API
+supervision and a real-device ARM64 run remain.
 
 ## Milestone 4 — OpenCode Bionic provisioning
 
-- [ ] Pin upstream release/commit + checksums in a manifest
+- [x] Pin upstream release/commit + checksums in a manifest (`OpenCodePins`, v2.3.2)
 - [ ] Process launch/stop/health supervision
 - [ ] API client + event plumbing
 - [ ] Deterministic controller tests

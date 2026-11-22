@@ -19,6 +19,7 @@ and secondary users are rejected at bootstrap time — audit §C5).
       projects/                 #   workspace root (project directories)
       .config/                  #   user configuration
       .cache/                   #   user-level cache
+    agent/                      # OpenCode Bionic binary (outside $PREFIX; ADR-0003)
     state/                      # PocketDev registry (projects.tsv, runtime state)
                                 #   — kept from Milestone 1; outside $PREFIX so a
                                 #   prefix wipe/update never touches project data

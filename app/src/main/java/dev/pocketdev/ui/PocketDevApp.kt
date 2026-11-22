@@ -57,6 +57,8 @@ fun PocketDevApp() {
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val runtimeState by dashboardViewModel.runtimeState.collectAsStateWithLifecycle()
     val provisioning by dashboardViewModel.provisioning.collectAsStateWithLifecycle()
+    val agentState by dashboardViewModel.agentState.collectAsStateWithLifecycle()
+    val agentProvisioning by dashboardViewModel.agentProvisioning.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -101,6 +103,9 @@ fun PocketDevApp() {
                     runtimeState = runtimeState,
                     provisioning = provisioning,
                     onInstall = dashboardViewModel::installRuntime,
+                    agentState = agentState,
+                    agentProvisioning = agentProvisioning,
+                    onInstallAgent = dashboardViewModel::installAgent,
                 )
             }
             composable(Destination.Projects.route) {

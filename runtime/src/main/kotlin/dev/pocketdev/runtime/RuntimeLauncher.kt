@@ -18,12 +18,18 @@ class RuntimeLauncher(
 ) {
 
     /** Starts `program` (absolute path inside $PREFIX) with `args` via the system linker. */
-    fun exec(program: File, vararg args: String): Process {
+    fun exec(program: File, vararg args: String): Process = execIn(null, program, *args)
+
+    /** Like [exec], with an explicit working directory for the child. */
+    fun execIn(workingDir: File?, program: File, vararg args: String): Process {
         val argv = listOf(linker64) + listOf(program.absolutePath) + args
         val env = if (preload != null) envBuilder.childEnv(preload) else envBuilder.baseEnv()
         return ProcessBuilder(argv)
             .redirectErrorStream(true)
-            .apply { environment().putAll(env) }
+            .apply {
+                workingDir?.let { directory(it) }
+                environment().putAll(env)
+            }
             .start()
     }
 

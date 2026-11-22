@@ -24,14 +24,16 @@ class HttpBootstrapDownloader(
         offset: Long,
         onProgress: (bytesDownloaded: Long) -> Unit,
     ) {
-        downloadFrom(artifact.downloadUrl, destination, offset, onProgress)
+        downloadFile(artifact.downloadUrl, destination, offset, onProgress)
     }
 
     /**
+     * Downloads [url] to [destination], resuming from [offset].
+     *
      * @throws IOException on any HTTP/network failure. The partial file is left in
      * place so the next run can resume.
      */
-    internal fun downloadFrom(
+    fun downloadFile(
         url: String,
         destination: File,
         offset: Long,

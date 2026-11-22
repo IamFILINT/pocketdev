@@ -54,7 +54,7 @@ class HttpBootstrapDownloaderTest {
         val destination = File(tmp.root, "bootstrap.zip")
         var lastProgress = 0L
 
-        HttpBootstrapDownloader().downloadFrom(url, destination, 0) { lastProgress = it }
+        HttpBootstrapDownloader().downloadFile(url, destination, 0) { lastProgress = it }
 
         assertArrayEquals(payload, destination.readBytes())
         assertEquals(payload.size.toLong(), lastProgress)
@@ -67,7 +67,7 @@ class HttpBootstrapDownloaderTest {
         File(tmp.root, "bootstrap.zip").writeBytes(payload.copyOfRange(0, 1000))
         var lastProgress = 0L
 
-        HttpBootstrapDownloader().downloadFrom(url, destination, 1000) { lastProgress = it }
+        HttpBootstrapDownloader().downloadFile(url, destination, 1000) { lastProgress = it }
 
         assertArrayEquals(payload, destination.readBytes())
         assertEquals(payload.size.toLong(), lastProgress)
@@ -80,7 +80,7 @@ class HttpBootstrapDownloaderTest {
         File(tmp.root, "bootstrap.zip").writeBytes(payload.copyOfRange(0, 1000))
 
         assertThrows(IOException::class.java) {
-            HttpBootstrapDownloader().downloadFrom(url, destination, 1000) { }
+            HttpBootstrapDownloader().downloadFile(url, destination, 1000) { }
         }
     }
 
@@ -88,7 +88,7 @@ class HttpBootstrapDownloaderTest {
     fun `non-https url is refused`() {
         val destination = File(tmp.root, "bootstrap.zip")
         assertThrows(IOException::class.java) {
-            HttpBootstrapDownloader().downloadFrom("http://example.test/x.zip", destination, 0) { }
+            HttpBootstrapDownloader().downloadFile("http://example.test/x.zip", destination, 0) { }
         }
     }
 
@@ -96,7 +96,7 @@ class HttpBootstrapDownloaderTest {
     fun `http error status fails loudly`() {
         val url = startServer().replace("/bootstrap.zip", "/missing.zip")
         assertThrows(IOException::class.java) {
-            HttpBootstrapDownloader().downloadFrom(url, File(tmp.root, "x.zip"), 0) { }
+            HttpBootstrapDownloader().downloadFile(url, File(tmp.root, "x.zip"), 0) { }
         }
     }
 }

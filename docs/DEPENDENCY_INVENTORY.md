@@ -23,12 +23,19 @@
 | androidx.lifecycle:lifecycle-runtime-ktx | 2.11.1 | Apache-2.0 |
 | androidx.lifecycle:lifecycle-runtime-compose | 2.11.1 | Apache-2.0 |
 | androidx.lifecycle:lifecycle-viewmodel-compose | 2.11.1 | Apache-2.0 |
+| androidx.lifecycle:lifecycle-viewmodel-ktx | 2.11.1 | Apache-2.0 |
 | androidx.activity:activity-compose | 1.13.0 | Apache-2.0 |
 | androidx.navigation:navigation-compose | 2.10.2 | Apache-2.0 |
 | androidx.compose:compose-bom | 2026.11.01 | Apache-2.0 |
 | androidx.compose.ui:ui (+graphics, tooling-preview) | BOM | Apache-2.0 |
 | androidx.compose.material3:material3 | BOM | Apache-2.0 |
 | androidx.compose.material:material-icons-core | BOM | Apache-2.0 |
+
+## Runtime module dependencies (`:runtime`)
+
+| Artifact | Version | License |
+| --- | --- | --- |
+| org.jetbrains.kotlinx:kotlinx-coroutines-core | 1.10.2 | Apache-2.0 |
 
 ## Test dependencies
 
@@ -51,10 +58,15 @@
 - Termux bootstrap archive `bootstrap-2026.11.15-r1+apt.android-7` /
   `bootstrap-aarch64.zip` — downloaded at first run, SHA-256 pinned in
   `BootstrapPins`, never bundled in the APK.
+- OpenCode Bionic `v2.3.2` — self-contained aarch64 binary (211,486,984 B,
+  SHA-256 `ea93b4c4…`), MIT, minimum API 29. Downloaded at first run into
+  `files/agent`, pinned in `OpenCodePins`, never bundled in the APK (ADR-0003).
 - `terminal-emulator` / `terminal-view` — approved for reuse (ADR-0001) but no
   code copied yet.
 
 ## Not yet included (planned)
 
-- OpenCode Bionic binary + Bun Termux + AndroidTUI/OpenTUI (Milestone 4)
+- Bun Termux / AndroidTUI / OpenTUI source components — currently consumed only
+  through the upstream OpenCode Bionic binary; link directly only if a fork is
+  needed (ADR-0003).
 - A real code editor component (Milestone 7)

@@ -161,3 +161,25 @@
   install/retry plus determinate/indeterminate progress and never invents state.
   Unit tests cover the ABI allow-list.
 - Next: the OpenCode Bionic controller for Milestone 4.
+
+## Session 7 — 2026-11-22
+
+### OpenCode Bionic pin and installer
+- Audited upstream `bd-loser/opencode-bionic` `v2.3.2` (published 2026-11-21,
+  MIT): self-contained aarch64 binary 211,486,984 B,
+  SHA-256 `ea93b4c4…`; upstream OpenCode 2.3.2; `bun-termux` 1.4.5-patched;
+  minimum API 29. x86_64 is not published, so the agent cannot run on the CI
+  emulator (ARM64 gap).
+- `:core` gains `OpenCodePins`/`AgentArtifact` (validated metadata) and
+  `AgentInstaller` (resumable download, size + SHA-256 verification, atomic
+  replace, chmod, fail-closed). Unit tests cover success, checksum mismatch and
+  resume offsets.
+- `:runtime` gains `HttpAgentDownloader` (reuses the HTTPS/range downloader) and
+  `OpenCodeController`: seeds state from the installed binary, refuses non-ARM64
+  or pre-API-29 devices, and starts the agent through `/system/bin/linker64`
+  with the project directory as cwd. ADR-0003 records fetch-vs-embed and pinning
+  decisions; layout/inventory/roadmap updated.
+- Dashboard: the AI-agent card now shows the real agent state with an
+  install/retry action and determinate/indeterminate progress.
+- Next: health/API supervision and OpenCode server (`opencode serve`)
+  integration, plus a real-device ARM64 run.
