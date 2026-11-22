@@ -2,7 +2,7 @@
 
 > Generated/maintained manually from `gradle/libs.versions.toml`. Update when pins change.
 
-## Build toolchain
+## In-house components (no third-party dependency)\n\n- `dev.pocketdev.core.json.Json` — dependency-free JSON reader (object/array,\n  escapes, Unicode, number/boolean/null). Used by `OpenCodeApiClient` and later\n  SSE parsing.\n- `dev.pocketdev.core.agent.OpenCodeApiClient` — `HttpURLConnection` + HTTP Basic\n  auth; no HTTP client library.\n- `dev.pocketdev.core.agent.OpenCodeServeOutputParser` — readiness-line parser.\n- `dev.pocketdev.runtime.OpenCodeServer` — process supervision state machine.\n\n## Build toolchain
 
 | Component | Version | Notes |
 | --- | --- | --- |

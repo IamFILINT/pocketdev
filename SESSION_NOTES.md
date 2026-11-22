@@ -217,3 +217,36 @@
 - Next: Milestone 5 AI workspace — SSE event stream into UI state, sessions,
   provider/model settings, permission prompts.
 
+
+## Session 9 — 2026-11-22
+
+### Merge + Termux CI research + docs refresh
+- Merged PR #16 (merge commit `35e6716`); `verify` `45000833539` and
+  `android-emulator` `45000833447` both green on `main`.
+- Researched Termux's own CI to see how they build and test on GitHub-hosted
+  runners:
+  - `termux/termux-app`: `run_tests.yml` runs `./gradlew test` on
+    `ubuntu-latest` only (no emulator tests at all); `debug_build.yml` builds
+    matrixed package variants, names APKs with a `versionName+shortsha` tag,
+    validates every expected ABI APK, generates `sha256sums`, and uploads per-ABI
+    artifacts; `gradle-wrapper-validation.yml` is its own workflow.
+  - `termux/termux-packages`: cross-builds aarch64/arm/i686/x86_64 packages in
+    Docker on `ubuntu`, with `fail-fast: false`, PR-only concurrency cancellation,
+    artifact reuse between PR jobs, `permissions: {}` default with job-level
+    grants, and a scheduled `bootstrap_archives.yml` that builds/publishes
+    per-arch zips to a GitHub Release.
+  - Takeaway adopted for PocketDev: static validation of native payloads on x86_64
+    (don't pretend an emulator proves ARM64), fast separate JVM tests, sha256sums
+    discipline, least-privilege permissions, PR-only cancellation. Differences:
+    PocketDev keeps one combined `verify.yml` gate (one green check is meaningful),
+    ships one universal APK (not per-ABI), and never auto-upgrades pinned runtime
+    deps — every pin bump is a reviewed PR with passing CI.
+- Docs refresh to reflect M4 landed: README (status, progress, "what works today",
+  doc links), ARCHITECTURE (module map, agent data flow, decisions, security),
+  DEPENDENCY_INVENTORY (in-house components, no new third-party deps),
+  CI_CD (M4 evidence + Termux-inspired practices), IMPLEMENTATION_ROADMAP (exit
+  evidence), new `docs/OPENCODE_BIONIC.md` (integration contract) and
+  `docs/TESTING.md` (layers, honest gaps, inventory).
+- Next: Milestone 5 — SSE event stream from `GET /api/event` into UI state,
+  sessions, provider/model settings, permission prompts; plus a physical ARM64
+  device run (accepted CI gap) and the planned `native-runtime-ci.yml`.

@@ -92,6 +92,9 @@ process and the client against a real HTTP server; the actual ARM64 Bionic binar
 still cannot run in Actions (risk R1). Real-device execution remains the accepted
 gap and is not claimed as validated here.
 
+**Exit evidence:** PR #16, runs `44999755169` (`verify`, green) and
+`44999755172` (`android-emulator`, green); merge commit `35e6716` on `main`.
+
 ## Milestone 5 — AI workspace
 
 - [ ] Streaming event UI, sessions, provider/model settings, permission prompts
