@@ -11,6 +11,11 @@ android {
         minSdk = 29
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
     lint {
         abortOnError = true
         warningsAsErrors = false
@@ -19,6 +24,10 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
