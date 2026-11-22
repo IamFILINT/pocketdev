@@ -14,7 +14,9 @@
     <string name="dashboard_agent_title">AI agent</string>
     <string name="dashboard_projects_title">Projects</string>
     <string name="dashboard_runtime_not_installed">Not installed</string>
-    <string name="dashboard_runtime_hint">The integrated Android/Bionic runtime is provisioned in a later milestone. This screen reflects real state only — nothing is simulated.</string>
+    <string name="dashboard_runtime_hint">Downloads the pinned ARM64 bootstrap, verifies its SHA-256, extracts it safely and checks real execution before switching it live.</string>
+    <string name="dashboard_runtime_install">Install runtime</string>
+    <string name="dashboard_runtime_retry">Retry installation</string>
     <string name="dashboard_agent_not_installed">Not installed</string>
     <string name="dashboard_agent_hint">OpenCode Bionic will be provisioned and supervised in a later milestone.</string>
     <string name="dashboard_project_count">%1$d project(s)</string>

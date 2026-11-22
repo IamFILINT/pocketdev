@@ -1,13 +1,18 @@
 package dev.pocketdev.runtime
 
 import android.content.Context
+import android.os.Build
 import android.os.StatFs
 import dev.pocketdev.core.runtime.Abi
 import dev.pocketdev.core.runtime.BootstrapManifest
 import dev.pocketdev.core.runtime.BootstrapManager
+import dev.pocketdev.core.runtime.BootstrapPins
 import dev.pocketdev.core.runtime.HttpBootstrapDownloader
 import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.runtime.RuntimeState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 
 /**
@@ -32,16 +37,54 @@ class RuntimeController(context: Context) {
         legacyDataDir = envBuilder.legacyDataDir,
     )
 
+    private val _state = MutableStateFlow<RuntimeState>(RuntimeState.NotInstalled)
+
+    /**
+     * Honest runtime state shared with the UI. Seeded from the bootstrap journal so
+     * a completed installation survives process restarts.
+     */
+    val state: StateFlow<RuntimeState> = _state.asStateFlow()
+
     val manager: BootstrapManager = BootstrapManager(
         filesDir = appContext.filesDir,
         cacheDir = appContext.cacheDir,
         downloader = HttpBootstrapDownloader(),
         health = health,
         freeBytes = { freeSpaceBytes() },
+        onState = { _state.value = it },
     )
+
+    init {
+        _state.value = initialState()
+    }
+
+    /** Provisions the pinned bootstrap for this device. Blocking: call off the main thread. */
+    fun provision(): RuntimeState {
+        val abi = abiFor(Build.SUPPORTED_ABIS.toList())
+        val result = if (abi == null) {
+            RuntimeState.Failed(
+                RuntimeState.Stage.CHECK,
+                "unsupported ABI: ${Build.SUPPORTED_ABIS.joinToString()}",
+            )
+        } else {
+            manager.provision(BootstrapPins.manifest, abi, Build.VERSION.SDK_INT)
+        }
+        _state.value = result
+        return result
+    }
 
     fun provision(manifest: BootstrapManifest, abi: Abi, apiLevel: Int): RuntimeState =
         manager.provision(manifest, abi, apiLevel)
+
+    private fun initialState(): RuntimeState {
+        val journal = manager.journalStore.read()
+        val version = journal?.version
+        return if (journal?.completed == true && version != null && preloadDeployer.isDeployed()) {
+            RuntimeState.Ready(version)
+        } else {
+            RuntimeState.NotInstalled
+        }
+    }
 
     /** Starts [program] (absolute path inside `$PREFIX`) through `/system/bin/linker64`. */
     fun launch(program: File, vararg args: String): Process {
@@ -63,5 +106,14 @@ class RuntimeController(context: Context) {
     private fun freeSpaceBytes(): Long {
         val statFs = StatFs(appContext.filesDir.absolutePath)
         return statFs.blockSizeLong * statFs.availableBlocksLong
+    }
+
+    companion object {
+        /** First ABI in [abis] that PocketDev has a pinned bootstrap for, if any. */
+        fun abiFor(abis: List<String>): Abi? = when {
+            abis.any { it == Abi.AARCH64.ndkAbi } -> Abi.AARCH64
+            abis.any { it == Abi.X86_64.ndkAbi } -> Abi.X86_64
+            else -> null
+        }
     }
 }

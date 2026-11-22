@@ -56,6 +56,7 @@ fun PocketDevApp() {
 
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val runtimeState by dashboardViewModel.runtimeState.collectAsStateWithLifecycle()
+    val provisioning by dashboardViewModel.provisioning.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -98,6 +99,8 @@ fun PocketDevApp() {
                 DashboardRoute(
                     projectCount = projectsState.projects.size,
                     runtimeState = runtimeState,
+                    provisioning = provisioning,
+                    onInstall = dashboardViewModel::installRuntime,
                 )
             }
             composable(Destination.Projects.route) {

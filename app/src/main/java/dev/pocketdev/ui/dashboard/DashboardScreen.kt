@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,10 +27,14 @@ import dev.pocketdev.core.runtime.RuntimeState
 fun DashboardRoute(
     projectCount: Int,
     runtimeState: RuntimeState,
+    provisioning: Boolean,
+    onInstall: () -> Unit,
 ) {
     DashboardScreen(
         projectCount = projectCount,
         runtimeState = runtimeState,
+        provisioning = provisioning,
+        onInstall = onInstall,
     )
 }
 
@@ -36,6 +42,8 @@ fun DashboardRoute(
 fun DashboardScreen(
     projectCount: Int,
     runtimeState: RuntimeState,
+    provisioning: Boolean,
+    onInstall: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -69,6 +77,12 @@ fun DashboardScreen(
             hint = stringResource(R.string.dashboard_runtime_hint),
         )
 
+        RuntimeAction(
+            runtimeState = runtimeState,
+            provisioning = provisioning,
+            onInstall = onInstall,
+        )
+
         StatusCard(
             title = stringResource(R.string.dashboard_agent_title),
             status = stringResource(R.string.dashboard_agent_not_installed),
@@ -95,6 +109,47 @@ private fun runtimeStatusText(state: RuntimeState): String = when (state) {
     RuntimeState.Updating -> stringResource(R.string.dashboard_runtime_updating)
     is RuntimeState.Failed ->
         stringResource(R.string.dashboard_runtime_failed, state.stage.name, state.message)
+}
+
+@Composable
+private fun RuntimeAction(
+    runtimeState: RuntimeState,
+    provisioning: Boolean,
+    onInstall: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val fraction = when (runtimeState) {
+        is RuntimeState.Downloading -> runtimeState.fraction
+        is RuntimeState.Extracting -> if (runtimeState.totalEntries > 0) {
+            runtimeState.completedEntries.toFloat() / runtimeState.totalEntries
+        } else {
+            null
+        }
+        else -> null
+    }
+    val busy = provisioning || runtimeState is RuntimeState.Checking ||
+        runtimeState is RuntimeState.Downloading || runtimeState is RuntimeState.Verifying ||
+        runtimeState is RuntimeState.Extracting || runtimeState is RuntimeState.Updating
+
+    if (busy) {
+        if (fraction != null) {
+            LinearProgressIndicator(progress = { fraction }, modifier = modifier.fillMaxWidth())
+        } else {
+            LinearProgressIndicator(modifier = modifier.fillMaxWidth())
+        }
+    }
+
+    if (runtimeState is RuntimeState.NotInstalled || runtimeState is RuntimeState.Failed) {
+        Button(onClick = onInstall, enabled = !provisioning, modifier = modifier) {
+            Text(
+                text = if (runtimeState is RuntimeState.Failed) {
+                    stringResource(R.string.dashboard_runtime_retry)
+                } else {
+                    stringResource(R.string.dashboard_runtime_install)
+                },
+            )
+        }
+    }
 }
 
 @Composable
