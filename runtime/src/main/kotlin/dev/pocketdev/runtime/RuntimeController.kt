@@ -79,16 +79,6 @@ class RuntimeController(context: Context) {
         return result
     }
 
-    /** Pure predicate used by [initialState]: a completed journal + deployed preload. */
-    internal companion object {
-        fun initialStateFrom(journalCompleted: Boolean, version: String?, preloadDeployed: Boolean): RuntimeState =
-            if (journalCompleted && version != null && preloadDeployed) {
-                RuntimeState.Ready(version)
-            } else {
-                RuntimeState.NotInstalled
-            }
-    }
-
     private fun initialState(): RuntimeState {
         val journal = manager.journalStore.read()
         return initialStateFrom(
@@ -121,6 +111,14 @@ class RuntimeController(context: Context) {
     }
 
     companion object {
+        /** Pure predicate used by [initialState]: a completed journal + deployed preload. */
+        fun initialStateFrom(journalCompleted: Boolean, version: String?, preloadDeployed: Boolean): RuntimeState =
+            if (journalCompleted && version != null && preloadDeployed) {
+                RuntimeState.Ready(version)
+            } else {
+                RuntimeState.NotInstalled
+            }
+
         /** First ABI in [abis] that PocketDev has a pinned bootstrap for, if any. */
         fun abiFor(abis: List<String>): Abi? = when {
             abis.any { it == Abi.AARCH64.ndkAbi } -> Abi.AARCH64
