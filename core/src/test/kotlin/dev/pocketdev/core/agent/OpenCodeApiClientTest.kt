@@ -9,6 +9,7 @@ import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.concurrent.CopyOnWriteArrayList
+import java.io.ByteArrayInputStream
 
 class OpenCodeApiClientTest {
 
@@ -129,5 +130,40 @@ class OpenCodeApiClientTest {
         } finally {
             server.stop(0)
         }
+    }
+
+    @Test
+    fun streamEventsParsesSseAndStopsWhenHandlerReturnsFalse() {
+        val body = "event: update\ndata: first\n\nevent: update\ndata: second\n\n"
+        val transport = object : HttpTransport {
+            override fun execute(request: HttpRequest): HttpResponse = HttpResponse(200, "")
+            override fun openStream(request: HttpRequest): java.io.InputStream =
+                ByteArrayInputStream(body.toByteArray(StandardCharsets.UTF_8))
+        }
+        val client = OpenCodeApiClient("http://127.0.0.1:4096", "pw", transport = transport)
+        val received = mutableListOf<ServerSentEvent>()
+        val delivered = client.streamEvents { ev ->
+            received.add(ev)
+            received.size < 1 // stop after first
+        }
+        assertEquals(1, delivered)
+        assertEquals(1, received.size)
+        assertEquals("first", received[0].data)
+        assertEquals("update", received[0].event)
+    }
+
+    @Test
+    fun streamEventsDeliversAllWhenHandlerAlwaysTrue() {
+        val body = "data: a\n\ndata: b\n\ndata: c\n"
+        val transport = object : HttpTransport {
+            override fun execute(request: HttpRequest): HttpResponse = HttpResponse(200, "")
+            override fun openStream(request: HttpRequest): java.io.InputStream =
+                ByteArrayInputStream(body.toByteArray(StandardCharsets.UTF_8))
+        }
+        val client = OpenCodeApiClient("http://127.0.0.1:4096", "pw", transport = transport)
+        val received = mutableListOf<String>()
+        val delivered = client.streamEvents { ev -> received.add(ev.data); true }
+        assertEquals(3, delivered)
+        assertEquals(listOf("a", "b", "c"), received)
     }
 }
