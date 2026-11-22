@@ -66,8 +66,9 @@ preload + env override is sufficient for ADR-0002.
 environment builder (including the Termux data-dir/prefix overrides), the
 linker-hop launcher (`/system/bin/linker64`), preload deployment checks, and a
 real execution health check (bash + coreutil through the linker) used by the
-bootstrap manager. The app depends on `:runtime`; wiring the provisioning UX and
-the OpenCode controller is the remaining Milestone 4 work.
+bootstrap manager. The dashboard now triggers provisioning (install/retry) and
+renders the live state, which is seeded from the bootstrap journal on restart.
+The remaining Milestone 4 work is the OpenCode Bionic controller.
 
 ## Milestone 4 — OpenCode Bionic provisioning
 

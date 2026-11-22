@@ -155,5 +155,9 @@
 - `AppContainer` exposes `runtime`; `verify.yml` artefact paths now include
   `:runtime` reports. Unit tests cover the env layout/overrides and preload
   presence (`TemporaryFolder`, no emulator needed).
-- Next: provisioning UX (dashboard trigger + state), then the OpenCode Bionic
-  controller for Milestone 4.
+- Dashboard wiring: `RuntimeController` exposes a `StateFlow<RuntimeState>`
+  seeded from the journal, detects the device ABI (`abiFor`), and
+  `DashboardViewModel` runs provisioning off the main thread; the UI shows
+  install/retry plus determinate/indeterminate progress and never invents state.
+  Unit tests cover the ABI allow-list.
+- Next: the OpenCode Bionic controller for Milestone 4.

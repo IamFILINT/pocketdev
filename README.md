@@ -10,8 +10,9 @@ an AI coding agent (OpenCode Bionic).
 > Status: Milestone 3 + Android runtime wiring — bootstrap logic is pinned,
 > checksum-verified, safely extracted and resumable; the new `:runtime` module
 > adds the execution environment, linker-hop launcher and real execution health
-> checks (proven by the ADR-0002 spike). The provisioning UI and OpenCode
-> controller are not wired yet, so the app is not yet usable.
+> checks (proven by the ADR-0002 spike). The dashboard can install the runtime and
+> renders live bootstrap state; the OpenCode controller is not implemented yet, so
+> the app is not yet usable.
 
 [![verify](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml)
 [![android-emulator](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml)
