@@ -24,3 +24,4 @@ rootProject.name = "PocketDev"
 
 include(":app")
 include(":core")
+include(":runtime")

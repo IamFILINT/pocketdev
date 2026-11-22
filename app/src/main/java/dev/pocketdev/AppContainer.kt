@@ -3,6 +3,7 @@ package dev.pocketdev
 import android.content.Context
 import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.workspace.ProjectStore
+import dev.pocketdev.runtime.RuntimeController
 import dev.pocketdev.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +28,9 @@ class AppContainer(context: Context) {
 
     /** Registry of project metadata (id, name, root, createdAt). */
     val projectStore: ProjectStore = ProjectStore(paths.state)
+
+    /** Android-side runtime wiring: provisioning, environment, linker-hop launch. */
+    val runtime: RuntimeController = RuntimeController(appContext)
 
     private val preferences =
         appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)

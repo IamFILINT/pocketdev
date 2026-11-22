@@ -1,7 +1,8 @@
 # PocketDev — Architecture
 
-> Status: Milestone 3 (runtime bootstrap logic in `:core`). Physical layout will
-> evolve; Android wiring for the runtime lands with `:runtime`.
+> Status: Milestone 3 plus Android runtime wiring (`:runtime`). Domain logic
+> stays in `:core`; `:runtime` holds the Android-only environment, linker-hop
+> process spawn and execution health checks.
 
 ## Module layout
 
@@ -9,6 +10,7 @@
 | --- | --- | --- |
 | `:app` | Android application (Compose) | UI shell, navigation, screens, Android-specific wiring |
 | `:core` | Pure Kotlin/JVM library | Domain logic with no Android dependencies: validation, path safety, project registry, state machines, redaction |
+| `:runtime` | Android library | Bootstrap manager wiring: environment builder, linker-hop process spawn (`/system/bin/linker64`), preload deployment, execution health checks |
 
 Keeping `:core` Android-free means its logic is testable on a plain JVM in CI, fast and
 without an emulator.
@@ -17,7 +19,6 @@ Planned modules (later milestones):
 
 | Module | Purpose |
 | --- | --- |
-| `:runtime` | Android-side wiring for the bootstrap manager: real downloader, storage probing, environment, process spawn |
 | `:terminal` | PTY host and terminal session management |
 | `:ai` | OpenCode process supervision + API client + event mapping |
 | `:workspace` | File explorer operations, editor file synchronization, Git |

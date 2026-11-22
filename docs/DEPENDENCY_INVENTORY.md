@@ -34,7 +34,7 @@
 
 | Artifact | Version | Scope |
 | --- | --- | --- |
-| junit:junit | 4.13.2 | `:core` and `:app` unit tests |
+| junit:junit | 4.13.2 | `:core`, `:runtime`, and `:app` unit tests |
 
 ## CI actions (pinned to commit SHAs)
 
@@ -56,6 +56,5 @@
 
 ## Not yet included (planned)
 
-- `:runtime` Android downloader/exec wiring (after ADR-0002)
 - OpenCode Bionic binary + Bun Termux + AndroidTUI/OpenTUI (Milestone 4)
 - A real code editor component (Milestone 7)

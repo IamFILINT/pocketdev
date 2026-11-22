@@ -60,8 +60,14 @@ release 2.5.0 because of the compiled-in Termux prefix; a follow-up spike
 the `TERMUX_APP__DATA_DIR` / `TERMUX__PREFIX` environment overrides and now
 executes shebang scripts through `/system/bin/linker64` (exit 0, `shebang-ok`).
 The gate is now closed: no custom prefix-built preload is required — the stock
-preload + env override is sufficient for ADR-0002. Next work: `:runtime` Android
-wiring (downloader, env builder, linker-hop launcher, preload deployment).
+preload + env override is sufficient for ADR-0002.
+
+**Android wiring landed:** the `:runtime` Android library now provides the
+environment builder (including the Termux data-dir/prefix overrides), the
+linker-hop launcher (`/system/bin/linker64`), preload deployment checks, and a
+real execution health check (bash + coreutil through the linker) used by the
+bootstrap manager. The app depends on `:runtime`; wiring the provisioning UX and
+the OpenCode controller is the remaining Milestone 4 work.
 
 ## Milestone 4 — OpenCode Bionic provisioning
 

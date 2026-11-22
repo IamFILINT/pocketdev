@@ -19,8 +19,9 @@ Triggers:
 
 Steps: checkout → Gradle wrapper validation → JDK 17 (Temurin) → Gradle setup →
 Android SDK (`platforms;android-37.0`, `build-tools;36.0.0`/`37.0.0`) →
-`./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug` → upload unit-test
-reports, lint report, and debug APK artifacts.
+`./gradlew --no-daemon lintDebug testDebugUnitTest assembleDebug` (runs for
+`:core`, `:runtime` and `:app`) → upload unit-test reports, lint report, and debug
+APK artifacts.
 
 Evidence: run `44623877843` (Milestone 0), run `44670913592` (Milestone 1 green).
 

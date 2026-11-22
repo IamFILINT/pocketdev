@@ -134,3 +134,26 @@
 - `:runtime` Android wiring (downloader, env builder, linker-hop launcher,
   preload deployment of the stock `termux-exec-ld-preload.so` from the pinned
   bootstrap; env `TERMUX_APP__DATA_DIR`/`TERMUX__PREFIX` override).
+
+## Session 6 — 2026-11-22
+
+### Android runtime wiring (`:runtime`)
+- New Android library module `:runtime` (depends on `:core`; app depends on it),
+  with Android-only classes around the pure bootstrap manager:
+  - `RuntimeEnvBuilder` — env from `docs/BOOTSTRAP_LAYOUT.md` §8.5, including
+    `TERMUX_APP__DATA_DIR` / `TERMUX_APP__LEGACY_DATA_DIR` / `TERMUX__PREFIX`
+    overrides and a child-only `LD_PRELOAD`.
+  - `RuntimeLauncher` — every launch is `/system/bin/linker64 <program> <args>`
+    (W^X first hop), with the runtime env injected.
+  - `RuntimePreloadDeployer` — tracks the stock
+    `libtermux-exec-ld-preload.so` shipped by the pinned bootstrap.
+  - `RuntimeExecutionHealthCheck` — structural checks from `:core` plus real
+    execution checks (`bash -lc 'echo pd-runtime-ok'` and `ls -1 bin`) through
+    the linker; used by `BootstrapManager` so a broken prefix fails provisioning.
+  - `RuntimeController` — wires the manager, `HttpBootstrapDownloader`, free-space
+    probe, env builder and launcher into one Android entry point.
+- `AppContainer` exposes `runtime`; `verify.yml` artefact paths now include
+  `:runtime` reports. Unit tests cover the env layout/overrides and preload
+  presence (`TemporaryFolder`, no emulator needed).
+- Next: provisioning UX (dashboard trigger + state), then the OpenCode Bionic
+  controller for Milestone 4.

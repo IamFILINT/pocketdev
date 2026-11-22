@@ -7,9 +7,11 @@ version-control real software projects directly on an Android device — with a 
 terminal, an integrated Bionic runtime, a code editor, Git, package management, and
 an AI coding agent (OpenCode Bionic).
 
-> Status: Milestone 3 — Runtime bootstrap logic (pinned, checksum-verified, safely
-> extracted, resumable). The runtime is not wired to the UI yet and no Bionic
-> process has been executed; the app is not yet usable.
+> Status: Milestone 3 + Android runtime wiring — bootstrap logic is pinned,
+> checksum-verified, safely extracted and resumable; the new `:runtime` module
+> adds the execution environment, linker-hop launcher and real execution health
+> checks (proven by the ADR-0002 spike). The provisioning UI and OpenCode
+> controller are not wired yet, so the app is not yet usable.
 
 [![verify](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml)
 [![android-emulator](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml)
@@ -21,8 +23,8 @@ an AI coding agent (OpenCode Bionic).
 | 0 — Discovery and CI baseline | Done |
 | 1 — Android foundation | Done |
 | 2 — Runtime architecture and ARM64 feasibility | Done (`docs/ARM64_FEASIBILITY.md`) |
-| 3 — Runtime bootstrap | Done in `:core`; Android wiring next |
-| 4 — OpenCode Bionic provisioning | Not started |
+| 3 — Runtime bootstrap | Done in `:core`; `:runtime` wiring landed |
+| 4 — OpenCode Bionic provisioning | In progress (runtime wiring landed; controller next) |
 
 ## Principles
 
