@@ -28,16 +28,27 @@ class AgentWorkspaceViewModelTest {
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val projectDir = File(application.cacheDir, "agent-workspace-test").apply { mkdirs() }
 
-    private class FakeApi : OpenCodeSessionApi {
-        val sessions = listOf(OpenCodeSession("ses_1", "First session", null))
+    private class FakeApi(
+        initial: List<OpenCodeSession> = listOf(OpenCodeSession("ses_1", "First session", null)),
+    ) : OpenCodeSessionApi {
+        val sessions = initial.toMutableList()
         var streamCalls = 0
+        var created = 0
+        val prompts = mutableListOf<Pair<String, String>>()
 
-        override fun listSessions(limit: Int): List<OpenCodeSession> = sessions
+        override fun listSessions(limit: Int): List<OpenCodeSession> = sessions.toList()
 
-        override fun createSession(title: String?): OpenCodeSession =
-            OpenCodeSession("ses_new", title, null)
+        override fun createSession(title: String?): OpenCodeSession {
+            created++
+            val session = OpenCodeSession("ses_new_$created", title, null)
+            sessions.add(session)
+            return session
+        }
 
-        override fun prompt(sessionId: String, text: String): String = "{}"
+        override fun prompt(sessionId: String, text: String): String {
+            prompts.add(sessionId to text)
+            return "{}"
+        }
 
         override fun streamEvents(sessionId: String?, onEvent: (ServerSentEvent) -> Boolean): Int {
             streamCalls++
@@ -138,5 +149,47 @@ class AgentWorkspaceViewModelTest {
         await { viewModel.agentState.value is AgentState.Ready }
         assertTrue(runtime.installed)
         assertFalse(viewModel.busy.value)
+    }
+
+    @Test
+    fun sendPromptCreatesSessionWhenNoneIsSelected() {
+        val runtime = FakeRuntime(FakeApi(emptyList()))
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        viewModel.startServer()
+        await { runtime.api.streamCalls > 0 && !viewModel.busy.value && viewModel.activeSessionId.value == null }
+
+        viewModel.sendPrompt("hello")
+
+        await { runtime.api.created == 1 && runtime.api.prompts.size == 1 }
+        assertEquals("ses_new_1" to "hello", runtime.api.prompts.single())
+        assertEquals("ses_new_1", viewModel.activeSessionId.value)
+        assertFalse(viewModel.sending.value)
+    }
+
+    @Test
+    fun createSessionSelectsTheNewSession() {
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        viewModel.startServer()
+        await { viewModel.sessions.value.isNotEmpty() }
+
+        viewModel.createSession()
+
+        await { viewModel.activeSessionId.value == "ses_new_1" }
+        assertEquals(2, viewModel.sessions.value.size)
+    }
+
+    @Test
+    fun blankPromptIsRejectedWithoutCallingTheServer() {
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        viewModel.startServer()
+        await { viewModel.sessions.value.isNotEmpty() }
+
+        viewModel.sendPrompt("   ")
+
+        assertTrue(viewModel.actionError.value != null)
+        assertTrue(runtime.api.prompts.isEmpty())
+        assertEquals(0, runtime.api.created)
     }
 }

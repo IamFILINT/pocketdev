@@ -37,6 +37,7 @@ For each component: responsibilities, expected behavior, dependencies, failure c
 - M5 SSE: `ServerSentEvent` parser and `TaskStateMapper` unit-tested (PRs #24, #26); `AgentSessionViewModel` instrumented (PR #28).
 - M5 SSE consumption: `OpenCodeSessionApi` seam + `AgentSessionViewModel.start/stop` streaming, failure and stop coverage on the emulator (PR #32).
 - M5 workspace: `AgentRuntime`/`OpenCodeSessionApi` seams + Agent workspace ViewModel (install, attach on listening, detach on stop) and Agent tab navigation (PR #33).
+- M5 prompt: session creation/selection/prompt dispatch with fake API, blank-prompt rejection, and prompt composer UI (PR #34).
 
 ### Defects found during audit
 

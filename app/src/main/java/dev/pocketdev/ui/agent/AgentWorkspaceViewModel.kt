@@ -40,13 +40,20 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     private val _sessions = MutableStateFlow<List<OpenCodeSession>>(emptyList())
     val sessions: StateFlow<List<OpenCodeSession>> = _sessions.asStateFlow()
 
+    private val _activeSessionId = MutableStateFlow<String?>(null)
+    val activeSessionId: StateFlow<String?> = _activeSessionId.asStateFlow()
+
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
+
+    private val _sending = MutableStateFlow(false)
+    val sending: StateFlow<Boolean> = _sending.asStateFlow()
 
     private val _actionError = MutableStateFlow<String?>(null)
     val actionError: StateFlow<String?> = _actionError.asStateFlow()
 
     private var attachedUrl: String? = null
+    private var api: OpenCodeSessionApi? = null
 
     init {
         viewModelScope.launch {
@@ -59,16 +66,35 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
         }
     }
 
-    fun installAgent() = runBusy {
-        runtime.install()
+    fun installAgent() = runBusy { runtime.install() }
+
+    fun startServer() = runBusy { runtime.startServer(projectsRoot) }
+
+    fun stopServer() = runBusy { runtime.stopServer() }
+
+    fun selectSession(id: String) {
+        _activeSessionId.value = id
     }
 
-    fun startServer() = runBusy {
-        runtime.startServer(projectsRoot)
+    fun createSession() = runSend { client ->
+        val created = client.createSession()
+        refreshSessions(client)
+        _activeSessionId.value = created.id
     }
 
-    fun stopServer() = runBusy {
-        runtime.stopServer()
+    fun sendPrompt(text: String) {
+        val prompt = text.trim()
+        if (prompt.isEmpty()) {
+            _actionError.value = "Prompt must not be blank"
+            return
+        }
+        runSend { client ->
+            val sessionId = _activeSessionId.value ?: client.createSession().id.also {
+                refreshSessions(client)
+                _activeSessionId.value = it
+            }
+            client.prompt(sessionId, prompt)
+        }
     }
 
     override fun onCleared() {
@@ -78,20 +104,30 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     private fun attach(baseUrl: String) {
         if (attachedUrl == baseUrl) return
         attachedUrl = baseUrl
-        val api = runtime.newApiClient() ?: return
-        session.start(api)
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { api.listSessions() }
-                .onSuccess { _sessions.value = it }
-                .onFailure { _actionError.value = it.message ?: it::class.simpleName }
-        }
+        val client = runtime.newApiClient() ?: return
+        api = client
+        session.start(client)
+        viewModelScope.launch(Dispatchers.IO) { refreshSessions(client) }
     }
 
     private fun detach() {
         if (attachedUrl == null) return
         attachedUrl = null
+        api = null
+        _activeSessionId.value = null
         session.stop()
         _sessions.value = emptyList()
+    }
+
+    private fun refreshSessions(client: OpenCodeSessionApi) {
+        runCatching { client.listSessions() }
+            .onSuccess { loaded ->
+                _sessions.value = loaded
+                if (_activeSessionId.value == null || loaded.none { it.id == _activeSessionId.value }) {
+                    _activeSessionId.value = loaded.firstOrNull()?.id
+                }
+            }
+            .onFailure { _actionError.value = it.message ?: it::class.simpleName }
     }
 
     private fun runBusy(block: () -> Unit) {
@@ -105,6 +141,25 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
                 _actionError.value = e.message ?: e::class.simpleName
             } finally {
                 _busy.value = false
+            }
+        }
+    }
+
+    private fun runSend(block: (OpenCodeSessionApi) -> Unit) {
+        if (_sending.value) return
+        val client = api ?: run {
+            _actionError.value = "Agent server is not listening"
+            return
+        }
+        _sending.value = true
+        _actionError.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                block(client)
+            } catch (e: Exception) {
+                _actionError.value = e.message ?: e::class.simpleName
+            } finally {
+                _sending.value = false
             }
         }
     }
