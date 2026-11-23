@@ -28,7 +28,7 @@ AI coding agent (OpenCode Bionic).
 | 2 — Runtime architecture and ARM64 feasibility | Done (`docs/ARM64_FEASIBILITY.md`) |
 | 3 — Runtime bootstrap | Done (`:core` logic + `:runtime` wiring) |
 | 4 — OpenCode Bionic provisioning | Done: pin, verified installer, loopback supervision, API client (ADR-0003/0004) |
-| 5 — AI workspace | Next: SSE events → UI, sessions, provider/model settings, permissions |
+| 5 — AI workspace | Done: SSE events → UI, sessions, prompts, provider/model settings, permission prompts |
 
 ## Principles
 

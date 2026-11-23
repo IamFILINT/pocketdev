@@ -306,3 +306,25 @@
 - Tests: core validation unit tests, instrumented persistence/invalid-input tests,
   Settings navigation assertions.
 - Next: permission prompts; ARM64 device run remains R1.
+
+## Session 14 — 2026-11-23
+
+### M5 slice 5 — permission prompts
+- Researched the pinned OpenCode v2.3.2 OpenAPI schema: `permission.asked` carries
+  `id`, `sessionID`, `action`, `resources` and optional `message` inside `data`;
+  `POST /api/session/{sessionID}/permission/{requestID}/reply` accepts
+  `{"decision":"once"|"always"|"reject"}` and returns 204.
+- `:core` gains `PermissionRequest` (event projection), `PermissionDecision`
+  (upstream reply values), `ServerSentEvent.type` (SSE name with JSON payload
+  fallback for generic/missing `event:`), and `OpenCodeSessionApi.replyPermission`
+  implemented by `OpenCodeApiClient`.
+- `AgentSessionViewModel` exposes the pending request, replies through the active
+  session API, and clears it on `permission.replied`; `AgentWorkspaceViewModel`
+  forwards the action. The Agent tab renders action/resources/message with Allow
+  once / Always allow / Reject buttons.
+- Tests: permission parsing/type fallback/reply-body unit tests and instrumented
+  end-to-end event-to-reply coverage through both ViewModels.
+- First CI run exposed missing `type` extension imports in `TaskStateMapper` and
+  `AgentSessionViewModel`; fixed in a follow-up commit. PR #36 is green:
+  verify `45237366899`/`45237378788`, android-emulator `45237367091`/`45237378747`.
+- Next: ARM64 device run remains R1.

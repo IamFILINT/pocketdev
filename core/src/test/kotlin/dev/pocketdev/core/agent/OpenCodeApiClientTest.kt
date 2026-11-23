@@ -97,6 +97,24 @@ class OpenCodeApiClientTest {
         assertTrue(body.contains("\\\"quoted\\\""))
     }
 
+    @Test
+    fun replyPermissionPostsDecisionToPermissionEndpoint() {
+        val transport = CapturingTransport().apply { response = HttpResponse(204, "") }
+        OpenCodeApiClient("http://127.0.0.1:4096", "pw", transport = transport)
+            .replyPermission("ses 1", "per/1", PermissionDecision.ALWAYS)
+
+        val request = transport.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals(
+            "http://127.0.0.1:4096/api/session/ses+1/permission/per%2F1/reply",
+            request.url,
+        )
+        assertEquals(
+            "{\"decision\":\"always\"}",
+            request.body!!.toString(StandardCharsets.UTF_8),
+        )
+    }
+
     @Test(expected = OpenCodeApiException::class)
     fun non2xxThrowsWithStatus() {
         val transport = CapturingTransport().apply { response = HttpResponse(401, """{"message":"Authentication required"}""") }

@@ -1,5 +1,9 @@
 package dev.pocketdev.core.agent
 
+import dev.pocketdev.core.json.Json
+import dev.pocketdev.core.json.asString
+import dev.pocketdev.core.json.field
+
 /**
  * One Server-Sent Event as defined by the SSE spec and emitted by OpenCode's
  * `GET /api/event` endpoint.
@@ -14,6 +18,11 @@ data class ServerSentEvent(
     /** Last event id from the `id:` field, if present. */
     val id: String?,
 )
+
+val ServerSentEvent.type: String?
+    get() = event?.takeIf { it != "message" }
+        ?: runCatching { Json.parseObject(data).field("type")?.asString() }.getOrNull()
+        ?: event
 
 /**
  * Stateless parser for Server-Sent Event streams.

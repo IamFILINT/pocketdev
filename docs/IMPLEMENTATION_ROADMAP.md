@@ -97,7 +97,11 @@ gap and is not claimed as validated here.
 
 ## Milestone 5 — AI workspace
 
-- [ ] Streaming event UI, sessions, provider/model settings, permission prompts
+- [x] Streaming event UI, sessions, prompts, provider/model settings, permission prompts
+
+**Exit evidence:** PR #36, verify `45237366899`/`45237378788` and
+`android-emulator` `45237367091`/`45237378747` (all green). Permission execution
+against a live ARM64 OpenCode server remains the accepted R1 device gap.
 
 ## Milestone 6 — Terminal and filesystem
 

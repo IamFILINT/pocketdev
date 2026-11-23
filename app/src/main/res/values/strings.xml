@@ -40,6 +40,13 @@
     <string name="agent_task_state">%1$s</string>
     <string name="agent_task_streaming">Streaming live events</string>
     <string name="agent_task_error">Stream error: %1$s</string>
+    <string name="agent_permission_title">Permission request</string>
+    <string name="agent_permission_action">Action: %1$s</string>
+    <string name="agent_permission_resources">Resources: %1$s</string>
+    <string name="agent_permission_message">Message: %1$s</string>
+    <string name="agent_permission_allow_once">Allow once</string>
+    <string name="agent_permission_allow_always">Always allow</string>
+    <string name="agent_permission_reject">Reject</string>
     <string name="agent_sessions_title">Sessions</string>
     <string name="agent_sessions_empty">No sessions yet</string>
     <string name="agent_action_error">Error: %1$s</string>

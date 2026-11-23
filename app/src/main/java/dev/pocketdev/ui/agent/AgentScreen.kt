@@ -29,6 +29,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pocketdev.R
 import dev.pocketdev.core.agent.AgentState
 import dev.pocketdev.core.agent.OpenCodeSession
+import dev.pocketdev.core.agent.PermissionDecision
+import dev.pocketdev.core.agent.PermissionRequest
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.runtime.OpenCodeServerState
 
@@ -44,6 +46,7 @@ fun AgentRoute(viewModel: AgentWorkspaceViewModel) {
     val actionError by viewModel.actionError.collectAsStateWithLifecycle()
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val sending by viewModel.sending.collectAsStateWithLifecycle()
+    val permissionRequest by viewModel.permissionRequest.collectAsStateWithLifecycle()
 
     AgentScreen(
         agentState = agentState,
@@ -56,12 +59,14 @@ fun AgentRoute(viewModel: AgentWorkspaceViewModel) {
         actionError = actionError,
         activeSessionId = activeSessionId,
         sending = sending,
+        permissionRequest = permissionRequest,
         onInstall = viewModel::installAgent,
         onStartServer = viewModel::startServer,
         onStopServer = viewModel::stopServer,
         onSelectSession = viewModel::selectSession,
         onCreateSession = viewModel::createSession,
         onSendPrompt = viewModel::sendPrompt,
+        onPermissionDecision = viewModel::respondToPermission,
     )
 }
 
@@ -77,12 +82,14 @@ fun AgentScreen(
     actionError: String?,
     activeSessionId: String?,
     sending: Boolean,
+    permissionRequest: PermissionRequest?,
     onInstall: () -> Unit,
     onStartServer: () -> Unit,
     onStopServer: () -> Unit,
     onSelectSession: (String) -> Unit,
     onCreateSession: () -> Unit,
     onSendPrompt: (String) -> Unit,
+    onPermissionDecision: (PermissionDecision) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var draft by remember { mutableStateOf("") }
@@ -180,6 +187,38 @@ fun AgentScreen(
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
+            }
+        }
+
+        permissionRequest?.let { request ->
+            AgentCard(
+                title = stringResource(R.string.agent_permission_title),
+                status = stringResource(R.string.agent_permission_action, request.action),
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.agent_permission_resources,
+                        request.resources.joinToString(", "),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                request.message?.let {
+                    Text(
+                        text = stringResource(R.string.agent_permission_message, it),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onPermissionDecision(PermissionDecision.ONCE) }) {
+                        Text(stringResource(R.string.agent_permission_allow_once))
+                    }
+                    OutlinedButton(onClick = { onPermissionDecision(PermissionDecision.ALWAYS) }) {
+                        Text(stringResource(R.string.agent_permission_allow_always))
+                    }
+                    OutlinedButton(onClick = { onPermissionDecision(PermissionDecision.REJECT) }) {
+                        Text(stringResource(R.string.agent_permission_reject))
+                    }
+                }
             }
         }
 

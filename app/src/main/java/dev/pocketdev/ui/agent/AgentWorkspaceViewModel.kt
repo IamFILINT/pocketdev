@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
 import dev.pocketdev.core.agent.OpenCodeSession
 import dev.pocketdev.core.agent.OpenCodeSessionApi
+import dev.pocketdev.core.agent.PermissionDecision
+import dev.pocketdev.core.agent.PermissionRequest
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.runtime.AgentRuntime
 import dev.pocketdev.runtime.OpenCodeServerState
@@ -36,6 +38,7 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     val taskState: StateFlow<TaskState> = session.taskState
     val streaming: StateFlow<Boolean> = session.streaming
     val streamError: StateFlow<String?> = session.error
+    val permissionRequest: StateFlow<PermissionRequest?> = session.permissionRequest
 
     private val _sessions = MutableStateFlow<List<OpenCodeSession>>(emptyList())
     val sessions: StateFlow<List<OpenCodeSession>> = _sessions.asStateFlow()
@@ -75,6 +78,8 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     fun selectSession(id: String) {
         _activeSessionId.value = id
     }
+
+    fun respondToPermission(decision: PermissionDecision) = session.respondToPermission(decision)
 
     fun createSession() = runSend { client ->
         val created = client.createSession()

@@ -17,6 +17,9 @@ interface OpenCodeSessionApi {
     /** `POST /api/session/{id}/prompt`. */
     fun prompt(sessionId: String, text: String): String
 
+    /** `POST /api/session/{id}/permission/{requestID}/reply`. */
+    fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision)
+
     /**
      * Streams `GET /api/event`, delivering each parsed event to [onEvent] until the
      * handler returns false or the server closes the stream. Blocking.

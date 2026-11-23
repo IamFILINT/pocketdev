@@ -1,6 +1,7 @@
 package dev.pocketdev.core.ai
 
 import dev.pocketdev.core.agent.ServerSentEvent
+import dev.pocketdev.core.agent.type
 import dev.pocketdev.core.json.Json
 
 /**
@@ -19,7 +20,7 @@ object TaskStateMapper {
     }
 
     private fun impliedState(event: ServerSentEvent): TaskState? {
-        val name = event.event ?: "message"
+        val name = event.type ?: "message"
         return when (name) {
             "session.created" -> TaskState.INITIALIZING
             "session.idle" -> TaskState.COMPLETED

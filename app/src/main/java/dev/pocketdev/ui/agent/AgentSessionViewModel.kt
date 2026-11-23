@@ -4,7 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pocketdev.core.agent.OpenCodeSessionApi
+import dev.pocketdev.core.agent.PermissionDecision
+import dev.pocketdev.core.agent.PermissionRequest
 import dev.pocketdev.core.agent.ServerSentEvent
+import dev.pocketdev.core.agent.type
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.core.ai.TaskStateMapper
 import kotlinx.coroutines.CancellationException
@@ -34,6 +37,10 @@ class AgentSessionViewModel(application: Application) : AndroidViewModel(applica
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _permissionRequest = MutableStateFlow<PermissionRequest?>(null)
+    val permissionRequest: StateFlow<PermissionRequest?> = _permissionRequest.asStateFlow()
+
+    private var sessionApi: OpenCodeSessionApi? = null
     private var streamJob: Job? = null
     private var generation = 0
 
@@ -42,6 +49,8 @@ class AgentSessionViewModel(application: Application) : AndroidViewModel(applica
         stop()
         val current = ++generation
         _error.value = null
+        _permissionRequest.value = null
+        sessionApi = api
         _streaming.value = true
         streamJob = viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -68,15 +77,29 @@ class AgentSessionViewModel(application: Application) : AndroidViewModel(applica
         generation++
         streamJob?.cancel()
         streamJob = null
+        sessionApi = null
+        _permissionRequest.value = null
         _streaming.value = false
     }
 
     fun applyEvent(event: ServerSentEvent) {
+        PermissionRequest.fromEvent(event)?.let { _permissionRequest.value = it }
+        if (event.type == "permission.replied") _permissionRequest.value = null
         val next = TaskStateMapper.fromEvent(event, _taskState.value)
         if (next != null) _taskState.value = next
     }
 
+    fun respondToPermission(decision: PermissionDecision) {
+        val request = _permissionRequest.value ?: return
+        val client = sessionApi ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { client.replyPermission(request.sessionId, request.id, decision) }
+                .onFailure { _error.value = it.message ?: it::class.simpleName }
+        }
+    }
+
     fun reset() {
         _taskState.value = TaskState.IDLE
+        _permissionRequest.value = null
     }
 }

@@ -7,6 +7,7 @@ import dev.pocketdev.core.agent.AgentState
 import dev.pocketdev.core.agent.OpenCodeServerConnection
 import dev.pocketdev.core.agent.OpenCodeSession
 import dev.pocketdev.core.agent.OpenCodeSessionApi
+import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.ServerSentEvent
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.runtime.AgentRuntime
@@ -30,11 +31,17 @@ class AgentWorkspaceViewModelTest {
 
     private class FakeApi(
         initial: List<OpenCodeSession> = listOf(OpenCodeSession("ses_1", "First session", null)),
+        private val events: List<ServerSentEvent> = listOf(
+            ServerSentEvent("session.created", "{}", null),
+            ServerSentEvent("message.part.updated", """{"type":"reasoning"}""", null),
+            ServerSentEvent("session.idle", "{}", null),
+        ),
     ) : OpenCodeSessionApi {
         val sessions = initial.toMutableList()
         var streamCalls = 0
         var created = 0
         val prompts = mutableListOf<Pair<String, String>>()
+        val replies = mutableListOf<Triple<String, String, PermissionDecision>>()
 
         override fun listSessions(limit: Int): List<OpenCodeSession> = sessions.toList()
 
@@ -50,13 +57,12 @@ class AgentWorkspaceViewModelTest {
             return "{}"
         }
 
+        override fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision) {
+            replies.add(Triple(sessionId, requestId, decision))
+        }
+
         override fun streamEvents(sessionId: String?, onEvent: (ServerSentEvent) -> Boolean): Int {
             streamCalls++
-            val events = listOf(
-                ServerSentEvent("session.created", "{}", null),
-                ServerSentEvent("message.part.updated", """{"type":"reasoning"}""", null),
-                ServerSentEvent("session.idle", "{}", null),
-            )
             var delivered = 0
             for (event in events) {
                 delivered++
@@ -177,6 +183,31 @@ class AgentWorkspaceViewModelTest {
 
         await { viewModel.activeSessionId.value == "ses_new_1" }
         assertEquals(2, viewModel.sessions.value.size)
+    }
+
+    @Test
+    fun permissionRequestFromStreamCanBeReplied() {
+        val api = FakeApi(
+            events = listOf(
+                ServerSentEvent("session.created", "{}", null),
+                ServerSentEvent("message.part.updated", """{"type":"text"}""", null),
+                ServerSentEvent(
+                    event = "permission.asked",
+                    data = """{"type":"permission.asked","data":{"id":"per_1","sessionID":"ses_1","action":"bash","resources":["pwd"]}}""",
+                    id = null,
+                ),
+            ),
+        )
+        val runtime = FakeRuntime(api)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+
+        viewModel.startServer()
+
+        await { viewModel.permissionRequest.value?.id == "per_1" }
+        assertEquals(TaskState.WAITING_FOR_PERMISSION, viewModel.taskState.value)
+        viewModel.respondToPermission(PermissionDecision.REJECT)
+        await { api.replies.size == 1 }
+        assertEquals(Triple("ses_1", "per_1", PermissionDecision.REJECT), api.replies.single())
     }
 
     @Test
