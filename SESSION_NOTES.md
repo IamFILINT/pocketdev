@@ -358,4 +358,6 @@
 - First PR #38 CI run failed on ANSI buffer API/type errors; second failed on Compose
   BOM clipboard/`SpanStyle` API changes. Fixed in follow-up commits; final code CI is
   green: verify `45254925593`/`45254937737`, android-emulator `45254925748`/`45254937817`.
-- Next: merge PR #38, then Milestone 7 code editor. Physical ARM64 device run remains R1.
+- PR #38 merged into `main` at `27dbcc7`; final docs verification green on verify
+  `45257636050`/`45257644825` and android-emulator `45257635719`/`45257644889`.
+- Next: Milestone 7 code editor. Physical ARM64 device run remains R1.
