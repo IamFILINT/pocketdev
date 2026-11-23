@@ -3,6 +3,7 @@ package dev.pocketdev.ui
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -31,6 +32,8 @@ import dev.pocketdev.ui.agent.AgentRoute
 import dev.pocketdev.ui.agent.AgentWorkspaceViewModel
 import dev.pocketdev.ui.dashboard.DashboardRoute
 import dev.pocketdev.ui.dashboard.DashboardViewModel
+import dev.pocketdev.ui.files.FilesRoute
+import dev.pocketdev.ui.files.FilesViewModel
 import dev.pocketdev.ui.projects.ProjectsRoute
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import dev.pocketdev.ui.settings.SettingsRoute
@@ -43,7 +46,8 @@ private enum class Destination(
 ) {
     Dashboard("dashboard", R.string.nav_dashboard, Icons.Filled.Home),
     Agent("agent", R.string.nav_agent, Icons.Filled.Build),
-    Projects("projects", R.string.nav_projects, Icons.Filled.List),
+    Files("files", R.string.nav_files, Icons.AutoMirrored.Filled.List),
+    Projects("projects", R.string.nav_projects, Icons.AutoMirrored.Filled.List),
     Settings("settings", R.string.nav_settings, Icons.Filled.Settings),
 }
 
@@ -58,6 +62,7 @@ fun PocketDevApp() {
     val settingsViewModel: SettingsViewModel = viewModel()
     val dashboardViewModel: DashboardViewModel = viewModel()
     val agentWorkspaceViewModel: AgentWorkspaceViewModel = viewModel()
+    val filesViewModel: FilesViewModel = viewModel()
 
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val runtimeState by dashboardViewModel.runtimeState.collectAsStateWithLifecycle()
@@ -115,6 +120,9 @@ fun PocketDevApp() {
             }
             composable(Destination.Agent.route) {
                 AgentRoute(viewModel = agentWorkspaceViewModel)
+            }
+            composable(Destination.Files.route) {
+                FilesRoute(viewModel = filesViewModel)
             }
             composable(Destination.Projects.route) {
                 ProjectsRoute(viewModel = projectsViewModel)

@@ -328,3 +328,18 @@
   `AgentSessionViewModel`; fixed in a follow-up commit. PR #36 is green:
   verify `45237366899`/`45237378788`, android-emulator `45237367091`/`45237378747`.
 - Next: ARM64 device run remains R1.
+
+## Session 15 — 2026-11-23
+
+### M6 slice 1 — file explorer and shared workspace
+- PR #36 merged into `main` at `904196f`; local `main` fast-forwarded and branch deleted.
+- Added `:core` `WorkspaceFiles`/`FileEntry` with safe listing, create, rename, copy,
+  move, delete, search, hidden-file handling, text preview, and symlink escape
+  rejection. Pure-JVM unit tests cover all operations.
+- `AppContainer` now owns `selectedProject` and `activeProjectRoot()`; projects and
+  Files views share it, and the Agent server now starts in the selected project root.
+- Added Files tab with its own ViewModel, project selector, breadcrumb, hidden toggle,
+  search, create/rename/copy/move/delete dialogs, text preview, and SAF import/export.
+- CI green on PR #37 at `4e6d093`: verify `45247344473`/`45247358973`,
+  `android-emulator` `45247344412`/`45247358808`. Next: merge PR #37, then the PTY
+  terminal for M6; ARM64 device run remains R1.

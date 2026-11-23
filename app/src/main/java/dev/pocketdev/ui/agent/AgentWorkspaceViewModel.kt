@@ -28,8 +28,11 @@ import java.io.File
 class AgentWorkspaceViewModel @JvmOverloads constructor(
     application: Application,
     private val runtime: AgentRuntime = (application as PocketDevApplication).container.openCode,
-    val projectsRoot: File = (application as PocketDevApplication).container.projectsRoot,
+    val projectsRoot: File? = null,
 ) : AndroidViewModel(application) {
+
+    private val container = (application as PocketDevApplication).container
+    private var workspaceRoot: File = projectsRoot ?: container.projectsRoot
 
     val agentState = runtime.agentState
     val serverState: StateFlow<OpenCodeServerState> = runtime.serverState
@@ -59,6 +62,13 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     private var api: OpenCodeSessionApi? = null
 
     init {
+        if (projectsRoot == null) {
+            viewModelScope.launch {
+                container.selectedProject.collect { project ->
+                    workspaceRoot = project?.let { File(it.rootPath) } ?: container.projectsRoot
+                }
+            }
+        }
         viewModelScope.launch {
             runtime.serverState.collect { state ->
                 when (state) {
@@ -71,7 +81,7 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
 
     fun installAgent() = runBusy { runtime.install() }
 
-    fun startServer() = runBusy { runtime.startServer(projectsRoot) }
+    fun startServer() = runBusy { runtime.startServer(workspaceRoot) }
 
     fun stopServer() = runBusy { runtime.stopServer() }
 

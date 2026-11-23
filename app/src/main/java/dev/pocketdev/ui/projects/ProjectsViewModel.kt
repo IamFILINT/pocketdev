@@ -45,6 +45,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun refresh() {
+        container.syncSelectedProject()
         val projects = container.projectStore.load().sortedByDescending { it.createdAtEpochMs }
         _uiState.update {
             it.copy(
@@ -73,6 +74,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
             createdAtEpochMs = nowMs,
         )
         container.projectStore.add(project)
+        container.selectProject(project.id)
         refresh()
         return CreateProjectResult.Created
     }

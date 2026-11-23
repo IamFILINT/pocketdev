@@ -29,6 +29,8 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | OpenCodeApiClient.streamEvents | streaming delivery + early stop | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #24) |
 | OpenCodeSessionApi | seam implemented by client, faked in VM tests | unit | (interface; client verified above) | verify | Verified (PR #32) |
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
+| WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
+| FileEntry | kind detection and hidden flag | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
 | ProjectStore | CRUD/registry | unit | `core/.../workspace/ProjectStoreTest.kt` | verify | Verified |
 | ProjectNameValidator | name rules | unit | `core/.../validation/ProjectNameValidatorTest.kt` | verify | Verified |
 | SecretRedaction | redaction | unit | `core/.../security/SecretRedactionTest.kt` | verify | Verified |
@@ -71,6 +73,9 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #33) |
 | AgentWorkspaceViewModel permission | expose pending request and forward reply decision | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (PR #36) |
 | AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
+| FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
+| FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
+| AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
 | Compose screens | rendering | instrumentation | missing | - | Pending |
 
