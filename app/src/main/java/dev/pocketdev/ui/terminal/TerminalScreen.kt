@@ -1,5 +1,8 @@
 package dev.pocketdev.ui.terminal
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,7 +41,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -56,7 +59,8 @@ import dev.pocketdev.core.terminal.TerminalLine
 @Composable
 fun TerminalRoute(viewModel: TerminalViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
     TerminalScreen(
         state = state,
@@ -67,10 +71,12 @@ fun TerminalRoute(viewModel: TerminalViewModel) {
         onCloseSession = viewModel::closeSession,
         onCopy = {
             val text = viewModel.plainText()
-            if (text.isNotEmpty()) clipboardManager.setText(AnnotatedString(text))
+            if (text.isNotEmpty()) {
+                clipboard.setPrimaryClip(ClipData.newPlainText("terminal", text))
+            }
         },
         onPaste = {
-            val text = clipboardManager.text?.text?.toString().orEmpty()
+            val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString().orEmpty()
             if (text.isNotEmpty()) viewModel.send(text)
         },
     )
@@ -267,7 +273,7 @@ private fun renderLine(line: TerminalLine): AnnotatedString = buildAnnotatedStri
         withStyle(
             SpanStyle(
                 color = Color(foreground),
-                background = background?.let(::Color),
+                background = background?.let(::Color) ?: Color.Transparent,
                 fontWeight = if (cell.bold) FontWeight.Bold else null,
             ),
         ) {
