@@ -1,6 +1,5 @@
 package dev.pocketdev
 
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
@@ -34,8 +33,8 @@ class NavigationTest {
 
         composeRule.onNodeWithText("Agent workspace").assertIsDisplayed()
         composeRule.onNodeWithText("Task state").assertIsDisplayed()
-        composeRule.onNodeWithText("New session").assertExists()
-        composeRule.onNodeWithText("Prompt").assertExists()
+        composeRule.onNodeWithText("New session").fetchSemanticsNode()
+        composeRule.onNodeWithText("Prompt").fetchSemanticsNode()
     }
 
     @Test
@@ -46,8 +45,8 @@ class NavigationTest {
         composeRule.onNode(hasText("Settings") and isSelectable()).performClick()
         composeRule.onNodeWithText("Appearance").assertIsDisplayed()
         composeRule.onNodeWithText("AI provider").assertIsDisplayed()
-        composeRule.onNodeWithText("Provider").assertExists()
-        composeRule.onNodeWithText("Model").assertExists()
+        composeRule.onNodeWithText("Provider").fetchSemanticsNode()
+        composeRule.onNodeWithText("Model").fetchSemanticsNode()
 
         composeRule.onNode(hasText("Dashboard") and isSelectable()).performClick()
         composeRule.onNodeWithText("AI-powered development workstation").assertIsDisplayed()
