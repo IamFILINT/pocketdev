@@ -21,7 +21,7 @@ import java.io.File
  * runtime reinstall never removes it. ARM64 only: the upstream Bionic project does
  * not build x86_64, so this controller refuses to provision on the CI emulator.
  */
-class OpenCodeController(context: Context) {
+class OpenCodeController(context: Context) : AgentRuntime {
 
     private val appContext = context.applicationContext
     private val paths = RuntimePaths(appContext.filesDir).apply { ensureBaseDirectories() }
@@ -32,6 +32,8 @@ class OpenCodeController(context: Context) {
     private val _state = MutableStateFlow<AgentState>(AgentState.NotInstalled)
     val state: StateFlow<AgentState> = _state.asStateFlow()
 
+    override val agentState: StateFlow<AgentState> get() = state
+
     private val installer = AgentInstaller(installDir, HttpAgentDownloader()) { _state.value = it }
     private val launcher = RuntimeLauncher.withoutPreload(
         RuntimeEnvBuilder.fromContext(appContext, paths),
@@ -39,7 +41,7 @@ class OpenCodeController(context: Context) {
 
     /** Supervises `opencode serve` and captures its loopback URL + password. */
     private val server = OpenCodeServer(RuntimeProcessLauncher(launcher))
-    val serverState: StateFlow<OpenCodeServerState> = server.state
+    override val serverState: StateFlow<OpenCodeServerState> = server.state
 
     init {
         _state.value = initialState()
@@ -48,6 +50,8 @@ class OpenCodeController(context: Context) {
     private var process: Process? = null
 
     /** Downloads/verifies/installs the pinned agent. Blocking: call off the main thread. */
+    override fun install(): AgentState = provision()
+
     fun provision(apiLevel: Int = Build.VERSION.SDK_INT): AgentState {
         val artifact = OpenCodePins.aarch64
         val result = if (apiLevel < artifact.minApiLevel) {
@@ -66,7 +70,10 @@ class OpenCodeController(context: Context) {
      * [OpenCodeServerState.Starting]; the real URL/password arrive asynchronously on
      * [serverState]. Blocking launch: call off the main thread.
      */
-    fun startServer(projectDir: File, apiLevel: Int = Build.VERSION.SDK_INT): OpenCodeServerState {
+    override fun startServer(projectDir: File): OpenCodeServerState =
+        startServer(projectDir, Build.VERSION.SDK_INT)
+
+    fun startServer(projectDir: File, apiLevel: Int): OpenCodeServerState {
         val artifact = OpenCodePins.aarch64
         check(apiLevel >= artifact.minApiLevel) {
             "OpenCode Bionic requires API ${artifact.minApiLevel}+ (device is $apiLevel)"
@@ -79,14 +86,14 @@ class OpenCodeController(context: Context) {
         return server.start(installer.binary, projectDir)
     }
 
-    fun stopServer() = server.stop()
+    override fun stopServer() = server.stop()
 
     /** Connection details once [serverState] is [OpenCodeServerState.Listening]. */
     fun connection(): OpenCodeServerConnection? =
         (serverState.value as? OpenCodeServerState.Listening)?.connection
 
     /** A client bound to the running server, or null when it is not listening. */
-    fun newApiClient(): OpenCodeApiClient? = connection()?.let {
+    override fun newApiClient(): OpenCodeApiClient? = connection()?.let {
         OpenCodeApiClient(it.baseUrl, it.password)
     }
 

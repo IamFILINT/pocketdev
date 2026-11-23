@@ -3,6 +3,7 @@ package dev.pocketdev.ui
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
@@ -26,6 +27,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.pocketdev.R
+import dev.pocketdev.ui.agent.AgentRoute
+import dev.pocketdev.ui.agent.AgentWorkspaceViewModel
 import dev.pocketdev.ui.dashboard.DashboardRoute
 import dev.pocketdev.ui.dashboard.DashboardViewModel
 import dev.pocketdev.ui.projects.ProjectsRoute
@@ -39,6 +42,7 @@ private enum class Destination(
     val icon: ImageVector,
 ) {
     Dashboard("dashboard", R.string.nav_dashboard, Icons.Filled.Home),
+    Agent("agent", R.string.nav_agent, Icons.Filled.Build),
     Projects("projects", R.string.nav_projects, Icons.Filled.List),
     Settings("settings", R.string.nav_settings, Icons.Filled.Settings),
 }
@@ -53,6 +57,7 @@ fun PocketDevApp() {
     val projectsViewModel: ProjectsViewModel = viewModel()
     val settingsViewModel: SettingsViewModel = viewModel()
     val dashboardViewModel: DashboardViewModel = viewModel()
+    val agentWorkspaceViewModel: AgentWorkspaceViewModel = viewModel()
 
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val runtimeState by dashboardViewModel.runtimeState.collectAsStateWithLifecycle()
@@ -107,6 +112,9 @@ fun PocketDevApp() {
                     agentProvisioning = agentProvisioning,
                     onInstallAgent = dashboardViewModel::installAgent,
                 )
+            }
+            composable(Destination.Agent.route) {
+                AgentRoute(viewModel = agentWorkspaceViewModel)
             }
             composable(Destination.Projects.route) {
                 ProjectsRoute(viewModel = projectsViewModel)

@@ -265,3 +265,19 @@
   state unchanged, blocking stream + `stop()` -> not streaming, no error.
 - Next: Agent tab (server/session/prompt UI) consuming this VM; then sessions,
   provider/model settings and permission prompts.
+
+## Session 11 — 2026-11-23
+
+### M5 slice 2 — Agent workspace
+- `:runtime` `AgentRuntime` seam; `OpenCodeController` implements it (`install`,
+  `startServer(dir)`, `stopServer`, `newApiClient`).
+- `AgentWorkspaceViewModel` (`@JvmOverloads` for `viewModel()`): installs the
+  agent, starts/stops the server, and attaches the SSE stream only once
+  `OpenCodeServerState.Listening` arrives; detaches and clears sessions when the
+  server stops. Task state still comes exclusively from real events.
+- Agent tab (4th destination): agent status/install, server start/stop with URL,
+  task state + live/error indicators, session list. Strings added.
+- Instrumented tests: attach -> sessions + `COMPLETED`, stop -> detach, install
+  delegation; navigation test for the Agent tab.
+- Next: prompt composer + new-session action, provider/model settings, permission
+  prompts, then ARM64 device verification (R1).
