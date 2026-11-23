@@ -43,6 +43,10 @@
     <string name="agent_sessions_title">Sessions</string>
     <string name="agent_sessions_empty">No sessions yet</string>
     <string name="agent_action_error">Error: %1$s</string>
+    <string name="agent_session_new">New session</string>
+    <string name="agent_session_selected">Selected: %1$s</string>
+    <string name="agent_prompt_label">Prompt</string>
+    <string name="agent_prompt_send">Send prompt</string>
     <string name="dashboard_project_count">%1$d project(s)</string>
     <string name="dashboard_version">Version %1$s</string>
     <string name="dashboard_runtime_checking">Checking device…</string>

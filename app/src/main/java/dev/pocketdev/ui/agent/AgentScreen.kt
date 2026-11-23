@@ -14,9 +14,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +42,8 @@ fun AgentRoute(viewModel: AgentWorkspaceViewModel) {
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val actionError by viewModel.actionError.collectAsStateWithLifecycle()
+    val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
+    val sending by viewModel.sending.collectAsStateWithLifecycle()
 
     AgentScreen(
         agentState = agentState,
@@ -48,9 +54,14 @@ fun AgentRoute(viewModel: AgentWorkspaceViewModel) {
         sessions = sessions,
         busy = busy,
         actionError = actionError,
+        activeSessionId = activeSessionId,
+        sending = sending,
         onInstall = viewModel::installAgent,
         onStartServer = viewModel::startServer,
         onStopServer = viewModel::stopServer,
+        onSelectSession = viewModel::selectSession,
+        onCreateSession = viewModel::createSession,
+        onSendPrompt = viewModel::sendPrompt,
     )
 }
 
@@ -64,11 +75,19 @@ fun AgentScreen(
     sessions: List<OpenCodeSession>,
     busy: Boolean,
     actionError: String?,
+    activeSessionId: String?,
+    sending: Boolean,
     onInstall: () -> Unit,
     onStartServer: () -> Unit,
     onStopServer: () -> Unit,
+    onSelectSession: (String) -> Unit,
+    onCreateSession: () -> Unit,
+    onSendPrompt: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var draft by remember { mutableStateOf("") }
+    val serverReady = serverState is OpenCodeServerState.Listening
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -166,8 +185,11 @@ fun AgentScreen(
 
         AgentCard(
             title = stringResource(R.string.agent_sessions_title),
-            status = null,
+            status = activeSessionId?.let { stringResource(R.string.agent_session_selected, it) },
         ) {
+            OutlinedButton(onClick = onCreateSession, enabled = serverReady && !sending) {
+                Text(stringResource(R.string.agent_session_new))
+            }
             if (sessions.isEmpty()) {
                 Text(
                     text = stringResource(R.string.agent_sessions_empty),
@@ -176,11 +198,31 @@ fun AgentScreen(
                 )
             } else {
                 sessions.forEach { session ->
-                    Text(
-                        text = session.title ?: session.id,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                    OutlinedButton(
+                        onClick = { onSelectSession(session.id) },
+                        enabled = !sending,
+                    ) {
+                        Text(session.title ?: session.id)
+                    }
                 }
+            }
+
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                label = { Text(stringResource(R.string.agent_prompt_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = serverReady && !sending,
+                minLines = 3,
+            )
+            Button(
+                onClick = {
+                    onSendPrompt(draft)
+                    draft = ""
+                },
+                enabled = serverReady && !sending && draft.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.agent_prompt_send))
             }
         }
     }

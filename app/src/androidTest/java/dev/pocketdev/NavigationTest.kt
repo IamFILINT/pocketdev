@@ -33,6 +33,8 @@ class NavigationTest {
 
         composeRule.onNodeWithText("Agent workspace").assertIsDisplayed()
         composeRule.onNodeWithText("Task state").assertIsDisplayed()
+        composeRule.onNodeWithText("New session").assertIsDisplayed()
+        composeRule.onNodeWithText("Prompt").assertIsDisplayed()
     }
 
     @Test

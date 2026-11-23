@@ -281,3 +281,15 @@
   delegation; navigation test for the Agent tab.
 - Next: prompt composer + new-session action, provider/model settings, permission
   prompts, then ARM64 device verification (R1).
+
+## Session 12 — 2026-11-23
+
+### M5 slice 3 — prompt composer and sessions
+- `AgentWorkspaceViewModel`: active session state, `createSession`, `selectSession`,
+  `sendPrompt`, `sending` guard; prompts are sent through the session API only
+  while the server is listening, and blank prompts are rejected locally.
+- Agent tab: session selector, "New session", multiline prompt field and "Send
+  prompt" button; task state remains event-driven.
+- Instrumented tests: create-on-first-prompt, explicit new session, blank prompt
+  rejection; coverage/audit notes updated.
+- Next: provider/model settings, permission prompts, then ARM64 device run (R1).
