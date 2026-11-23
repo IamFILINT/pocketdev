@@ -28,6 +28,14 @@ class NavigationTest {
     }
 
     @Test
+    fun dashboardToAgentWorkspace() {
+        composeRule.onNode(hasText("Agent") and isSelectable()).performClick()
+
+        composeRule.onNodeWithText("Agent workspace").assertIsDisplayed()
+        composeRule.onNodeWithText("Task state").assertIsDisplayed()
+    }
+
+    @Test
     fun projectsToSettingsAndBackToDashboard() {
         composeRule.onNode(hasText("Projects") and isSelectable()).performClick()
         composeRule.onNodeWithText("No projects yet").assertIsDisplayed()

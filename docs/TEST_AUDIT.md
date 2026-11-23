@@ -36,6 +36,7 @@ For each component: responsibilities, expected behavior, dependencies, failure c
 - Native payload identity: `native-runtime-ci.yml` is green (run 45006056315).
 - M5 SSE: `ServerSentEvent` parser and `TaskStateMapper` unit-tested (PRs #24, #26); `AgentSessionViewModel` instrumented (PR #28).
 - M5 SSE consumption: `OpenCodeSessionApi` seam + `AgentSessionViewModel.start/stop` streaming, failure and stop coverage on the emulator (PR #32).
+- M5 workspace: `AgentRuntime`/`OpenCodeSessionApi` seams + Agent workspace ViewModel (install, attach on listening, detach on stop) and Agent tab navigation (PR #33).
 
 ### Defects found during audit
 

@@ -4,6 +4,7 @@
 
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_agent">Agent</string>
     <string name="nav_projects">Projects</string>
     <string name="nav_settings">Settings</string>
 
@@ -25,6 +26,23 @@
     <string name="dashboard_agent_verifying">Verifying…</string>
     <string name="dashboard_agent_ready">Ready (%1$s)</string>
     <string name="dashboard_agent_failed">Failed: %1$s</string>
+    <string name="agent_title">Agent workspace</string>
+    <string name="agent_subtitle">Runs the pinned OpenCode server and shows only task states reported by real session events.</string>
+    <string name="agent_server_title">Agent server</string>
+    <string name="agent_server_stopped">Stopped</string>
+    <string name="agent_server_starting">Starting…</string>
+    <string name="agent_server_listening">Listening on %1$s</string>
+    <string name="agent_server_failed">Failed: %1$s</string>
+    <string name="agent_server_exited">Exited (code %1$d)</string>
+    <string name="agent_server_start">Start server</string>
+    <string name="agent_server_stop">Stop server</string>
+    <string name="agent_task_title">Task state</string>
+    <string name="agent_task_state">%1$s</string>
+    <string name="agent_task_streaming">Streaming live events</string>
+    <string name="agent_task_error">Stream error: %1$s</string>
+    <string name="agent_sessions_title">Sessions</string>
+    <string name="agent_sessions_empty">No sessions yet</string>
+    <string name="agent_action_error">Error: %1$s</string>
     <string name="dashboard_project_count">%1$d project(s)</string>
     <string name="dashboard_version">Version %1$s</string>
     <string name="dashboard_runtime_checking">Checking device…</string>

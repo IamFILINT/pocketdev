@@ -23,7 +23,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | OpenCodeApiClient | auth, body, path escape, real server | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified |
 | ServerSentEvent + parser | SSE parsing edge cases | unit | `core/.../agent/ServerSentEventTest.kt` | verify | Verified (PR #24) |
 | OpenCodeApiClient.streamEvents | streaming delivery + early stop | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #24) |
-| OpenCodeSessionApi | seam implemented by client, faked in VM tests | unit | (interface; client verified above) | verify | Pending CI (PR #32) |
+| OpenCodeSessionApi | seam implemented by client, faked in VM tests | unit | (interface; client verified above) | verify | Verified (PR #32) |
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
 | ProjectStore | CRUD/registry | unit | `core/.../workspace/ProjectStoreTest.kt` | verify | Verified |
 | ProjectNameValidator | name rules | unit | `core/.../validation/ProjectNameValidatorTest.kt` | verify | Verified |
@@ -40,6 +40,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | Component | Expected behavior | Test type | Test location | Workflow | Status |
 | --- | --- | --- | --- | --- | --- |
 | RuntimeController.abiFor | ABI selection | unit | `runtime/.../RuntimeControllerAbiTest.kt` | verify | Verified |
+| AgentRuntime | seam implemented by OpenCodeController, faked in workspace tests | unit | (interface; controller covered indirectly) | verify | Pending CI (PR #33) |
 | RuntimeEnvBuilder | env overrides | unit | `runtime/.../RuntimeEnvBuilderTest.kt` | verify | Verified |
 | RuntimeLauncher | linker-hop spawn | unit | `runtime/.../RuntimeLauncherTest.kt` | verify | Verified |
 | RuntimePreloadDeployer | preload deploy | unit | `runtime/.../RuntimePreloadDeployerTest.kt` | verify | Verified |
@@ -59,7 +60,9 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | ProjectsViewModel | create/delete/validate | instrumentation | `app/src/androidTest/.../ProjectsViewModelTest.kt` | android-emulator | Verified (PR #19) |
 | SettingsViewModel | theme/api key draft | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #22) |
 | AgentSessionViewModel | event mapping | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #28) |
-| AgentSessionViewModel streaming | real API stream -> TaskState, error, stop | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Pending CI (PR #32) |
+| AgentSessionViewModel streaming | real API stream -> TaskState, error, stop | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #32) |
+| AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #33) |
+| AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
 | Compose screens | rendering | instrumentation | missing | - | Pending |
 
