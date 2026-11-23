@@ -1,5 +1,7 @@
 package dev.pocketdev.core.workspace
 
+import java.io.File
+
 enum class FileKind {
     DIRECTORY,
     TEXT,
