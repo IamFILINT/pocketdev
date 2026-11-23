@@ -5,7 +5,6 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.ArrayDeque
 
@@ -17,14 +16,13 @@ class WorkspaceFiles(private val root: File) {
         wrapped {
             val directory = resolve(relativeDirectory)
             require(directory.isDirectory) { "Not a directory" }
-            val entries = Files.list(directory.toPath()).use { stream ->
-                stream.map { path: Path -> path.toFile() }
-                    .filter { !Files.isSymbolicLink(it.toPath()) }
-                    .map { file: File -> FileEntry.from(canonicalRoot, file) }
-                    .filter { showHidden || !it.isHidden }
-                    .toList()
-                    .sortedWith(ENTRY_ORDER)
-            }
+            val entries = (directory.listFiles() ?: throw IOException("Could not read directory"))
+                .asSequence()
+                .filter { !Files.isSymbolicLink(it.toPath()) }
+                .map { FileEntry.from(canonicalRoot, it) }
+                .filter { showHidden || !it.isHidden }
+                .toList()
+                .sortedWith(ENTRY_ORDER)
             DirectoryListing(normalize(relativeDirectory), entries)
         }
 
