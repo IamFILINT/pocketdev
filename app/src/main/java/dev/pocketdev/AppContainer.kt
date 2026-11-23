@@ -2,6 +2,7 @@ package dev.pocketdev
 
 import android.content.Context
 import dev.pocketdev.core.runtime.RuntimePaths
+import dev.pocketdev.core.settings.AgentSettings
 import dev.pocketdev.core.workspace.ProjectStore
 import dev.pocketdev.runtime.OpenCodeController
 import dev.pocketdev.runtime.RuntimeController
@@ -39,6 +40,23 @@ class AppContainer(context: Context) {
     private val preferences =
         appContext.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
+    private val _agentSettings = MutableStateFlow(
+        AgentSettings.fromStorage(
+            preferences.getString(KEY_AGENT_PROVIDER, null),
+            preferences.getString(KEY_AGENT_MODEL, null),
+        ),
+    )
+    val agentSettings: StateFlow<AgentSettings> = _agentSettings.asStateFlow()
+
+    /** Persists only non-secret provider/model preferences. */
+    fun setAgentSettings(settings: AgentSettings) {
+        preferences.edit()
+            .putString(KEY_AGENT_PROVIDER, settings.provider)
+            .putString(KEY_AGENT_MODEL, settings.model)
+            .apply()
+        _agentSettings.value = settings
+    }
+
     private val _themeMode = MutableStateFlow(
         ThemeMode.fromStorage(preferences.getString(KEY_THEME_MODE, null)),
     )
@@ -52,5 +70,7 @@ class AppContainer(context: Context) {
     private companion object {
         const val PREFERENCES_NAME = "pocketdev.settings"
         const val KEY_THEME_MODE = "theme_mode"
+        const val KEY_AGENT_PROVIDER = "agent_provider"
+        const val KEY_AGENT_MODEL = "agent_model"
     }
 }

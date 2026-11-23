@@ -82,6 +82,12 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_ai_title">AI provider</string>
+    <string name="settings_provider_label">Provider</string>
+    <string name="settings_provider_placeholder">Server default</string>
+    <string name="settings_model_label">Model</string>
+    <string name="settings_model_placeholder">Server default</string>
+    <string name="settings_agent_defaults_hint">Leave provider or model blank to keep the OpenCode server default. These preferences are non-secret; applying them to a running server is not wired yet.</string>
+    <string name="settings_agent_settings_error">Invalid setting: %1$s</string>
     <string name="settings_ai_key_label">API key</string>
     <string name="settings_ai_key_placeholder">Paste a provider API key</string>
     <string name="settings_ai_key_warning">Keys are held in memory only for now. Encrypted, Keystore-backed persistence is added with the AI integration milestone; nothing is written to disk yet.</string>

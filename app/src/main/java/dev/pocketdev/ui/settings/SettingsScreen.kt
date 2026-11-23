@@ -29,19 +29,25 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pocketdev.R
+import dev.pocketdev.core.settings.AgentSettings
 import dev.pocketdev.settings.ThemeMode
 
 @Composable
 fun SettingsRoute(viewModel: SettingsViewModel) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val apiKeyDraft by viewModel.apiKeyDraft.collectAsStateWithLifecycle()
+    val agentSettings by viewModel.agentSettings.collectAsStateWithLifecycle()
+    val agentSettingsError by viewModel.agentSettingsError.collectAsStateWithLifecycle()
 
     SettingsScreen(
         themeMode = themeMode,
         apiKeyDraft = apiKeyDraft,
+        agentSettings = agentSettings,
+        agentSettingsError = agentSettingsError,
         workspaceRoot = viewModel.workspaceRoot,
         onThemeChange = viewModel::setThemeMode,
         onApiKeyChange = viewModel::setApiKeyDraft,
+        onAgentSettingsChange = viewModel::setAgentSettings,
         onClearProjects = viewModel::clearProjects,
     )
 }
@@ -50,9 +56,12 @@ fun SettingsRoute(viewModel: SettingsViewModel) {
 fun SettingsScreen(
     themeMode: ThemeMode,
     apiKeyDraft: String,
+    agentSettings: AgentSettings,
+    agentSettingsError: String?,
     workspaceRoot: String,
     onThemeChange: (ThemeMode) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onAgentSettingsChange: (String, String) -> Unit,
     onClearProjects: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -86,6 +95,34 @@ fun SettingsScreen(
         }
 
         SectionCard(title = stringResource(R.string.settings_ai_title)) {
+            OutlinedTextField(
+                value = agentSettings.provider,
+                onValueChange = { onAgentSettingsChange(it, agentSettings.model) },
+                label = { Text(stringResource(R.string.settings_provider_label)) },
+                placeholder = { Text(stringResource(R.string.settings_provider_placeholder)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                value = agentSettings.model,
+                onValueChange = { onAgentSettingsChange(agentSettings.provider, it) },
+                label = { Text(stringResource(R.string.settings_model_label)) },
+                placeholder = { Text(stringResource(R.string.settings_model_placeholder)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = stringResource(R.string.settings_agent_defaults_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            agentSettingsError?.let {
+                Text(
+                    text = stringResource(R.string.settings_agent_settings_error, it),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             OutlinedTextField(
                 value = apiKeyDraft,
                 onValueChange = onApiKeyChange,
