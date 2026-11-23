@@ -8,7 +8,8 @@ on:
       - 'core/src/main/kotlin/dev/pocketdev/core/agent/OpenCodePins.kt'
       - '.github/workflows/native-runtime-ci.yml'
   push:
-    branches: [main]
+    branches:
+      - '**'
     paths:
       - 'core/src/main/kotlin/dev/pocketdev/core/runtime/BootstrapPins.kt'
       - 'core/src/main/kotlin/dev/pocketdev/core/agent/OpenCodePins.kt'
