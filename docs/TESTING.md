@@ -9,9 +9,9 @@
 
 | Layer | Where | What it proves | What it does **not** prove |
 | --- | --- | --- | --- |
-| JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, serve-output parsing, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
+| JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, serve-output parsing, ANSI terminal buffer, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
 | Android lint + `assembleDebug` | `verify.yml`, `ubuntu-latest` | Compiles `:app`/`:runtime`/`:core`, lint gates the debug build | Runtime correctness on device |
-| Instrumentation (x86_64 API 30) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics | Any ARM64/Bionic behavior |
+| Instrumentation (x86_64 API 30) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real x86_64 PTY sessions | Any ARM64/Bionic behavior |
 | Static native-artifact checks | planned `native-runtime-ci.yml` | Pinned artifact identity (size, SHA-256, ELF machine/class), honest static validation of the aarch64 agent/bootstrap on an x86_64 runner | Execution |
 | ARM64 device run | not in CI | — | The accepted gap (risk R1) |
 
@@ -26,7 +26,7 @@
 Artifacts: unit-test reports, lint report, debug APK.
 
 `android-emulator.yml`: boots an x86_64 API 30 AVD and runs
-`connectedDebugAndroidTest` (currently navigation tests).
+`connectedDebugAndroidTest` (navigation, Files, and terminal-session tests).
 
 ## What is deliberately *not* claimed
 
@@ -51,6 +51,8 @@ Artifacts: unit-test reports, lint report, debug APK.
 | Bootstrap (checksums, archive, journal, manager, health) | `core/.../runtime/*Test.kt` |
 | Runtime env / preload / launcher / ABI | `runtime/.../*Test.kt` |
 | Server supervision state machine | `runtime/.../OpenCodeServerTest.kt` |
+| ANSI terminal buffer | `core/.../terminal/AnsiBufferTest.kt` |
+| Terminal sessions / navigation | `app/src/androidTest/.../TerminalViewModelTest.kt`, `app/src/androidTest/.../NavigationTest.kt` |
 | Compose navigation / runtime spike (opt-in) | `app/src/androidTest/...` |
 
 ## Running tests

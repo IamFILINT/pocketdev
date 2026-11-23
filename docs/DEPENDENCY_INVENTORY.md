@@ -61,8 +61,8 @@
 - OpenCode Bionic `v2.3.2` — self-contained aarch64 binary (211,486,984 B,
   SHA-256 `ea93b4c4…`), MIT, minimum API 29. Downloaded at first run into
   `files/agent`, pinned in `OpenCodePins`, never bundled in the APK (ADR-0003).
-- `terminal-emulator` / `terminal-view` — approved for reuse (ADR-0001) but no
-  code copied yet.
+- `terminal-emulator` / `terminal-view` — approved for reuse (ADR-0001) but not
+  copied; PocketDev uses its own JNI PTY and Compose/Kotlin ANSI renderer.
 
 ## Not yet included (planned)
 
