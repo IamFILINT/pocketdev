@@ -26,6 +26,11 @@ Planned modules (later milestones):
 | `:ai` | Event-stream mapping and provider/permission UI (the process controller and API client currently live in `:runtime`/`:core`) |
 | `:workspace` | File explorer operations, editor file synchronization, Git |
 
+The PTY host is currently implemented in the app (JNI/native under
+`app/src/main/cpp` plus Kotlin session management under
+`app/src/main/java/dev/pocketdev/terminal`) instead of a separate `:terminal`
+module; the module split remains deferred.
+
 ## Layer boundaries (master prompt §4.1)
 
 - UI must not touch runtime internals directly.

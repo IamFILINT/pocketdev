@@ -27,7 +27,7 @@ For each component: responsibilities, expected behavior, dependencies, failure c
 1. Android-bound orchestration (`OpenCodeController`, `RuntimeController`) has no direct tests. Covered indirectly by `:core`/`:runtime` unit tests and manual device runs. Needs Robolectric or instrumented tests to close; not configured today.
 2. `RuntimeExecutionHealthCheck` requires a real linker64 + prefix; only runs on a device/emulator with a provisioned prefix. Structural part (`BootstrapHealth`) is unit-tested.
 3. `AppContainer` is Context-bound; no unit tests (object graph is trivial wiring).
-4. Compose screens have no instrumentation tests beyond navigation.
+4. Compose screens have instrumentation coverage only for navigation/Files/Terminal smoke.
 5. ARM64 device execution remains unverifiable in GitHub Actions (risk R1).
 
 ### Closed since original audit
@@ -41,6 +41,7 @@ For each component: responsibilities, expected behavior, dependencies, failure c
 - M5 settings: non-secret provider/model preferences validated in `:core`, persisted in `AppContainer`, surfaced in Settings with reject-invalid tests (PR #35). Secret API keys remain in memory by design.
 - M5 permissions: `permission.asked` parsed into a pending request, `once`/`always`/`reject` reply posted to the upstream session permission endpoint, state/action exposed through both Agent ViewModels, permission card rendered in the Agent tab, and unit/instrumented coverage added (PR #36).
 - M6 explorer: `WorkspaceFiles` keeps all create/rename/copy/move/delete/search/preview operations inside the selected project root, skips symlinks, rejects traversal, and is covered by JVM unit tests plus instrumented `FilesViewModel`/navigation tests (PR #37).
+- M6 terminal: JNI `openpty`/`fork`/`execve` PTY sessions, ANSI buffer, resize, scrollback, copy/paste, signals, multi-session support, and selected-project cwd are covered by JVM ANSI unit tests plus instrumented `TerminalViewModel`/navigation tests (PR #38).
 
 ### Defects found during audit
 

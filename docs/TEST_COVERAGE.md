@@ -31,6 +31,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
 | WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
 | FileEntry | kind detection and hidden flag | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
+| AnsiBuffer | ANSI SGR, cursor, erase, scrollback, resize, OSC, plain text | unit | `core/.../terminal/AnsiBufferTest.kt` | verify | Verified (PR #38) |
 | ProjectStore | CRUD/registry | unit | `core/.../workspace/ProjectStoreTest.kt` | verify | Verified |
 | ProjectNameValidator | name rules | unit | `core/.../validation/ProjectNameValidatorTest.kt` | verify | Verified |
 | SecretRedaction | redaction | unit | `core/.../security/SecretRedactionTest.kt` | verify | Verified |
@@ -75,9 +76,11 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
 | FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
 | FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
+| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation | `app/src/androidTest/.../TerminalViewModelTest.kt` | android-emulator | Verified (PR #38) |
+| TerminalScreen + nav | Terminal tab renders terminal controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #38) |
 | AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
-| Compose screens | rendering | instrumentation | missing | - | Pending |
+| Compose screens | rendering | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Partial (navigation/Files/Terminal smoke) |
 
 ## Native payloads (static, x86_64 runner)
 

@@ -11,9 +11,9 @@ AI coding agent (OpenCode Bionic).
 > supervised loopback-only, and driven through a typed API client with live SSE
 > events, sessions, prompts, provider/model settings, and permission prompts. The
 > runtime bootstrap is pinned, checksum-verified, safely extracted, resumable, and
-> health-checked through the linker hop. Milestone 6 file explorer and shared
-> project identity are verified; the PTY terminal and an end-to-end physical ARM64
-> run remain.
+> health-checked through the linker hop. Milestone 6 file explorer, shared project
+> identity, and real PTY terminal are verified; an end-to-end physical ARM64 run
+> remains.
 
 [![verify](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml)
 [![android-emulator](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml)
@@ -28,7 +28,7 @@ AI coding agent (OpenCode Bionic).
 | 3 — Runtime bootstrap | Done (`:core` logic + `:runtime` wiring) |
 | 4 — OpenCode Bionic provisioning | Done: pin, verified installer, loopback supervision, API client (ADR-0003/0004) |
 | 5 — AI workspace | Done: SSE events → UI, sessions, prompts, provider/model settings, permission prompts |
-| 6 — Terminal and filesystem | In progress: file explorer + shared project identity verified; PTY terminal pending |
+| 6 — Terminal and filesystem | Done: file explorer, shared project identity, and real PTY terminal (PRs #37/#38) |
 
 ## Principles
 
@@ -53,6 +53,8 @@ AI coding agent (OpenCode Bionic).
   `/api/info`, session list/create, prompt.
 - File explorer: safe create/rename/copy/move/delete/search/preview inside the
   selected project root, SAF import/export, and one shared root for agent/files.
+- Terminal: native PTY sessions with ANSI color/cursor handling, resize, scrollback,
+  copy/paste, signals, and multiple sessions sharing the selected project root.
 
 See [`docs/OPENCODE_BIONIC.md`](docs/OPENCODE_BIONIC.md) for the integration contract
 and [`docs/TESTING.md`](docs/TESTING.md) for exactly what CI proves (and does not).

@@ -340,6 +340,22 @@
   Files views share it, and the Agent server now starts in the selected project root.
 - Added Files tab with its own ViewModel, project selector, breadcrumb, hidden toggle,
   search, create/rename/copy/move/delete dialogs, text preview, and SAF import/export.
-- CI green on PR #37 at `4e6d093`: verify `45247344473`/`45247358973`,
-  `android-emulator` `45247344412`/`45247358808`. Next: merge PR #37, then the PTY
-  terminal for M6; ARM64 device run remains R1.
+- CI green on PR #37 at `4e6d093` and final head `5104fd1`: verify
+  `45248176459`/`45248191102`, `android-emulator` `45248176792`/`45248190987`.
+- PR #37 merged into `main` at `81dfd49` after local fast-forward; branch deleted.
+  Next: PTY terminal for M6; ARM64 device run remains R1.
+
+## Session 16 — 2026-11-23
+
+### M6 slice 2 — real PTY terminal
+- Added native JNI PTY host (`openpty`, `fork`, `execve`, `TIOCSWINSZ`, signals,
+  reap) for `arm64-v8a` and `x86_64`, with Kotlin session lifecycle and shared
+  project cwd.
+- Added pure-Kotlin ANSI buffer (cursor, SGR, erase, scrollback, resize, OSC, plain
+  text) with JVM unit tests.
+- Added Terminal tab with multi-session tabs, scrollback, keyboard input, copy/paste,
+  resize handling, and instrumentation coverage for real x86_64 PTY sessions/navigation.
+- First PR #38 CI run failed on ANSI buffer API/type errors; second failed on Compose
+  BOM clipboard/`SpanStyle` API changes. Fixed in follow-up commits; final code CI is
+  green: verify `45254925593`/`45254937737`, android-emulator `45254925748`/`45254937817`.
+- Next: merge PR #38, then Milestone 7 code editor. Physical ARM64 device run remains R1.

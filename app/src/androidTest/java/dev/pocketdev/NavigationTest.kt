@@ -47,6 +47,16 @@ class NavigationTest {
     }
 
     @Test
+    fun dashboardToTerminal() {
+        composeRule.onNode(hasText("Terminal") and isSelectable()).performClick()
+
+        composeRule.onNode(hasText("Working directory:", substring = true)).fetchSemanticsNode()
+        composeRule.onNodeWithText("New session").fetchSemanticsNode()
+        composeRule.onNodeWithText("Close session").fetchSemanticsNode()
+        composeRule.onNodeWithText("Copy").fetchSemanticsNode()
+    }
+
+    @Test
     fun projectsToSettingsAndBackToDashboard() {
         composeRule.onNode(hasText("Projects") and isSelectable()).performClick()
         composeRule.onNodeWithText("No projects yet").assertIsDisplayed()

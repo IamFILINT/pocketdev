@@ -107,11 +107,12 @@ against a live ARM64 OpenCode server remains the accepted R1 device gap.
 
 - [x] File explorer with create/rename/copy/move/delete/search/preview and SAF import/export (PR #37)
 - [x] Shared selected-project identity across Projects, Files, and Agent (PR #37)
-- [ ] PTY-backed terminal with ANSI/cursor/resize/scrollback/copy-paste/signals/multi-session
+- [x] PTY-backed terminal with ANSI/cursor/resize/scrollback/copy-paste/signals/multi-session (PR #38)
 
-**Partial exit evidence:** PR #37 verify `45246455172`/`45246470278` and
-`android-emulator` `45246454923`/`45246470007` (all green). Milestone 6 is not
-complete until the PTY terminal lands.
+**Exit evidence:** PR #37 verify `45248176459`/`45248191102` and `android-emulator`
+`45248176792`/`45248190987` (all green). PR #38 verify `45254925593`/`45254937737`
+and `android-emulator` `45254925748`/`45254937817` (all green). Physical ARM64
+device execution remains the accepted R1 gap.
 
 ## Milestone 7 — Code editor
 
