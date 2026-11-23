@@ -293,3 +293,16 @@
 - Instrumented tests: create-on-first-prompt, explicit new session, blank prompt
   rejection; coverage/audit notes updated.
 - Next: provider/model settings, permission prompts, then ARM64 device run (R1).
+
+## Session 13 — 2026-11-23
+
+### M5 slice 4 — provider/model preferences
+- `:core` `AgentSettings` (non-secret provider/model, trimming and validation);
+  `AppContainer` persists them in SharedPreferences; `SettingsViewModel` exposes
+  validated setters with an error StateFlow.
+- Settings screen: Provider/Model text fields with "server default" placeholders
+  and an explicit note that applying them to a running server is not wired yet.
+  API key remains in-memory only (Keystore store still pending).
+- Tests: core validation unit tests, instrumented persistence/invalid-input tests,
+  Settings navigation assertions.
+- Next: permission prompts; ARM64 device run remains R1.

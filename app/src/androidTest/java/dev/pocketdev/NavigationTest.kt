@@ -1,5 +1,6 @@
 package dev.pocketdev
 
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
@@ -45,6 +46,8 @@ class NavigationTest {
         composeRule.onNode(hasText("Settings") and isSelectable()).performClick()
         composeRule.onNodeWithText("Appearance").assertIsDisplayed()
         composeRule.onNodeWithText("AI provider").assertIsDisplayed()
+        composeRule.onNodeWithText("Provider").assertExists()
+        composeRule.onNodeWithText("Model").assertExists()
 
         composeRule.onNode(hasText("Dashboard") and isSelectable()).performClick()
         composeRule.onNodeWithText("AI-powered development workstation").assertIsDisplayed()

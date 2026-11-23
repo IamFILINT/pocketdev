@@ -2,6 +2,7 @@ package dev.pocketdev
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.pocketdev.core.settings.AgentSettings
 import dev.pocketdev.settings.ThemeMode
 import dev.pocketdev.ui.settings.SettingsViewModel
 import org.junit.After
@@ -28,6 +29,7 @@ class SettingsViewModelTest {
     fun tearDown() {
         app.container.projectStore.replaceAll(emptyList())
         app.container.setThemeMode(ThemeMode.SYSTEM)
+        app.container.setAgentSettings(AgentSettings.DEFAULT)
     }
 
     @Test
@@ -51,6 +53,24 @@ class SettingsViewModelTest {
 
         viewModel.setApiKeyDraft("")
         assertEquals("", viewModel.apiKeyDraft.value)
+    }
+
+    @Test
+    fun agentSettingsPersistAcrossViewModels() {
+        viewModel.setAgentSettings("  anthropic ", " claude-sonnet-4 ")
+
+        val restored = SettingsViewModel(app).agentSettings.value
+        assertEquals("anthropic", restored.provider)
+        assertEquals("claude-sonnet-4", restored.model)
+    }
+
+    @Test
+    fun invalidAgentSettingsAreRejectedWithoutChangingStoredValues() {
+        viewModel.setAgentSettings("ok", "model")
+        viewModel.setAgentSettings("bad\nprovider", "other")
+
+        assertTrue(viewModel.agentSettingsError.value != null)
+        assertEquals("ok", SettingsViewModel(app).agentSettings.value.provider)
     }
 
     @Test
