@@ -340,4 +340,6 @@
   Files views share it, and the Agent server now starts in the selected project root.
 - Added Files tab with its own ViewModel, project selector, breadcrumb, hidden toggle,
   search, create/rename/copy/move/delete dialogs, text preview, and SAF import/export.
-- CI pending on PR #37. Next: PTY terminal for M6; ARM64 device run remains R1.
+- CI green on PR #37 at `4e6d093`: verify `45247344473`/`45247358973`,
+  `android-emulator` `45247344412`/`45247358808`. Next: merge PR #37, then the PTY
+  terminal for M6; ARM64 device run remains R1.
