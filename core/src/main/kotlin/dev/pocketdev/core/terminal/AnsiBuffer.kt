@@ -11,7 +11,7 @@ data class TerminalCell(
 )
 
 data class TerminalLine(val cells: List<TerminalCell>) {
-    fun text(): String = cells.joinToString("") { it.char }.trimEnd()
+    fun text(): String = cells.joinToString("") { it.char.toString() }.trimEnd()
 }
 
 data class TerminalSnapshot(
@@ -64,7 +64,7 @@ class AnsiBuffer(initialCols: Int = 80, initialRows: Int = 24) {
 
     @Synchronized
     fun snapshot(): TerminalSnapshot {
-        val all = scrollback.toList() + lines
+        val all = (scrollback.toList() + lines).toMutableList()
         val absoluteRow = scrollback.size + cursorRow
         if (absoluteRow in all.indices) {
             val cells = all[absoluteRow].cells.toMutableList()
