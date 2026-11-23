@@ -12,14 +12,17 @@ import org.junit.runner.RunWith
 class OpenCodeControllerTest {
 
     @Test
-    fun provisionFailsClosedOnUnsupportedAbi() {
-        // The emulator is x86_64; OpenCode Bionic is aarch64-only, so provisioning
-        // must be refused rather than attempting a download.
+    fun provisionFailsClosedBelowMinimumApi() {
+        // API 30 google_apis x86_64 images advertise arm64-v8a in
+        // ro.product.cpu.abilist (ARM translation), so an ABI-only negative test
+        // would attempt a real 211 MB download. Gate on API level instead: it is
+        // deterministic and never touches the network. ABI selection itself is
+        // covered by RuntimeControllerAbiTest.
         val controller = OpenCodeController(ApplicationProvider.getApplicationContext())
-        val state = controller.provision()
+        val state = controller.provision(apiLevel = 28)
 
         assertTrue(
-            "expected Failed on unsupported ABI, got $state",
+            "expected Failed below min API, got $state",
             state is AgentState.Failed,
         )
     }
@@ -28,8 +31,9 @@ class OpenCodeControllerTest {
     fun startServerRequiresInstalledBinary() {
         val controller = OpenCodeController(ApplicationProvider.getApplicationContext())
         var threw = false
+        val projectDir = java.io.File(System.getProperty("java.io.tmpdir") ?: ".")
         try {
-            controller.startServer(java.io.File(System.getProperty("java.io.tmpdir")))
+            controller.startServer(projectDir)
         } catch (e: IllegalStateException) {
             threw = true
         } catch (e: Exception) {
