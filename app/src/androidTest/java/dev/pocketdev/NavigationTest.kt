@@ -38,6 +38,15 @@ class NavigationTest {
     }
 
     @Test
+    fun dashboardToFiles() {
+        composeRule.onNode(hasText("Files") and isSelectable()).performClick()
+
+        composeRule.onNodeWithText("Project files").assertIsDisplayed()
+        composeRule.onNodeWithText("New folder").fetchSemanticsNode()
+        composeRule.onNodeWithText("Search files").fetchSemanticsNode()
+    }
+
+    @Test
     fun projectsToSettingsAndBackToDashboard() {
         composeRule.onNode(hasText("Projects") and isSelectable()).performClick()
         composeRule.onNodeWithText("No projects yet").assertIsDisplayed()

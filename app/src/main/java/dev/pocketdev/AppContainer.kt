@@ -3,6 +3,7 @@ package dev.pocketdev
 import android.content.Context
 import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.settings.AgentSettings
+import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.core.workspace.ProjectStore
 import dev.pocketdev.runtime.OpenCodeController
 import dev.pocketdev.runtime.RuntimeController
@@ -30,6 +31,24 @@ class AppContainer(context: Context) {
 
     /** Registry of project metadata (id, name, root, createdAt). */
     val projectStore: ProjectStore = ProjectStore(paths.state)
+
+    private val _selectedProject = MutableStateFlow(projectStore.load().firstOrNull())
+    val selectedProject: StateFlow<Project?> = _selectedProject.asStateFlow()
+
+    /** Project root shared by the agent, file explorer, terminal, editor, and Git. */
+    fun activeProjectRoot(): File =
+        selectedProject.value?.let { File(it.rootPath) } ?: projectsRoot
+
+    fun selectProject(id: String?) {
+        _selectedProject.value = projectStore.load().firstOrNull { it.id == id }
+    }
+
+    fun syncSelectedProject() {
+        val projects = projectStore.load()
+        if (selectedProject.value == null || projects.none { it.id == selectedProject.value?.id }) {
+            _selectedProject.value = projects.firstOrNull()
+        }
+    }
 
     /** Android-side runtime wiring: provisioning, environment, linker-hop launch. */
     val runtime: RuntimeController = RuntimeController(appContext)

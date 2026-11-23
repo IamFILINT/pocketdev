@@ -105,7 +105,9 @@ against a live ARM64 OpenCode server remains the accepted R1 device gap.
 
 ## Milestone 6 — Terminal and filesystem
 
-- [ ] PTY-backed terminal; file explorer; shared project identity
+- [x] File explorer with create/rename/copy/move/delete/search/preview and SAF import/export (PR #37 pending CI)
+- [x] Shared selected-project identity across Projects, Files, and Agent (PR #37 pending CI)
+- [ ] PTY-backed terminal with ANSI/cursor/resize/scrollback/copy-paste/signals/multi-session
 
 ## Milestone 7 — Code editor
 

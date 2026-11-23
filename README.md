@@ -7,14 +7,12 @@ version-control real software projects directly on an Android device — with a 
 terminal, an integrated Bionic runtime, a code editor, Git, package management, and an
 AI coding agent (OpenCode Bionic).
 
-> Status: Milestone 4 — the pinned OpenCode Bionic agent can be provisioned and is
-> supervised as a real child process. `opencode serve` is launched loopback-only,
-> its URL and per-run password are captured from the process output, and a typed
-> API client talks to it. The runtime bootstrap (`:core` + `:runtime`) is pinned,
-> checksum-verified, safely extracted, resumable, and its execution is health-checked
-> through the linker hop. The UI can install the runtime and agent and render live
-> state. Remaining for M4/M5: the SSE event stream into UI state (M5) and an
-> end-to-end run on a physical ARM64 device (accepted CI gap).
+> Status: Milestone 5 complete — the pinned OpenCode Bionic agent is provisioned,
+> supervised loopback-only, and driven through a typed API client with live SSE
+> events, sessions, prompts, provider/model settings, and permission prompts. The
+> runtime bootstrap is pinned, checksum-verified, safely extracted, resumable, and
+> health-checked through the linker hop. Milestone 6 file explorer is pending CI;
+> the PTY terminal and an end-to-end physical ARM64 run remain.
 
 [![verify](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/verify.yml)
 [![android-emulator](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml/badge.svg)](https://github.com/IamFILINT/pocketdev/actions/workflows/android-emulator.yml)
