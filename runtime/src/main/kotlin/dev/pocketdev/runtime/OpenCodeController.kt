@@ -41,7 +41,7 @@ class OpenCodeController(context: Context) : AgentRuntime {
 
     /** Supervises `opencode serve` and captures its loopback URL + password. */
     private val server = OpenCodeServer(RuntimeProcessLauncher(launcher))
-    val serverState: StateFlow<OpenCodeServerState> = server.state
+    override val serverState: StateFlow<OpenCodeServerState> = server.state
 
     init {
         _state.value = initialState()
