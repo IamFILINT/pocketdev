@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pocketdev.core.agent.OpenCodeSession
 import dev.pocketdev.core.agent.OpenCodeSessionApi
+import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.ServerSentEvent
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.ui.agent.AgentSessionViewModel
@@ -75,9 +76,13 @@ class AgentSessionViewModelTest {
         private val events: List<ServerSentEvent> = emptyList(),
         private val failure: Exception? = null,
     ) : OpenCodeSessionApi {
+        val replies = mutableListOf<Triple<String, String, PermissionDecision>>()
         override fun listSessions(limit: Int): List<OpenCodeSession> = emptyList()
         override fun createSession(title: String?): OpenCodeSession = OpenCodeSession("ses_test", title, null)
         override fun prompt(sessionId: String, text: String): String = "{}"
+        override fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision) {
+            replies.add(Triple(sessionId, requestId, decision))
+        }
         override fun streamEvents(sessionId: String?, onEvent: (ServerSentEvent) -> Boolean): Int {
             failure?.let { throw it }
             var delivered = 0
@@ -94,6 +99,7 @@ class AgentSessionViewModelTest {
         override fun listSessions(limit: Int): List<OpenCodeSession> = emptyList()
         override fun createSession(title: String?): OpenCodeSession = OpenCodeSession("ses_test", title, null)
         override fun prompt(sessionId: String, text: String): String = "{}"
+        override fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision) = Unit
         override fun streamEvents(sessionId: String?, onEvent: (ServerSentEvent) -> Boolean): Int {
             started.countDown()
             Thread.sleep(60_000)
@@ -133,6 +139,49 @@ class AgentSessionViewModelTest {
         await { !viewModel.streaming.value }
         assertEquals("stream broke", viewModel.error.value)
         assertEquals(TaskState.IDLE, viewModel.taskState.value)
+    }
+
+    @Test
+    fun permissionAskedIsExposedAndReplyIsSent() {
+        val api = FakeApi()
+        viewModel.start(api)
+        viewModel.applyEvent(ServerSentEvent("session.created", "{}", null))
+        viewModel.applyEvent(ServerSentEvent("message.part.updated", """{"type":"text"}""", null))
+        viewModel.applyEvent(
+            ServerSentEvent(
+                event = "permission.asked",
+                data = """{"type":"permission.asked","data":{"id":"per_1","sessionID":"ses_1","action":"bash","resources":["ls -la"],"message":"Allow?"}}""",
+                id = null,
+            ),
+        )
+
+        assertEquals(TaskState.WAITING_FOR_PERMISSION, viewModel.taskState.value)
+        assertEquals("per_1", viewModel.permissionRequest.value?.id)
+        assertEquals("bash", viewModel.permissionRequest.value?.action)
+
+        viewModel.respondToPermission(PermissionDecision.ONCE)
+
+        await { api.replies.size == 1 }
+        assertEquals(Triple("ses_1", "per_1", PermissionDecision.ONCE), api.replies.single())
+    }
+
+    @Test
+    fun permissionRepliedClearsPendingRequest() {
+        viewModel.applyEvent(ServerSentEvent("session.created", "{}", null))
+        viewModel.applyEvent(ServerSentEvent("message.part.updated", """{"type":"text"}""", null))
+        viewModel.applyEvent(
+            ServerSentEvent(
+                event = "permission.asked",
+                data = """{"data":{"id":"per_1","sessionID":"ses_1","action":"bash","resources":[]}}""",
+                id = null,
+            ),
+        )
+        assertEquals("per_1", viewModel.permissionRequest.value?.id)
+
+        viewModel.applyEvent(ServerSentEvent("permission.replied", """{"data":{"requestID":"per_1"}}""", null))
+
+        assertNull(viewModel.permissionRequest.value)
+        assertEquals(TaskState.TOOL_RUNNING, viewModel.taskState.value)
     }
 
     @Test

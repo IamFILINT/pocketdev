@@ -204,6 +204,19 @@ class OpenCodeApiClient(
         return post("/api/session/${encodePathSegment(sessionId)}/prompt", body).body
     }
 
+    override fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision) {
+        val body = StringBuilder().apply {
+            append("{\"decision\":")
+            appendString(this, decision.wireValue)
+            append('}')
+        }.toString()
+        post(
+            "/api/session/${encodePathSegment(sessionId)}/permission/" +
+                "${encodePathSegment(requestId)}/reply",
+            body,
+        )
+    }
+
     /**
      * Opens the OpenCode SSE event stream (`GET /api/event`) and delivers each
      * parsed event to [onEvent] until the stream closes or [onEvent] returns false.

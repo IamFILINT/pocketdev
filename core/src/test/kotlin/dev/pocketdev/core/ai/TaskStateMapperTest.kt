@@ -32,6 +32,12 @@ class TaskStateMapperTest {
     }
 
     @Test
+    fun eventTypeFromJsonPayloadIsRecognized() {
+        val ev = ServerSentEvent(null, """{"type":"permission.asked","data":{}}""", null)
+        assertEquals(TaskState.WAITING_FOR_PERMISSION, TaskStateMapper.fromEvent(ev, TaskState.RUNNING))
+    }
+
+    @Test
     fun messagePartReasoningMovesToThinking() {
         val ev = ServerSentEvent("message.part.updated", """{"type":"reasoning"}""", null)
         assertEquals(TaskState.THINKING, TaskStateMapper.fromEvent(ev, TaskState.RUNNING))

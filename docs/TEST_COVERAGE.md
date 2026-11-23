@@ -22,7 +22,10 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | OpenCodeServeOutputParser | readiness lines, ANSI, loopback | unit | `core/.../agent/OpenCodeServeOutputParserTest.kt` | verify | Verified |
 | Json | parse/escapes/numbers | unit | `core/.../json/JsonTest.kt` | verify | Verified |
 | OpenCodeApiClient | auth, body, path escape, real server | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified |
+| OpenCodeApiClient.replyPermission | POST decision to session permission endpoint | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Pending CI (PR #36) |
+| PermissionRequest + PermissionDecision | parse `permission.asked`, reply enum values | unit | `core/.../agent/PermissionRequestTest.kt` | verify | Pending CI (PR #36) |
 | ServerSentEvent + parser | SSE parsing edge cases | unit | `core/.../agent/ServerSentEventTest.kt` | verify | Verified (PR #24) |
+| ServerSentEvent.type | SSE event name / JSON payload fallback | unit | `core/.../agent/ServerSentEventTest.kt` | verify | Pending CI (PR #36) |
 | OpenCodeApiClient.streamEvents | streaming delivery + early stop | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #24) |
 | OpenCodeSessionApi | seam implemented by client, faked in VM tests | unit | (interface; client verified above) | verify | Verified (PR #32) |
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
@@ -30,7 +33,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | ProjectNameValidator | name rules | unit | `core/.../validation/ProjectNameValidatorTest.kt` | verify | Verified |
 | SecretRedaction | redaction | unit | `core/.../security/SecretRedactionTest.kt` | verify | Verified |
 | TaskState machine | transitions | unit | `core/.../ai/TaskStateMachineTest.kt` | verify | Verified |
-| TaskStateMapper | SSE event -> TaskState | unit | `core/.../ai/TaskStateMapperTest.kt` | verify | Verified (PR #26) |
+| TaskStateMapper | SSE event -> TaskState, JSON payload event type | unit | `core/.../ai/TaskStateMapperTest.kt` | verify | Pending CI (PR #36) |
 | OpenCodeServeOutput (data) | URL/password model | unit | (covered by parser test) | verify | Verified |
 | Project (data) | model | unit | (covered by ProjectStore test) | verify | Verified |
 | RuntimeState (data) | model | unit | (covered by state-machine test) | verify | Verified |
@@ -64,7 +67,9 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | SettingsScreen provider/model | fields rendered | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #35) |
 | AgentSessionViewModel | event mapping | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #28) |
 | AgentSessionViewModel streaming | real API stream -> TaskState, error, stop | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #32) |
+| AgentSessionViewModel permission | pending request exposed, reply sent, `permission.replied` clears | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Pending CI (PR #36) |
 | AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #33) |
+| AgentWorkspaceViewModel permission | expose pending request and forward reply decision | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #36) |
 | AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
 | Compose screens | rendering | instrumentation | missing | - | Pending |

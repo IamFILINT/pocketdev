@@ -68,4 +68,16 @@ class ServerSentEventTest {
     fun emptyInputYieldsNoEvents() {
         assertEquals(0, ServerSentEvents.parse("").size)
     }
+
+    @Test
+    fun typeFallsBackToJsonPayload() {
+        val event = ServerSentEvent(null, """{"type":"permission.asked","data":{}}""", null)
+        assertEquals("permission.asked", event.type)
+    }
+
+    @Test
+    fun genericMessageEventUsesJsonPayloadType() {
+        val event = ServerSentEvent("message", """{"type":"permission.asked","data":{}}""", null)
+        assertEquals("permission.asked", event.type)
+    }
 }

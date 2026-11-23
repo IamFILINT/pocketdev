@@ -19,7 +19,7 @@ object TaskStateMapper {
     }
 
     private fun impliedState(event: ServerSentEvent): TaskState? {
-        val name = event.event ?: "message"
+        val name = event.type ?: "message"
         return when (name) {
             "session.created" -> TaskState.INITIALIZING
             "session.idle" -> TaskState.COMPLETED
