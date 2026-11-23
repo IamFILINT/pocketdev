@@ -17,6 +17,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | RuntimePaths | layout, ensure dirs | unit | `core/.../runtime/RuntimePathsTest.kt` | verify | Verified |
 | RuntimeState machine | transitions | unit | `core/.../runtime/RuntimeStateMachineTest.kt` | verify | Verified |
 | OpenCodePins | validated metadata | unit | `core/.../agent/OpenCodePinsTest.kt` | verify | Verified |
+| AgentSettings | non-secret provider/model validation | unit | `core/.../settings/AgentSettingsTest.kt` | verify | Pending CI (PR #35) |
 | AgentInstaller | checksum/resume/fail-closed | unit | `core/.../agent/AgentInstallerTest.kt` | verify | Verified |
 | OpenCodeServeOutputParser | readiness lines, ANSI, loopback | unit | `core/.../agent/OpenCodeServeOutputParserTest.kt` | verify | Verified |
 | Json | parse/escapes/numbers | unit | `core/.../json/JsonTest.kt` | verify | Verified |
@@ -59,6 +60,8 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | DashboardViewModel | provisioning guards | instrumentation | `app/src/androidTest/.../DashboardViewModelTest.kt` | android-emulator | Verified (PR #22) |
 | ProjectsViewModel | create/delete/validate | instrumentation | `app/src/androidTest/.../ProjectsViewModelTest.kt` | android-emulator | Verified (PR #19) |
 | SettingsViewModel | theme/api key draft | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #22) |
+| SettingsViewModel provider/model | persistence + invalid rejection | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Pending CI (PR #35) |
+| SettingsScreen provider/model | fields rendered | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #35) |
 | AgentSessionViewModel | event mapping | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #28) |
 | AgentSessionViewModel streaming | real API stream -> TaskState, error, stop | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #32) |
 | AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #33) |

@@ -38,6 +38,7 @@ For each component: responsibilities, expected behavior, dependencies, failure c
 - M5 SSE consumption: `OpenCodeSessionApi` seam + `AgentSessionViewModel.start/stop` streaming, failure and stop coverage on the emulator (PR #32).
 - M5 workspace: `AgentRuntime`/`OpenCodeSessionApi` seams + Agent workspace ViewModel (install, attach on listening, detach on stop) and Agent tab navigation (PR #33).
 - M5 prompt: session creation/selection/prompt dispatch with fake API, blank-prompt rejection, and prompt composer UI (PR #34).
+- M5 settings: non-secret provider/model preferences validated in `:core`, persisted in `AppContainer`, surfaced in Settings with reject-invalid tests (PR #35). Secret API keys remain in memory by design.
 
 ### Defects found during audit
 
