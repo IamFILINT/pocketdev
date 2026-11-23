@@ -43,6 +43,7 @@ class AgentWorkspaceViewModelTest {
             streamCalls++
             val events = listOf(
                 ServerSentEvent("session.created", "{}", null),
+                ServerSentEvent("message.part.updated", """{"type":"reasoning"}""", null),
                 ServerSentEvent("session.idle", "{}", null),
             )
             var delivered = 0
