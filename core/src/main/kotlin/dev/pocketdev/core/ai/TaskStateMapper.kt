@@ -1,6 +1,7 @@
 package dev.pocketdev.core.ai
 
 import dev.pocketdev.core.agent.ServerSentEvent
+import dev.pocketdev.core.agent.type
 import dev.pocketdev.core.json.Json
 
 /**

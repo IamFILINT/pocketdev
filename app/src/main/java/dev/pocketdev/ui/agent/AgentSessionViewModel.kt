@@ -7,6 +7,7 @@ import dev.pocketdev.core.agent.OpenCodeSessionApi
 import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.PermissionRequest
 import dev.pocketdev.core.agent.ServerSentEvent
+import dev.pocketdev.core.agent.type
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.core.ai.TaskStateMapper
 import kotlinx.coroutines.CancellationException
