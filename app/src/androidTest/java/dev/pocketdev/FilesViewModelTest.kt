@@ -49,8 +49,8 @@ class FilesViewModelTest {
         val project = createProject("files-basic")
         filesViewModel.selectProject(project.id)
 
-        filesViewModel.create("", "src", directory = true)
-        filesViewModel.create("", "main.kt", directory = false)
+        filesViewModel.create("src", directory = true)
+        filesViewModel.create("main.kt", directory = false)
 
         assertEquals(
             listOf("src", "main.kt"),
@@ -64,7 +64,7 @@ class FilesViewModelTest {
     fun renameCopyMoveAndDeleteOperateOnSelectedProject() {
         val project = createProject("files-actions")
         filesViewModel.selectProject(project.id)
-        filesViewModel.create("", "data.txt", directory = false)
+        filesViewModel.create("data.txt", directory = false)
         File(project.rootPath, "data.txt").writeText("payload")
         filesViewModel.refresh()
         val original = filesViewModel.uiState.value.entries.first { it.name == "data.txt" }
@@ -86,8 +86,8 @@ class FilesViewModelTest {
     fun searchHonorsHiddenToggle() {
         val project = createProject("files-search")
         filesViewModel.selectProject(project.id)
-        filesViewModel.create("", "visible.txt", directory = false)
-        filesViewModel.create("", ".secret.txt", directory = false)
+        filesViewModel.create("visible.txt", directory = false)
+        filesViewModel.create(".secret.txt", directory = false)
 
         filesViewModel.setQuery("txt")
         assertEquals(listOf("visible.txt"), filesViewModel.uiState.value.entries.map { it.name })
@@ -104,7 +104,7 @@ class FilesViewModelTest {
     fun openReadsTextPreviewFromSelectedProject() {
         val project = createProject("files-preview")
         filesViewModel.selectProject(project.id)
-        filesViewModel.create("", "notes.txt", directory = false)
+        filesViewModel.create("notes.txt", directory = false)
         File(project.rootPath, "notes.txt").writeText("readable preview")
         filesViewModel.refresh()
         val entry = filesViewModel.uiState.value.entries.first { it.name == "notes.txt" }
