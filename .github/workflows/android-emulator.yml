@@ -63,7 +63,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
             -camera-back none -camera-front none
-          script: ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest
+          script: set -o pipefail && ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest 2>&1 | tee emulator-test.log
 
       - name: Upload instrumentation test reports
         if: always()
@@ -87,5 +87,14 @@ jobs:
         with:
           name: emulator-failure-screenshot
           path: emulator-failure.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload emulator test log
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # actions/upload-artifact v5
+        with:
+          name: emulator-test-log
+          path: emulator-test.log
           if-no-files-found: ignore
           retention-days: 14
