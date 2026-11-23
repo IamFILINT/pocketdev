@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,6 +39,8 @@ import dev.pocketdev.ui.projects.ProjectsRoute
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import dev.pocketdev.ui.settings.SettingsRoute
 import dev.pocketdev.ui.settings.SettingsViewModel
+import dev.pocketdev.ui.terminal.TerminalRoute
+import dev.pocketdev.ui.terminal.TerminalViewModel
 
 private enum class Destination(
     val route: String,
@@ -47,6 +50,7 @@ private enum class Destination(
     Dashboard("dashboard", R.string.nav_dashboard, Icons.Filled.Home),
     Agent("agent", R.string.nav_agent, Icons.Filled.Build),
     Files("files", R.string.nav_files, Icons.AutoMirrored.Filled.List),
+    Terminal("terminal", R.string.nav_terminal, Icons.Filled.PlayArrow),
     Projects("projects", R.string.nav_projects, Icons.AutoMirrored.Filled.List),
     Settings("settings", R.string.nav_settings, Icons.Filled.Settings),
 }
@@ -123,6 +127,9 @@ fun PocketDevApp() {
             }
             composable(Destination.Files.route) {
                 FilesRoute(viewModel = filesViewModel)
+            }
+            composable(Destination.Terminal.route) {
+                TerminalRoute(viewModel = viewModel())
             }
             composable(Destination.Projects.route) {
                 ProjectsRoute(viewModel = projectsViewModel)

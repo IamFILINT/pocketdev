@@ -44,7 +44,7 @@ jobs:
         with:
           # API 37 ships as a minor-versioned platform package (android-37.0);
           # there is no bare "platforms;android-37".
-          packages: "platforms;android-37.0 build-tools;36.0.0 build-tools;37.0.0"
+          packages: "platforms;android-37.0 build-tools;36.0.0 build-tools;37.0.0 ndk;27.2.12479018 cmake;3.22.1"
 
       - name: Build, test, and lint
         run: ./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug
