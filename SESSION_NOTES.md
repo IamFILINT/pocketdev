@@ -323,5 +323,8 @@
   forwards the action. The Agent tab renders action/resources/message with Allow
   once / Always allow / Reject buttons.
 - Tests: permission parsing/type fallback/reply-body unit tests and instrumented
-  end-to-end event-to-reply coverage through both ViewModels. CI pending on PR #36.
-- Next: mark coverage verified after CI, then ARM64 device run remains R1.
+  end-to-end event-to-reply coverage through both ViewModels.
+- First CI run exposed missing `type` extension imports in `TaskStateMapper` and
+  `AgentSessionViewModel`; fixed in a follow-up commit. PR #36 is green:
+  verify `45237366899`/`45237378788`, android-emulator `45237367091`/`45237378747`.
+- Next: ARM64 device run remains R1.
