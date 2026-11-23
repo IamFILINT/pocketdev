@@ -250,3 +250,18 @@
 - Next: Milestone 5 — SSE event stream from `GET /api/event` into UI state,
   sessions, provider/model settings, permission prompts; plus a physical ARM64
   device run (accepted CI gap) and the planned `native-runtime-ci.yml`.
+
+## Session 10 — 2026-11-23
+
+### M5 slice 1 — real SSE consumption in AgentSessionViewModel
+- Added `:core` `OpenCodeSessionApi` (list/create/prompt/streamEvents); made
+  `OpenCodeApiClient` implement it so UI code depends on a fakeable seam.
+- `AgentSessionViewModel` now opens the stream via `start(api, sessionId)` on
+  `Dispatchers.IO` (`runInterruptible`), maps every delivered event through
+  `TaskStateMapper`, exposes `streaming`/`error`, and stops with `stop()`.
+  Only real events may change `taskState`; failures leave the last state and set
+  `error` instead of inventing a state.
+- Instrumented tests: terminal stream -> `COMPLETED`, failure -> `error` with
+  state unchanged, blocking stream + `stop()` -> not streaming, no error.
+- Next: Agent tab (server/session/prompt UI) consuming this VM; then sessions,
+  provider/model settings and permission prompts.

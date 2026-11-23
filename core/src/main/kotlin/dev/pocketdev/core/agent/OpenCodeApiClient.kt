@@ -138,7 +138,7 @@ class OpenCodeApiClient(
     private val password: String,
     private val username: String = "opencode",
     private val transport: HttpTransport = HttpUrlConnectionTransport(),
-) {
+) : OpenCodeSessionApi {
     val baseUrl: String = baseUrl.trimEnd('/')
 
     init {
@@ -159,7 +159,7 @@ class OpenCodeApiClient(
     }
 
     /** Calls `GET /api/session`. */
-    fun listSessions(limit: Int = 50): List<OpenCodeSession> {
+    override fun listSessions(limit: Int): List<OpenCodeSession> {
         val response = get("/api/session?limit=$limit")
         val data = Json.parseObject(response.body).field("data")?.asArray().orEmpty()
         return data.mapNotNull { entry ->
@@ -174,7 +174,7 @@ class OpenCodeApiClient(
     }
 
     /** Calls `POST /api/session`. */
-    fun createSession(title: String? = null): OpenCodeSession {
+    override fun createSession(title: String?): OpenCodeSession {
         val body = StringBuilder().apply {
             append('{')
             if (title != null) {
@@ -195,7 +195,7 @@ class OpenCodeApiClient(
      * Calls `POST /api/session/{sessionID}/prompt`. Returns the raw response body;
      * event-stream processing belongs to the AI workspace milestone.
      */
-    fun prompt(sessionId: String, text: String): String {
+    override fun prompt(sessionId: String, text: String): String {
         val body = StringBuilder().apply {
             append("{\"text\":")
             appendString(this, text)
@@ -211,7 +211,7 @@ class OpenCodeApiClient(
      * Returns the number of events delivered. Blocking: dispatch off the main thread.
      * The optional [sessionId] filters events to one session when the server supports it.
      */
-    fun streamEvents(sessionId: String? = null, onEvent: (ServerSentEvent) -> Boolean): Int {
+    override fun streamEvents(sessionId: String?, onEvent: (ServerSentEvent) -> Boolean): Int {
         val path = if (sessionId == null) "/api/event" else "/api/event?sessionID=${encodePathSegment(sessionId)}"
         val request = HttpRequest("GET", baseUrl + path, authHeaders())
         val stream = transport.openStream(request)
