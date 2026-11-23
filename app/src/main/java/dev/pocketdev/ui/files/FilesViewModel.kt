@@ -43,8 +43,11 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
         val selected = container.selectedProject.value
         val root = container.activeProjectRoot()
         val files = WorkspaceFiles(root)
-        val entries = if (state.query.isBlank()) {
-            files.list(state.currentDirectory, state.showHidden)
+        val entries: WorkspaceResult<List<FileEntry>> = if (state.query.isBlank()) {
+            when (val result = files.list(state.currentDirectory, state.showHidden)) {
+                is WorkspaceResult.Success -> WorkspaceResult.Success(result.value.entries)
+                is WorkspaceResult.Failure -> result
+            }
         } else {
             files.search(state.query, state.showHidden)
         }

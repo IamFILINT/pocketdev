@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
@@ -46,7 +45,7 @@ private enum class Destination(
 ) {
     Dashboard("dashboard", R.string.nav_dashboard, Icons.Filled.Home),
     Agent("agent", R.string.nav_agent, Icons.Filled.Build),
-    Files("files", R.string.nav_files, Icons.Filled.Folder),
+    Files("files", R.string.nav_files, Icons.Filled.List),
     Projects("projects", R.string.nav_projects, Icons.Filled.List),
     Settings("settings", R.string.nav_settings, Icons.Filled.Settings),
 }
