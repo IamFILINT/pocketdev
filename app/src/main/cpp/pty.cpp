@@ -123,7 +123,7 @@ void failChild(int errorFd, int32_t stage, int code) {
     ::_exit(127);
 }
 
-bool isExited(const Handle* handle) {
+bool isExited(Handle* handle) {
     std::lock_guard<std::mutex> lock(handle->stateMutex);
     return handle->exited;
 }
