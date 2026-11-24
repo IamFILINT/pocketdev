@@ -1,6 +1,6 @@
 # PocketDev — Test Coverage Matrix
 
-Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main`. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
+Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main` or the current PR #39 head. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
 
 ## Core (`:core`)
 
@@ -62,7 +62,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | Component | Expected behavior | Test type | Test location | Workflow | Status |
 | --- | --- | --- | --- | --- | --- |
 | Navigation | launch + nav | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified |
-| Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (runs 45329524820, 45336872176) |
+| Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (runs 45329524820, 45336872176, 45347183919) |
 | DashboardViewModel | provisioning guards | instrumentation | `app/src/androidTest/.../DashboardViewModelTest.kt` | android-emulator | Verified (PR #22) |
 | ProjectsViewModel | create/delete/validate | instrumentation | `app/src/androidTest/.../ProjectsViewModelTest.kt` | android-emulator | Verified (PR #19) |
 | SettingsViewModel | theme/api key draft | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #22) |
@@ -71,16 +71,19 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | AgentSessionViewModel | event mapping | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #28) |
 | AgentSessionViewModel streaming | real API stream -> TaskState, error, stop | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #32) |
 | AgentSessionViewModel permission | pending request exposed, reply sent, `permission.replied` clears | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #36) |
-| AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #33) |
+| AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
+| AgentWorkspaceViewModel project context | server stays bound until restart; mismatch after selection change | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | AgentWorkspaceViewModel permission | expose pending request and forward reply decision | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (PR #36) |
 | AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
 | FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
+| FilesViewModel displayed-root stability | external project switch does not retarget active file operations | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
-| TerminalSession state | exit decoding, input normalization, listener races, idempotent close | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Verified (run 45336260899) |
-| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (run 45336872176) |
+| TerminalSession state | exit decoding, input normalization, listener races, idempotent close, project context | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Verified (runs 45336260899, 45341646980) |
+| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (runs 45336872176, 45347183919) |
+| TerminalViewModel project context | sessions retain launch root; new sessions use selected root | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (run 45347183919) |
 | PtyReliabilityTest | normal/non-zero/signal exit, launch failure, rapid lifecycle, concurrent listeners | instrumentation (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` | runtime-spike | Verified (run 45336872176) |
 | TerminalScreen + nav | Terminal tab renders terminal controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #38) |
-| AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
+| AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45336260899, 45341647148) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
 | Compose screens | rendering | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Partial (navigation/Files/Terminal smoke) |
 

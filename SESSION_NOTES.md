@@ -450,3 +450,24 @@
   all three `PtyReliabilityTest` cases. Artifact XML reports `time="9.217"`; the PTY
   logcat again records SELinux granting `linker64` execute on Bionic `bash` and
   `coreutils`. This proves x86_64 PTY reliability only; R1 remains unchanged.
+
+### M6.5 Phase 4 — project context binding
+- Commits `77ba5af` (binding + UI + tests), `8e7cff7` (canonical path assertions), and
+  `dbd9ce9` (deterministic busy-switch assertion) implement explicit project context.
+- `AppContainer.ProjectContext` canonicalizes and validates roots under `projectsRoot`;
+  outside roots are rejected. Agent servers stay bound to the root used at start and
+  show a mismatch warning after selection changes; stop/start is the explicit retarget.
+- Terminal sessions carry their own `ProjectContext`: existing PTYs keep their launch
+  directory, new PTYs use the selected project, and the UI shows active-session context
+  plus mismatch guidance. Files operations use the displayed root so an external
+  selection change cannot silently retarget in-flight operations.
+- First `77ba5af` run failed API 29 on a canonical path assertion
+  (`/data/user/0/...` vs `/data/data/...`); fixed in `8e7cff7`. PR API 36 at `8e7cff7`
+  then failed because a test observed a transient `sending` flag; fixed in `dbd9ce9`
+  with a deterministic prompt latch. No test was skipped, weakened, or deleted.
+- Required checks for `dbd9ce9` all green: verify push `45341636963`/PR `45341646980`,
+  API 29 push `45341636953`/PR `45341647148`, API 36 push `45341636953`/PR
+  `45341647148`, native-runtime push `45341636984`/PR `45341647036`.
+- Manual `runtime-spike` run `45347183919` on `dbd9ce9` passed 5 tests with 0
+  failures/errors/skips; artifact XML reports `time="8.461"`. The gated terminal test
+  verified context-bound sessions and project switching on x86_64 API 30; R1 unchanged.

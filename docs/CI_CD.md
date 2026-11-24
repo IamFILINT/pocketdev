@@ -84,8 +84,10 @@ Evidence: run `45329524820` passed the first two opt-in tests
 run `45336872176` on `23df376` passed 5 tests with 0 failures, errors, or skips:
 `RuntimeSpikeTest`, `TerminalViewModelTest`, and all three `PtyReliabilityTest`
 cases. The artifact XML reports `time="9.217"`; PTY logcat records `linker64`
-executing Bionic `bash`/`coreutils` and the real shell resolving `PREFIX`. This is
-x86_64 evidence only and does not close ARM64 risk R1.
+executing Bionic `bash`/`coreutils` and the real shell resolving `PREFIX`. After
+project-context binding, run `45347183919` on `dbd9ce9` passed the same 5 tests with
+0 failures/errors/skips (`time="8.461"`), including context-bound terminal sessions
+and project switching. This is x86_64 evidence only and does not close ARM64 risk R1.
 
 ### Planned (later milestones)
 

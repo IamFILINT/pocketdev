@@ -9,7 +9,7 @@
 | R5 | OpenCode Bionic artifact size / APK size | Installability, update bandwidth | Medium | Measure in CI; hybrid provisioning evaluation (prompt §9.3) | Open |
 | R6 | Android background process limits kill runtime/agent | Broken sessions | High | Foreground service only when justified; graceful recovery | Open |
 | R7 | AGP/Kotlin/Gradle version drift breaks CI | Build failures | Low | Pinned versions + wrapper checksum; Renovate-style manual review | Mitigated |
-| R8 | Emulator tests slow/flaky in CI | Noisy gate, wasted minutes | Medium | Small high-signal matrix; `concurrency` cancellation; diagnostics on failure | Open |
+| R8 | Emulator tests slow/flaky in CI | Noisy gate, wasted minutes | Medium | Small high-signal matrix; SHA-scoped concurrency with no cancellation of earlier commits; diagnostics on failure; deterministic latches for transient state | Open |
 | R9 | Agent misuses filesystem/commands | Data loss | Medium | Path safety in `:core`; permission model (prompt §10.2); confirmations | Partially mitigated |
 | R10 | Secret leakage into logs | Credential compromise | Low | `SecretRedaction`; never persist keys yet; no secrets in source | Partially mitigated |
 | R11 | Android 10+ W^X: targetSdk 36 app cannot `execve()` files in app data | Bootstrap binaries unrunnable | High | `linker64` first-hop proven on the API 30 emulator (ADR-0002, run `44876316131`: relocated `bash`/`ls` run, direct exec blocked as expected); shebang/`exec` works with stock `termux-exec` when `TERMUX_APP__DATA_DIR`/`TERMUX__PREFIX` env are set (run `44878997591`) | Mitigated — linker hop + shebang exec both proven |
