@@ -1,6 +1,6 @@
 # PocketDev — Test Coverage Matrix
 
-Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main`. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
+Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main` or the current PR #39 head. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
 
 ## Core (`:core`)
 
@@ -17,11 +17,12 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | RuntimePaths | layout, ensure dirs | unit | `core/.../runtime/RuntimePathsTest.kt` | verify | Verified |
 | RuntimeState machine | transitions | unit | `core/.../runtime/RuntimeStateMachineTest.kt` | verify | Verified |
 | OpenCodePins | validated metadata | unit | `core/.../agent/OpenCodePinsTest.kt` | verify | Verified |
-| AgentSettings | non-secret provider/model validation | unit | `core/.../settings/AgentSettingsTest.kt` | verify | Pending CI (PR #35) |
+| AgentSettings | non-secret provider/model validation and `modelSelection` | unit | `core/.../settings/AgentSettingsTest.kt` | verify | Verified (PR #39) |
 | AgentInstaller | checksum/resume/fail-closed | unit | `core/.../agent/AgentInstallerTest.kt` | verify | Verified |
 | OpenCodeServeOutputParser | readiness lines, ANSI, loopback | unit | `core/.../agent/OpenCodeServeOutputParserTest.kt` | verify | Verified |
 | Json | parse/escapes/numbers | unit | `core/.../json/JsonTest.kt` | verify | Verified |
-| OpenCodeApiClient | auth, body, path escape, real server | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified |
+| OpenCodeApiClient | auth, body, path escape, real server | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #39) |
+| AgentModelSelection + model endpoints | create-session `model` object and `POST /api/session/{id}/model` | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #39) |
 | OpenCodeApiClient.replyPermission | POST decision to session permission endpoint | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #36) |
 | PermissionRequest + PermissionDecision | parse `permission.asked`, reply enum values | unit | `core/.../agent/PermissionRequestTest.kt` | verify | Verified (PR #36) |
 | ServerSentEvent + parser | SSE parsing edge cases | unit | `core/.../agent/ServerSentEventTest.kt` | verify | Verified (PR #24) |
@@ -29,7 +30,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | OpenCodeApiClient.streamEvents | streaming delivery + early stop | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #24) |
 | OpenCodeSessionApi | seam implemented by client, faked in VM tests | unit | (interface; client verified above) | verify | Verified (PR #32) |
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
-| WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
+| WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape, recursive progress, cancellation, partial failure | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (run 45353953532) |
 | FileEntry | kind detection and hidden flag | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
 | AnsiBuffer | ANSI SGR, cursor, erase, scrollback, resize, OSC, plain text | unit | `core/.../terminal/AnsiBufferTest.kt` | verify | Verified (PR #38) |
 | ProjectStore | CRUD/registry | unit | `core/.../workspace/ProjectStoreTest.kt` | verify | Verified |
@@ -47,9 +48,10 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | Component | Expected behavior | Test type | Test location | Workflow | Status |
 | --- | --- | --- | --- | --- | --- |
 | RuntimeController.abiFor | ABI selection | unit | `runtime/.../RuntimeControllerAbiTest.kt` | verify | Verified |
-| AgentRuntime | seam implemented by OpenCodeController, faked in workspace tests | unit | (interface; controller covered indirectly) | verify | Pending CI (PR #33) |
-| RuntimeEnvBuilder | env overrides | unit | `runtime/.../RuntimeEnvBuilderTest.kt` | verify | Verified |
-| RuntimeLauncher | linker-hop spawn | unit | `runtime/.../RuntimeLauncherTest.kt` | verify | Verified |
+| AgentRuntime | seam implemented by OpenCodeController, faked in workspace tests | unit | (interface; controller covered indirectly) | verify | Verified (PR #39) |
+| RuntimeAgentConfig | selected model -> `OPENCODE_CONFIG_CONTENT`, `{env:POCKETDEV_API_KEY}` placeholder, credential env | unit | `runtime/.../RuntimeAgentConfigTest.kt` | verify | Verified (PR #39) |
+| RuntimeEnvBuilder | env overrides and agent config/credential injection | unit | `runtime/.../RuntimeEnvBuilderTest.kt` | verify | Verified (PR #39) |
+| RuntimeLauncher | linker-hop spawn and redacted launch-plan reporting | unit | `runtime/.../RuntimeLauncherTest.kt` | verify | Verified (PR #39) |
 | RuntimePreloadDeployer | preload deploy | unit | `runtime/.../RuntimePreloadDeployerTest.kt` | verify | Verified |
 | OpenCodeServer | supervision state machine | unit | `runtime/.../OpenCodeServerTest.kt` | verify | Verified |
 | ProcessLauncher | interface | unit | (trivial; covered by OpenCodeServerTest) | verify | Verified |
@@ -62,23 +64,30 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | Component | Expected behavior | Test type | Test location | Workflow | Status |
 | --- | --- | --- | --- | --- | --- |
 | Navigation | launch + nav | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified |
-| Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (manual) |
+| Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (runs 45329524820, 45336872176, 45347183919) |
 | DashboardViewModel | provisioning guards | instrumentation | `app/src/androidTest/.../DashboardViewModelTest.kt` | android-emulator | Verified (PR #22) |
 | ProjectsViewModel | create/delete/validate | instrumentation | `app/src/androidTest/.../ProjectsViewModelTest.kt` | android-emulator | Verified (PR #19) |
-| SettingsViewModel | theme/api key draft | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #22) |
-| SettingsViewModel provider/model | persistence + invalid rejection | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Pending CI (PR #35) |
-| SettingsScreen provider/model | fields rendered | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #35) |
+| SettingsViewModel | theme/API key status, keystore save/clear, blank rejection | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #39) |
+| SettingsViewModel provider/model | persistence + invalid rejection | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #39) |
+| SettingsScreen provider/model and key controls | fields rendered, secure key status/save/clear | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #39) |
 | AgentSessionViewModel | event mapping | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #28) |
 | AgentSessionViewModel streaming | real API stream -> TaskState, error, stop | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #32) |
 | AgentSessionViewModel permission | pending request exposed, reply sent, `permission.replied` clears | instrumentation | `app/src/androidTest/.../AgentSessionViewModelTest.kt` | android-emulator | Verified (PR #36) |
-| AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Pending CI (PR #33) |
+| AgentWorkspaceViewModel | install, server attach/detach, sessions | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
+| AgentWorkspaceViewModel project context | server stays bound until restart; mismatch after selection change | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | AgentWorkspaceViewModel permission | expose pending request and forward reply decision | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (PR #36) |
-| AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
-| FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
+| AgentWorkspaceViewModel selected model | create-session `model` object, prompting uses selected model, settings change switches active session | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (PR #39) |
+| AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #39) |
+| FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45353945512, 45353953646) |
+| FilesViewModel async filesystem/SAF | IO-dispatcher operations, progress/cancel state, explicit failure and partial failure | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45353945512, 45353953646) |
+| FilesViewModel displayed-root stability | external project switch does not retarget active file operations | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
-| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation | `app/src/androidTest/.../TerminalViewModelTest.kt` | android-emulator | Verified (PR #38) |
+| TerminalSession state | exit decoding, input normalization, listener races, idempotent close, project context | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Verified (runs 45336260899, 45341646980) |
+| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (runs 45336872176, 45347183919) |
+| TerminalViewModel project context | sessions retain launch root; new sessions use selected root | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (run 45347183919) |
+| PtyReliabilityTest | normal/non-zero/signal exit, launch failure, rapid lifecycle, concurrent listeners | instrumentation (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` | runtime-spike | Verified (run 45336872176) |
 | TerminalScreen + nav | Terminal tab renders terminal controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #38) |
-| AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
+| AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45336260899, 45341647148) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
 | Compose screens | rendering | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Partial (navigation/Files/Terminal smoke) |
 
@@ -95,4 +104,5 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 - OpenCode server end-to-end on a device — supervision/client tested against scripts/loopback server only.
 - App ViewModels and Compose screens — depend on Android Context; not unit-tested yet.
 - `OpenCodeController` and `RuntimeController` orchestration — Android-bound; covered indirectly by `:core`/`:runtime` unit tests and manual device runs.
-EOF
+- Real OpenCode env-auth handshake on ARM64 with a saved provider key — config/env and redaction contracts are proven on x86_64, not a device provider response (risk R1).
+- Custom OpenAI-compatible provider endpoints — current UI has no `package`/`baseURL` fields; only provider/model/key are covered.

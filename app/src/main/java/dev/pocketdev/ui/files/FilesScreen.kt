@@ -1,8 +1,5 @@
 package dev.pocketdev.ui.files
 
-import android.content.Context
-import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -22,6 +19,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,12 +40,11 @@ import dev.pocketdev.core.workspace.FileEntry
 @Composable
 fun FilesRoute(viewModel: FilesViewModel) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val pendingExport = remember { mutableStateOf<FileEntry?>(null) }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            viewModel.importDocument(uri, context.displayName(uri) ?: "imported")
+            viewModel.importDocument(uri)
         }
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
@@ -73,6 +69,7 @@ fun FilesRoute(viewModel: FilesViewModel) {
             exportLauncher.launch(entry.name)
         },
         onClearFeedback = viewModel::clearFeedback,
+        onCancelOperation = viewModel::cancelOperation,
     )
 }
 
@@ -92,6 +89,7 @@ fun FilesScreen(
     onImport: () -> Unit,
     onExport: (FileEntry) -> Unit,
     onClearFeedback: () -> Unit,
+    onCancelOperation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var dialog by remember { mutableStateOf<FileDialog?>(null) }
@@ -186,6 +184,52 @@ fun FilesScreen(
             },
             style = MaterialTheme.typography.bodyMedium,
         )
+
+        state.operation?.let { operation ->
+            val statusText = when (operation.status) {
+                FilesOperationStatus.RUNNING -> stringResource(R.string.files_operation_running, operation.label)
+                FilesOperationStatus.SUCCESS -> stringResource(R.string.files_operation_success, operation.label)
+                FilesOperationStatus.FAILURE -> stringResource(R.string.files_operation_failure, operation.label)
+                FilesOperationStatus.CANCELLED -> stringResource(R.string.files_operation_cancelled, operation.label)
+                FilesOperationStatus.PARTIAL_FAILURE -> stringResource(
+                    R.string.files_operation_partial,
+                    operation.label,
+                    operation.completed,
+                    operation.total,
+                )
+            }
+            Text(
+                text = statusText,
+                color = if (operation.status == FilesOperationStatus.FAILURE ||
+                    operation.status == FilesOperationStatus.PARTIAL_FAILURE
+                ) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+            if (operation.status == FilesOperationStatus.RUNNING) {
+                if (operation.total > 0) {
+                    LinearProgressIndicator(
+                        progress = { operation.completed.toFloat() / operation.total.toFloat() },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = stringResource(R.string.files_operation_progress, operation.completed, operation.total),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(
+                        text = stringResource(R.string.files_operation_indeterminate),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                TextButton(onClick = onCancelOperation) {
+                    Text(stringResource(R.string.files_cancel))
+                }
+            }
+        }
 
         state.message?.let {
             Text(text = stringResource(R.string.files_message, it), color = MaterialTheme.colorScheme.primary)
@@ -330,12 +374,4 @@ private sealed interface FileDialog {
     data class Copy(val entry: FileEntry) : FileDialog
     data class Move(val entry: FileEntry) : FileDialog
     data class Delete(val entry: FileEntry) : FileDialog
-}
-
-private fun Context.displayName(uri: Uri): String? {
-    contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-        if (index >= 0 && cursor.moveToFirst()) return cursor.getString(index)
-    }
-    return uri.lastPathSegment
 }

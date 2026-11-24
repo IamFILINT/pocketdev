@@ -3,17 +3,9 @@ name: Native runtime static verification
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'core/src/main/kotlin/dev/pocketdev/core/runtime/BootstrapPins.kt'
-      - 'core/src/main/kotlin/dev/pocketdev/core/agent/OpenCodePins.kt'
-      - '.github/workflows/native-runtime-ci.yml'
   push:
     branches:
       - '**'
-    paths:
-      - 'core/src/main/kotlin/dev/pocketdev/core/runtime/BootstrapPins.kt'
-      - 'core/src/main/kotlin/dev/pocketdev/core/agent/OpenCodePins.kt'
-      - '.github/workflows/native-runtime-ci.yml'
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -22,8 +14,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: native-runtime-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: native-runtime-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify-native-payloads:
@@ -113,7 +105,7 @@ jobs:
           cat native-runtime-evidence.txt
 
       - name: Upload evidence artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # actions/upload-artifact v4
         with:
           name: native-runtime-evidence
           path: native-runtime-evidence.txt

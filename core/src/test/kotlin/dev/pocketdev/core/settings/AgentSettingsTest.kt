@@ -27,6 +27,30 @@ class AgentSettingsTest {
     }
 
     @Test
+    fun selectedPairBecomesModelSelection() {
+        val selection = AgentSettings("anthropic", "claude-sonnet-4").modelSelection
+
+        assertEquals("anthropic", selection?.providerId)
+        assertEquals("claude-sonnet-4", selection?.modelId)
+        assertEquals(null, selection?.variant)
+    }
+
+    @Test
+    fun blankDefaultsHaveNoModelSelection() {
+        assertEquals(null, AgentSettings.DEFAULT.modelSelection)
+    }
+
+    @Test
+    fun partialProviderModelPairIsRejected() {
+        assertThrows(IllegalArgumentException::class.java) {
+            AgentSettings(provider = "anthropic", model = "")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            AgentSettings(provider = "", model = "claude-sonnet-4")
+        }
+    }
+
+    @Test
     fun controlCharactersAreRejected() {
         assertThrows(IllegalArgumentException::class.java) {
             AgentSettings(provider = "bad\nvalue", model = "")

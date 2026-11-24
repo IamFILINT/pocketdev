@@ -1,6 +1,7 @@
 package dev.pocketdev.core.agent
 
 import com.sun.net.httpserver.HttpServer
+import dev.pocketdev.core.settings.AgentModelSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -82,6 +83,38 @@ class OpenCodeApiClientTest {
         assertEquals("POST", request.method)
         assertTrue(request.body!!.toString(StandardCharsets.UTF_8).contains("\"My session\""))
         assertEquals("ses_new", session.id)
+    }
+
+    @Test
+    fun createSessionSendsSelectedProviderAndModel() {
+        val transport = CapturingTransport().apply {
+            response = HttpResponse(200, """{"data":{"id":"ses_model","title":null,"parentID":null}}""")
+        }
+        val session = OpenCodeApiClient("http://127.0.0.1:4096", "pw", transport = transport)
+            .createSession(model = AgentModelSelection("acme", "coder"))
+
+        val request = transport.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals(
+            "{\"model\":{\"providerID\":\"acme\",\"id\":\"coder\"}}",
+            request.body!!.toString(StandardCharsets.UTF_8),
+        )
+        assertEquals("ses_model", session.id)
+    }
+
+    @Test
+    fun switchModelPostsWireShapeForActiveSession() {
+        val transport = CapturingTransport().apply { response = HttpResponse(200, """{"data":{}}""") }
+        OpenCodeApiClient("http://127.0.0.1:4096", "pw", transport = transport)
+            .switchModel("ses a/b", AgentModelSelection("acme", "coder", "fast"))
+
+        val request = transport.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("http://127.0.0.1:4096/api/session/ses+a%2Fb/model", request.url)
+        assertEquals(
+            "{\"model\":{\"providerID\":\"acme\",\"id\":\"coder\",\"variant\":\"fast\"}}",
+            request.body!!.toString(StandardCharsets.UTF_8),
+        )
     }
 
     @Test

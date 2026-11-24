@@ -58,9 +58,11 @@ data class DirectoryListing(
 sealed interface WorkspaceResult<out T> {
     data class Success<out T>(val value: T) : WorkspaceResult<T>
     data class Failure(val message: String) : WorkspaceResult<Nothing>
+    data class PartialFailure(val message: String, val completed: Long, val total: Long) : WorkspaceResult<Nothing>
 
     fun getOrNull(): T? = when (this) {
         is Success -> value
         is Failure -> null
+        is PartialFailure -> null
     }
 }

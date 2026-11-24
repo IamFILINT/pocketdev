@@ -89,14 +89,20 @@ class RuntimeController(context: Context) {
     }
 
     /** Starts [program] (absolute path inside `$PREFIX`) through `/system/bin/linker64`. */
-    fun launch(program: File, vararg args: String): Process {
+    fun launch(program: File, vararg args: String): Process = launcher().exec(program, *args)
+
+    fun launchPlan(program: File, vararg args: String, workingDir: File): RuntimeLaunchPlan =
+        launcher().plan(program, *args, workingDir = workingDir)
+
+    fun bionicShell(): File = File(paths.prefix, "bin/bash")
+
+    private fun launcher(): RuntimeLauncher {
         val preload = preloadDeployer.preloadFile()
-        val launcher = if (preload != null) {
+        return if (preload != null) {
             RuntimeLauncher.withPreload(envBuilder, preload)
         } else {
             RuntimeLauncher.withoutPreload(envBuilder)
         }
-        return launcher.exec(program, *args)
     }
 
     fun childEnv(): Map<String, String> {

@@ -10,6 +10,9 @@ import dev.pocketdev.core.agent.OpenCodeSessionApi
 import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.ServerSentEvent
 import dev.pocketdev.core.ai.TaskState
+import dev.pocketdev.core.settings.AgentModelSelection
+import dev.pocketdev.core.settings.AgentSettings
+import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.runtime.AgentRuntime
 import dev.pocketdev.runtime.OpenCodeServerState
 import dev.pocketdev.ui.agent.AgentWorkspaceViewModel
@@ -22,12 +25,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class AgentWorkspaceViewModelTest {
 
     private val application = ApplicationProvider.getApplicationContext<Application>()
     private val projectDir = File(application.cacheDir, "agent-workspace-test").apply { mkdirs() }
+
+    private fun project(id: String, name: String, root: File): Project =
+        Project(id, name, root.absolutePath, 0L)
+
+    private fun selectedFlow(project: Project): MutableStateFlow<Project?> =
+        MutableStateFlow(project)
 
     private class FakeApi(
         initial: List<OpenCodeSession> = listOf(OpenCodeSession("ses_1", "First session", null)),
@@ -42,17 +53,26 @@ class AgentWorkspaceViewModelTest {
         var created = 0
         val prompts = mutableListOf<Pair<String, String>>()
         val replies = mutableListOf<Triple<String, String, PermissionDecision>>()
+        val createdModels = mutableListOf<AgentModelSelection?>()
+        val switchedModels = mutableListOf<Pair<String, AgentModelSelection>>()
+        var promptBlock: (() -> Unit)? = null
 
         override fun listSessions(limit: Int): List<OpenCodeSession> = sessions.toList()
 
-        override fun createSession(title: String?): OpenCodeSession {
+        override fun createSession(title: String?, model: AgentModelSelection?): OpenCodeSession {
             created++
+            createdModels.add(model)
             val session = OpenCodeSession("ses_new_$created", title, null)
             sessions.add(session)
             return session
         }
 
+        override fun switchModel(sessionId: String, model: AgentModelSelection) {
+            switchedModels.add(sessionId to model)
+        }
+
         override fun prompt(sessionId: String, text: String): String {
+            promptBlock?.invoke()
             prompts.add(sessionId to text)
             return "{}"
         }
@@ -117,7 +137,7 @@ class AgentWorkspaceViewModelTest {
     @Test
     fun startServerLoadsSessionsAndStreamsRealEvents() {
         val runtime = FakeRuntime()
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
 
         viewModel.startServer()
 
@@ -126,7 +146,7 @@ class AgentWorkspaceViewModelTest {
                 viewModel.taskState.value == TaskState.COMPLETED &&
                 !viewModel.streaming.value
         }
-        assertEquals(projectDir, runtime.startedDir)
+        assertEquals(projectDir.canonicalPath, runtime.startedDir?.canonicalPath)
         assertTrue(runtime.api.streamCalls >= 1)
         assertEquals("First session", viewModel.sessions.value.single().title)
         assertNull(viewModel.actionError.value)
@@ -135,7 +155,7 @@ class AgentWorkspaceViewModelTest {
     @Test
     fun stopServerDetachesTheStreamAndClearsSessions() {
         val runtime = FakeRuntime()
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
         viewModel.startServer()
         await { viewModel.sessions.value.isNotEmpty() }
 
@@ -148,7 +168,7 @@ class AgentWorkspaceViewModelTest {
     @Test
     fun installDelegatesToProvisioning() {
         val runtime = FakeRuntime()
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
 
         viewModel.installAgent()
 
@@ -160,7 +180,7 @@ class AgentWorkspaceViewModelTest {
     @Test
     fun sendPromptCreatesSessionWhenNoneIsSelected() {
         val runtime = FakeRuntime(FakeApi(emptyList()))
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
         viewModel.startServer()
         await { runtime.api.streamCalls > 0 && !viewModel.busy.value && viewModel.activeSessionId.value == null }
 
@@ -175,7 +195,7 @@ class AgentWorkspaceViewModelTest {
     @Test
     fun createSessionSelectsTheNewSession() {
         val runtime = FakeRuntime()
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
         viewModel.startServer()
         await { viewModel.sessions.value.isNotEmpty() }
 
@@ -199,7 +219,7 @@ class AgentWorkspaceViewModelTest {
             ),
         )
         val runtime = FakeRuntime(api)
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
 
         viewModel.startServer()
 
@@ -213,7 +233,7 @@ class AgentWorkspaceViewModelTest {
     @Test
     fun blankPromptIsRejectedWithoutCallingTheServer() {
         val runtime = FakeRuntime()
-        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir)
+        val viewModel = AgentWorkspaceViewModel(application, runtime, projectDir, selectedFlow(project("test", "Test", projectDir)))
         viewModel.startServer()
         await { viewModel.sessions.value.isNotEmpty() }
 
@@ -222,5 +242,124 @@ class AgentWorkspaceViewModelTest {
         assertTrue(viewModel.actionError.value != null)
         assertTrue(runtime.api.prompts.isEmpty())
         assertEquals(0, runtime.api.created)
+    }
+
+    @Test
+    fun createSessionSendsTheSelectedModel() {
+        val selection = AgentModelSelection("anthropic", "claude-sonnet-4")
+        val settings = MutableStateFlow(AgentSettings("anthropic", "claude-sonnet-4"))
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(
+            application,
+            runtime,
+            projectDir,
+            selectedFlow(project("test", "Test", projectDir)),
+            settings,
+        )
+        viewModel.startServer()
+        await { viewModel.sessions.value.isNotEmpty() && !viewModel.busy.value }
+
+        viewModel.createSession()
+
+        await { runtime.api.created == 1 }
+        assertEquals(selection, runtime.api.createdModels.single())
+    }
+
+    @Test
+    fun sendPromptUsesTheSelectedModelWhenItCreatesASession() {
+        val selection = AgentModelSelection("openai", "gpt-5")
+        val settings = MutableStateFlow(AgentSettings("openai", "gpt-5"))
+        val runtime = FakeRuntime(FakeApi(emptyList()))
+        val viewModel = AgentWorkspaceViewModel(
+            application,
+            runtime,
+            projectDir,
+            selectedFlow(project("test", "Test", projectDir)),
+            settings,
+        )
+        viewModel.startServer()
+        await { runtime.api.streamCalls > 0 && !viewModel.busy.value && viewModel.activeSessionId.value == null }
+
+        viewModel.sendPrompt("hello")
+
+        await { runtime.api.created == 1 && runtime.api.prompts.size == 1 }
+        assertEquals(selection, runtime.api.createdModels.single())
+    }
+
+    @Test
+    fun changingSettingsSwitchesTheActiveSessionModel() {
+        val settings = MutableStateFlow(AgentSettings.DEFAULT)
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(
+            application,
+            runtime,
+            projectDir,
+            selectedFlow(project("test", "Test", projectDir)),
+            settings,
+        )
+        viewModel.startServer()
+        await { viewModel.sessions.value.isNotEmpty() && runtime.api.switchedModels.isEmpty() }
+
+        settings.value = AgentSettings("openai", "gpt-5")
+
+        await { runtime.api.switchedModels.isNotEmpty() }
+        assertEquals("ses_1" to AgentModelSelection("openai", "gpt-5"), runtime.api.switchedModels.single())
+        assertNull(viewModel.actionError.value)
+    }
+
+    @Test
+    fun switchingProjectsWhileAgentIsIdleDoesNotRetargetServerUntilRestart() {
+        val base = File(application.cacheDir, "agent-switch-base").apply { mkdirs() }
+        val first = File(base, "first").apply { mkdirs() }
+        val second = File(base, "second").apply { mkdirs() }
+        val selected = selectedFlow(project("first", "First", first))
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(application, runtime, base, selected)
+
+        viewModel.startServer()
+        await { viewModel.serverContext.value?.rootPath == first.canonicalPath }
+        selected.value = project("second", "Second", second)
+        await { viewModel.selectedProjectContext.value?.projectId == "second" }
+
+        assertEquals(first.canonicalPath, viewModel.serverContext.value?.rootPath)
+        assertEquals(first.canonicalPath, runtime.startedDir?.canonicalPath)
+
+        viewModel.stopServer()
+        await { viewModel.serverContext.value == null }
+        viewModel.startServer()
+        await {
+            runtime.startedDir?.canonicalPath == second.canonicalPath &&
+                viewModel.serverContext.value?.rootPath == second.canonicalPath
+        }
+    }
+
+    @Test
+    fun switchingProjectsWhileAgentIsBusyKeepsServerBoundToOriginalRoot() {
+        val base = File(application.cacheDir, "agent-busy-base").apply { mkdirs() }
+        val first = File(base, "first").apply { mkdirs() }
+        val second = File(base, "second").apply { mkdirs() }
+        val selected = selectedFlow(project("first", "First", first))
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(application, runtime, base, selected)
+        val promptStarted = CountDownLatch(1)
+        val promptRelease = CountDownLatch(1)
+        runtime.api.promptBlock = {
+            promptStarted.countDown()
+            promptRelease.await()
+        }
+
+        viewModel.startServer()
+        await { viewModel.serverContext.value != null && runtime.api.streamCalls > 0 && !viewModel.busy.value }
+        viewModel.sendPrompt("hello")
+        assertTrue(promptStarted.await(3, TimeUnit.SECONDS))
+        assertTrue(viewModel.sending.value)
+        selected.value = project("second", "Second", second)
+        await { viewModel.selectedProjectContext.value?.projectId == "second" }
+
+        assertEquals(first.canonicalPath, viewModel.serverContext.value?.rootPath)
+        assertEquals(first.canonicalPath, runtime.startedDir?.canonicalPath)
+        promptRelease.countDown()
+        await { !viewModel.sending.value && runtime.api.prompts.size == 1 }
+        assertEquals(first.canonicalPath, viewModel.serverContext.value?.rootPath)
     }
 }

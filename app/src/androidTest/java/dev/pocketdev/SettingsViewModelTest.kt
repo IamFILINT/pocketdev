@@ -30,6 +30,7 @@ class SettingsViewModelTest {
         app.container.projectStore.replaceAll(emptyList())
         app.container.setThemeMode(ThemeMode.SYSTEM)
         app.container.setAgentSettings(AgentSettings.DEFAULT)
+        app.container.clearApiKey()
     }
 
     @Test
@@ -53,6 +54,40 @@ class SettingsViewModelTest {
 
         viewModel.setApiKeyDraft("")
         assertEquals("", viewModel.apiKeyDraft.value)
+    }
+
+    @Test
+    fun apiKeyIsPersistedThroughKeystoreBackedStore() {
+        viewModel.setApiKeyDraft("  sk-test-key  ")
+
+        viewModel.saveApiKey(viewModel.apiKeyDraft.value)
+
+        assertTrue(viewModel.apiKeyConfigured.value)
+        assertEquals("", viewModel.apiKeyDraft.value)
+        assertEquals("sk-test-key", app.container.currentApiKey())
+        assertTrue(SettingsViewModel(app).apiKeyConfigured.value)
+    }
+
+    @Test
+    fun clearApiKeyRemovesSavedSecret() {
+        app.container.saveApiKey("sk-test-key")
+        assertTrue(viewModel.apiKeyConfigured.value)
+
+        viewModel.clearApiKey()
+
+        assertEquals(null, app.container.currentApiKey())
+        assertEquals(false, viewModel.apiKeyConfigured.value)
+    }
+
+    @Test
+    fun blankApiKeyIsRejectedWithoutClearingSavedKey() {
+        app.container.saveApiKey("sk-test-key")
+
+        viewModel.saveApiKey("   ")
+
+        assertTrue(viewModel.apiKeyError.value != null)
+        assertTrue(viewModel.apiKeyConfigured.value)
+        assertEquals("sk-test-key", app.container.currentApiKey())
     }
 
     @Test

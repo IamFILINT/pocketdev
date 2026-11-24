@@ -361,3 +361,174 @@
 - PR #38 merged into `main` at `27dbcc7`; final docs verification green on verify
   `45257636050`/`45257644825` and android-emulator `45257635719`/`45257644889`.
 - Next: Milestone 7 code editor. Physical ARM64 device run remains R1.
+
+## Session 17 — 2026-11-24
+
+### M6.5 Phase 0 — runtime integration reconnaissance
+- Started Milestone 6.5 from clean `main` at `a1cfff7` with PR #38 merged at
+  `27dbcc7`. Baseline M6 green evidence: verify `45259268881`,
+  android-emulator `45259268072`. No local build or device verification.
+- Confirmed prompt source is external
+  `/storage/emulated/0/Download/POCKETDEV_MILESTONE_6_5_PROMPT.md`; no literal
+  M6.5 phase text exists in the repository.
+- Verified current manifest has `INTERNET` but no cleartext opt-in; with
+  `minSdk 29`/`targetSdk 36`, loopback HTTP needs a narrow domain config.
+- Verified PTY creation still uses `/system/bin/sh` directly and does not consume
+  `RuntimeLauncher`/`RuntimeEnvBuilder`; runtime execution on a real ARM64 device
+  remains an accepted R1 gap, not a passing claim.
+- Verified branch protection is absent (`main/protection` 404, rulesets `[]`),
+  `verify.yml`/`android-emulator.yml` use mutable `cancel-in-progress: true`,
+  and `native-runtime-ci.yml` still uses mutable `actions/upload-artifact@v4`.
+- Verified docs still describe native-runtime-ci as planned in `docs/CI_CD.md`
+  and `docs/TESTING.md`; they need reconciliation after workflow stabilization.
+- Implementation order: CI stabilization, loopback HTTP, PTY/runtime integration,
+  PTY reliability, project context, filesystem I/O, provider/model verification,
+  then final docs. No M6.5 implementation changes are included in this commit.
+
+### M6.5 Phase 7 — CI enforcement hardening
+- Switched all five workflows to SHA-scoped concurrency groups with
+  `cancel-in-progress: false`, so a newer push cannot cancel an earlier SHA's
+  verification.
+- Removed path filters from `native-runtime-ci.yml`, so the static payload gate runs
+  on every PR/push and can be a required status check; pinned the remaining mutable
+  `actions/upload-artifact@v4` reference to `ea165f8d65b6e75b540449e92b4886f43607fa02`.
+- Documented the three required status checks and the manual branch-protection step
+  in `docs/CI_CD.md`; reconciled `docs/TESTING.md` and `docs/TEST_AUDIT.md`.
+- Branch protection itself remains absent; repository files cannot set it.
+
+### M6.5 Phase 1 — loopback HTTP on Android
+- Added a narrow Network Security Config permitting cleartext only for
+  `127.0.0.1`, `localhost`, and `::1`; production traffic remains TLS-only.
+- Added `LoopbackHttpTest` instrumentation coverage that drives the real
+  `OpenCodeApiClient`/`HttpUrlConnectionTransport` against a loopback HTTP server,
+  asserting `/api/info` parsing, Basic auth, and response projection.
+- Expanded the emulator gate to API 29 and API 36 with API-scoped artifacts, covering
+  the oldest practical supported API and a newer API without claiming ARM64 behavior.
+- The first API 36 run exposed a pre-existing `NavigationTest` assertion against
+  off-screen scrollable content; the test now scrolls to "Task state" before asserting
+  it is displayed, keeping the visibility assertion intact.
+
+### M6.5 Phase 2 — Bionic PTY launch path
+- Commit `818e758` adds `RuntimeLaunchPlan` (`executable`, `argv`, `environment`,
+  `workingDirectory`) to `:runtime`; `RuntimeLauncher`/`RuntimeController` expose it
+  for any child process, with linker64 as executable and argv[0].
+- `TerminalViewModel` now requires `RuntimeState.Ready` and fails with a visible
+  error instead of silently spawning `/system/bin/sh`; sessions are named `bash-*`.
+- `TerminalSession`, `PtyNative`, and `pty.cpp` now pass full argv and environment
+  into `execve`; JNI strings are copied before `fork`, so the child no longer uses
+  JNI pointers or allocates a fresh argv vector after forking.
+- `TerminalViewModelTest` is gated by `bionicPty=true`: it provisions the pinned
+  x86_64 bootstrap, then asserts real `$PREFIX/bin/bash -i` output, `PREFIX`
+  expansion, `command -v bash`, multi-session, resize, and close behavior. The
+  normal API 29/36 gate keeps this opt-in because it downloads the full bootstrap.
+- PR #39 checks green at `818e758`: verify push `45328936634`/PR `45328945207`,
+  API 29/36 push `45328936554`/PR `45328945230`, native-runtime push `45328936579`/
+  PR `45328945126`.
+- Manual `runtime-spike` run `45329524820` passed 2 tests with 0 skipped; the PTY
+  logcat records SELinux granting `linker64` execute on
+  `/data/user/0/dev.pocketdev/files/usr/bin/bash`. This proves the x86_64 linker-hop
+  Bionic PTY path, not ARM64 execution (R1 unchanged).
+
+### M6.5 Phase 3 — PTY lifecycle and status hardening
+- Commit `bc0a1d0` adds a pre-fork argv/env/error-pipe setup, checked child setup
+  calls, waitpid status caching, packed exit info, `exitInfo`/`waitForExit`/
+  `requestStop` JNI entry points, a poll-based reader with a close flag, process-group
+  termination, separate listener/lifecycle/operation locks, and idempotent close.
+- Added `PtyDriver` seam plus JVM `TerminalSessionTest` and gated instrumentation
+  `PtyReliabilityTest` covering normal/non-zero/signal exits, launch failures, rapid
+  lifecycle, and concurrent listeners. `runtime-spike.yml` now includes
+  `PtyReliabilityTest`; `android-emulator.yml` excludes it from the normal gate.
+- The first push failed native compilation because `isExited(const Handle*)` tried to
+  lock a const mutex; fixed in `23df376` by taking `Handle*`, then re-verified green.
+- Required checks for `23df376` all green: verify push `45336254935`/PR
+  `45336260899`, API 29 push `45336254876`/PR `45336260781`, API 36 push
+  `45336254876`/PR `45336260781`, native-runtime push `45336254863`/PR
+  `45336260847`.
+- Manual `runtime-spike` run `45336872176` on `23df376` passed 5 tests with 0
+  failures/errors/skips: `RuntimeSpikeTest.pinnedBootstrapRunsThroughTheSystemLinker`,
+  `TerminalViewModelTest.runsRealBionicPtyInSelectedProjectAndSupportsSessions`, and
+  all three `PtyReliabilityTest` cases. Artifact XML reports `time="9.217"`; the PTY
+  logcat again records SELinux granting `linker64` execute on Bionic `bash` and
+  `coreutils`. This proves x86_64 PTY reliability only; R1 remains unchanged.
+
+### M6.5 Phase 4 — project context binding
+- Commits `77ba5af` (binding + UI + tests), `8e7cff7` (canonical path assertions), and
+  `dbd9ce9` (deterministic busy-switch assertion) implement explicit project context.
+- `AppContainer.ProjectContext` canonicalizes and validates roots under `projectsRoot`;
+  outside roots are rejected. Agent servers stay bound to the root used at start and
+  show a mismatch warning after selection changes; stop/start is the explicit retarget.
+- Terminal sessions carry their own `ProjectContext`: existing PTYs keep their launch
+  directory, new PTYs use the selected project, and the UI shows active-session context
+  plus mismatch guidance. Files operations use the displayed root so an external
+  selection change cannot silently retarget in-flight operations.
+- First `77ba5af` run failed API 29 on a canonical path assertion
+  (`/data/user/0/...` vs `/data/data/...`); fixed in `8e7cff7`. PR API 36 at `8e7cff7`
+  then failed because a test observed a transient `sending` flag; fixed in `dbd9ce9`
+  with a deterministic prompt latch. No test was skipped, weakened, or deleted.
+- Required checks for `dbd9ce9` all green: verify push `45341636963`/PR `45341646980`,
+  API 29 push `45341636953`/PR `45341647148`, API 36 push `45341636953`/PR
+  `45341647148`, native-runtime push `45341636984`/PR `45341647036`.
+- Manual `runtime-spike` run `45347183919` on `dbd9ce9` passed 5 tests with 0
+  failures/errors/skips; artifact XML reports `time="8.461"`. The gated terminal test
+  verified context-bound sessions and project switching on x86_64 API 30; R1 unchanged.
+
+### M6.5 Phase 5 — filesystem and SAF off the main thread
+- Commits `5bb2b28` (implementation), `d090838` (suspend path helpers), `6010f81`
+  (wrapped refresh outcomes), and `de36fe8` (deterministic hidden-file await) implement
+  the phase.
+- `WorkspaceFiles` operations are suspend functions on coroutine context with
+  `ensureActive()` cancellation checks, progress callbacks, explicit
+  `WorkspaceResult.PartialFailure`, recursive copy/delete plans that skip symlink
+  escapes, and streamed copies that check cancellation per chunk; failed copies clean
+  up their destination.
+- `FilesViewModel` launches operations through `viewModelScope`, moves blocking listing,
+  mutation, project-store loads, SAF queries, and stream copies to `Dispatchers.IO`,
+  returns state updates to `Dispatchers.Main`, exposes `FilesOperation` progress/cancel
+  state, and maps success, failure, cancellation, and partial failure explicitly.
+- `FilesScreen` shows operation status/progress and a cancel action; SAF import no
+  longer resolves `DISPLAY_NAME` on the composition thread.
+- Interim failures were fixed without weakening tests: non-suspend `destination`/`source`
+  calling `wrapped` (`WorkspaceFiles.kt:156`, `:165`) in `d090838`; `ListingData` passed
+  where `WorkspaceResult` was expected (`FilesViewModel.kt:92`, `:106`) in `6010f81`;
+  a stale same-label `Refresh` success let the hidden-toggle assertion observe the old
+  listing on API 29, fixed with explicit state waits in `de36fe8`.
+- Required checks for `de36fe8` all green: verify push `45353945435`/PR `45353953532`,
+  API 29 push `45353945512`/PR `45353953646`, API 36 push `45353945512`/PR
+  `45353953646`, native-runtime push `45353945597`/PR `45353953703`.
+
+## Session 18 — 2026-11-24
+
+### M6.5 Phase 6 — provider/model, runtime config, and credentials
+- Commits: `dfdba3f` (session model wire shape), `fd55516` (redacted runtime config),
+  `6701e62` (Keystore-backed credentials), `8017071` (Keystore import fix), and
+  `a89442a` (AppContainer/controller/workspace wiring).
+- `dfdba3f`: `AgentSettings.modelSelection` is sent as the `model` object
+  (`providerID`, `id`) on `POST /api/session`; `OpenCodeSessionApi.switchModel` posts to
+  `/api/session/{id}/model`. Core and instrumentation fakes assert both endpoints.
+- `fd55516`: added `RuntimeAgentConfig` with inline `OPENCODE_CONFIG_CONTENT` JSON and
+  the `{env:POCKETDEV_API_KEY}` placeholder; `RuntimeEnvBuilder.withAgentConfig` injects
+  config/credential env; `RuntimeLaunchPlan.toString()` reports only `environmentKeys`,
+  never values. Tests prove placeholder-only config, env injection, and redaction.
+- `6701e62`: added `ApiKeyStore`/`KeystoreApiKeyStore` (Android Keystore AES/GCM,
+  randomized IV, SharedPreferences ciphertext/IV), injected it into `AppContainer`,
+  and added Settings UI status/save/clear plus instrumented persistence, clear, and
+  blank-key rejection tests. No plaintext key is stored in preferences.
+- `6701e62` failed CI on a wrong `android.security.KeyProperties` import
+  (`Unresolved reference 'KeyProperties'`); `8017071` switched to
+  `android.security.keystore.KeyProperties` and restored all green checks.
+- `a89442a`: `AppContainer.syncAgentRuntimeConfig()` refreshes the controller config
+  from the selected model and saved key; `OpenCodeController` builds its launcher per
+  launch with the current config so config/credential env apply to subsequently
+  started processes; `AgentWorkspaceViewModel` sends the selected model when creating
+  sessions and calls `switchModel` when the active session's settings change.
+- First `a89442a` API 36 push job failed on the pre-existing Compose navigation flake
+  (`Method removeObserver must be called on the main thread`); no test was skipped,
+  weakened, or deleted. `gh run rerun 45366893850 --failed` passed, and duplicate PR
+  API 36 jobs also passed.
+- Required checks at final code head `a89442a` are green: verify push `45366893894`/
+  PR `45366907136`; API 29 push `45366893850` (rerun job `138354227724`)/PR
+  `45366907176`; API 36 push `45366893850` (rerun job `138354226028`)/PR
+  `45366907176`; native-runtime push `45366893798`/PR `45366907218`.
+- ARM64 device execution and the real OpenCode env-auth handshake remain unverified;
+  R1 is unchanged. x86_64 instrumentation proves wiring, persistence, redaction, and
+  state flows, not the pinned aarch64 binary or provider API response.

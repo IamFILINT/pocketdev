@@ -38,6 +38,9 @@
     <string name="agent_server_exited">Exited (code %1$d)</string>
     <string name="agent_server_start">Start server</string>
     <string name="agent_server_stop">Stop server</string>
+    <string name="agent_server_context">Server project: %1$s (%2$s)</string>
+    <string name="agent_server_no_context">Server project: none</string>
+    <string name="agent_project_mismatch">Selected project differs from the running agent project. Stop the server and start it again to target the selected project.</string>
     <string name="agent_task_title">Task state</string>
     <string name="agent_task_state">%1$s</string>
     <string name="agent_task_streaming">Streaming live events</string>
@@ -95,11 +98,16 @@
     <string name="settings_provider_placeholder">Server default</string>
     <string name="settings_model_label">Model</string>
     <string name="settings_model_placeholder">Server default</string>
-    <string name="settings_agent_defaults_hint">Leave provider or model blank to keep the OpenCode server default. These preferences are non-secret; applying them to a running server is not wired yet.</string>
+    <string name="settings_agent_defaults_hint">Leave provider or model blank to keep the OpenCode server default. The selected model is sent to new sessions and applied to the active session when changed.</string>
     <string name="settings_agent_settings_error">Invalid setting: %1$s</string>
     <string name="settings_ai_key_label">API key</string>
     <string name="settings_ai_key_placeholder">Paste a provider API key</string>
-    <string name="settings_ai_key_warning">Keys are held in memory only for now. Encrypted, Keystore-backed persistence is added with the AI integration milestone; nothing is written to disk yet.</string>
+    <string name="settings_ai_key_warning">Keys are encrypted by Android Keystore. Only provider/model preferences are readable as plain settings; saved keys apply to the next agent server start.</string>
+    <string name="settings_ai_key_saved">API key saved in Android Keystore.</string>
+    <string name="settings_ai_key_missing">No API key saved.</string>
+    <string name="settings_ai_key_save">Save key</string>
+    <string name="settings_ai_key_clear">Clear key</string>
+    <string name="settings_ai_key_error">Unable to update API key: %1$s</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about_body">PocketDev is built and tested exclusively on GitHub Actions. This device is the control surface, not the build server.</string>
     <string name="settings_delete_all_title">Workspace</string>
@@ -130,6 +138,13 @@
     <string name="files_message">%1$s</string>
     <string name="files_error">Error: %1$s</string>
     <string name="files_dismiss">Dismiss</string>
+    <string name="files_operation_running">Working: %1$s</string>
+    <string name="files_operation_success">Done: %1$s</string>
+    <string name="files_operation_failure">Failed: %1$s</string>
+    <string name="files_operation_cancelled">Cancelled: %1$s</string>
+    <string name="files_operation_partial">Partially completed: %1$s (%2$d/%3$d)</string>
+    <string name="files_operation_progress">%1$d / %2$d</string>
+    <string name="files_operation_indeterminate">In progress</string>
     <string name="files_preview_title">Preview: %1$s</string>
     <string name="files_preview_binary">Binary or unsupported preview.</string>
     <string name="files_dialog_create_folder">New folder</string>
@@ -146,6 +161,9 @@
     <!-- Terminal -->
     <string name="terminal_title">Terminal</string>
     <string name="terminal_root_label">Working directory: %1$s</string>
+    <string name="terminal_session_context">Session project: %1$s (%2$s)</string>
+    <string name="terminal_no_active_session">Session project: none</string>
+    <string name="terminal_project_mismatch">Selected project differs from the active terminal session. New sessions use the selected project; existing sessions keep their original directory.</string>
     <string name="terminal_new_session">New session</string>
     <string name="terminal_close_session">Close session</string>
     <string name="terminal_copy">Copy</string>

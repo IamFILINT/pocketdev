@@ -72,8 +72,8 @@ Android-bound items that cannot be unit-tested on a plain JVM will be recorded a
 - `verify.yml` runs lint + unit tests + assembleDebug on every PR/push (now `push: branches: ['**']` after CI enforcement task) and uploads artifacts.
 - `android-emulator.yml` runs instrumentation.
 - `native-runtime-ci.yml` green (run 45006056315).
-- Concurrency + least-privilege in place; groups are per-ref so unrelated branches do not cancel each other.
-- Remaining: ensure `native-runtime-ci.yml` is required in branch protection (manual GitHub setting, out of repo).
+- Concurrency + least-privilege in place; groups are SHA-scoped so a newer commit never cancels verification of an earlier SHA.
+- Remaining: enable branch protection on `main` manually with the three required checks listed in `docs/CI_CD.md` (manual GitHub setting, out of repo).
 
 ## Phase D (defect resolution)
 

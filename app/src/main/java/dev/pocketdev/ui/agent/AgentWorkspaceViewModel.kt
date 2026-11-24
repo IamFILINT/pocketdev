@@ -4,11 +4,15 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
+import dev.pocketdev.ProjectContext
 import dev.pocketdev.core.agent.OpenCodeSession
 import dev.pocketdev.core.agent.OpenCodeSessionApi
 import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.PermissionRequest
 import dev.pocketdev.core.ai.TaskState
+import dev.pocketdev.core.settings.AgentModelSelection
+import dev.pocketdev.core.settings.AgentSettings
+import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.runtime.AgentRuntime
 import dev.pocketdev.runtime.OpenCodeServerState
 import kotlinx.coroutines.Dispatchers
@@ -29,10 +33,21 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     application: Application,
     private val runtime: AgentRuntime = (application as PocketDevApplication).container.openCode,
     val projectsRoot: File? = null,
+    private val selectedProjectFlow: StateFlow<Project?>? = null,
+    private val agentSettingsFlow: StateFlow<AgentSettings>? = null,
 ) : AndroidViewModel(application) {
 
     private val container = (application as PocketDevApplication).container
-    private var workspaceRoot: File = projectsRoot ?: container.projectsRoot
+    private val modelFlow = agentSettingsFlow ?: container.agentSettings
+    private val projectFlow = selectedProjectFlow ?: container.selectedProject
+    private val baseRoot = projectsRoot ?: container.projectsRoot
+    private val _selectedContext = MutableStateFlow(
+        runCatching { container.projectContext(projectFlow.value, baseRoot) }.getOrNull(),
+    )
+    val selectedProjectContext: StateFlow<ProjectContext?> = _selectedContext.asStateFlow()
+
+    private val _serverContext = MutableStateFlow<ProjectContext?>(null)
+    val serverContext: StateFlow<ProjectContext?> = _serverContext.asStateFlow()
 
     val agentState = runtime.agentState
     val serverState: StateFlow<OpenCodeServerState> = runtime.serverState
@@ -60,39 +75,65 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
 
     private var attachedUrl: String? = null
     private var api: OpenCodeSessionApi? = null
+    private var appliedSessionId: String? = null
+    private var appliedModel: AgentModelSelection? = null
 
     init {
-        if (projectsRoot == null) {
-            viewModelScope.launch {
-                container.selectedProject.collect { project ->
-                    workspaceRoot = project?.let { File(it.rootPath) } ?: container.projectsRoot
-                }
+        viewModelScope.launch {
+            projectFlow.collect { project ->
+                _selectedContext.value = runCatching { container.projectContext(project, baseRoot) }.getOrNull()
             }
         }
         viewModelScope.launch {
             runtime.serverState.collect { state ->
                 when (state) {
                     is OpenCodeServerState.Listening -> attach(state.connection.baseUrl)
-                    else -> detach()
+                    OpenCodeServerState.Stopped,
+                    is OpenCodeServerState.Failed,
+                    is OpenCodeServerState.Exited -> {
+                        detach()
+                        _serverContext.value = null
+                    }
+                    else -> Unit
                 }
+            }
+        }
+        viewModelScope.launch {
+            modelFlow.collect { settings ->
+                val model = settings.modelSelection
+                if (model == appliedModel) return@collect
+                appliedSessionId = null
+                applySelectedModel(model)
             }
         }
     }
 
     fun installAgent() = runBusy { runtime.install() }
 
-    fun startServer() = runBusy { runtime.startServer(workspaceRoot) }
+    fun startServer() = runBusy {
+        val context = _selectedContext.value
+            ?: throw IllegalStateException("Selected project root is invalid")
+        runtime.startServer(File(context.rootPath))
+        _serverContext.value = context
+    }
 
-    fun stopServer() = runBusy { runtime.stopServer() }
+    fun stopServer() = runBusy {
+        runtime.stopServer()
+        _serverContext.value = null
+    }
 
     fun selectSession(id: String) {
         _activeSessionId.value = id
+        applySelectedModel(modelFlow.value.modelSelection)
     }
 
     fun respondToPermission(decision: PermissionDecision) = session.respondToPermission(decision)
 
     fun createSession() = runSend { client ->
-        val created = client.createSession()
+        val model = selectedModel()
+        val created = client.createSession(model = model)
+        appliedModel = model
+        appliedSessionId = created.id
         refreshSessions(client)
         _activeSessionId.value = created.id
     }
@@ -104,9 +145,12 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
             return
         }
         runSend { client ->
-            val sessionId = _activeSessionId.value ?: client.createSession().id.also {
+            val model = selectedModel()
+            val sessionId = _activeSessionId.value ?: client.createSession(model = model).id.also { newId ->
+                appliedModel = model
+                appliedSessionId = newId
                 refreshSessions(client)
-                _activeSessionId.value = it
+                _activeSessionId.value = newId
             }
             client.prompt(sessionId, prompt)
         }
@@ -122,7 +166,10 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
         val client = runtime.newApiClient() ?: return
         api = client
         session.start(client)
-        viewModelScope.launch(Dispatchers.IO) { refreshSessions(client) }
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshSessions(client)
+            applySelectedModel(selectedModel())
+        }
     }
 
     private fun detach() {
@@ -130,8 +177,28 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
         attachedUrl = null
         api = null
         _activeSessionId.value = null
+        appliedSessionId = null
+        appliedModel = null
         session.stop()
         _sessions.value = emptyList()
+    }
+
+    private fun selectedModel(): AgentModelSelection? = modelFlow.value.modelSelection
+
+    private fun applySelectedModel(model: AgentModelSelection?) {
+        appliedModel = model
+        val sessionId = _activeSessionId.value
+        val client = api
+        if (model == null || sessionId == null || client == null) return
+        if (appliedSessionId == sessionId && appliedModel == model) return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { client.switchModel(sessionId, model) }
+                .onSuccess {
+                    appliedSessionId = sessionId
+                    appliedModel = model
+                }
+                .onFailure { _actionError.value = it.message ?: it::class.simpleName }
+        }
     }
 
     private fun refreshSessions(client: OpenCodeSessionApi) {

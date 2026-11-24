@@ -2,7 +2,7 @@ name: runtime-spike
 
 # ADR-0002 spike (risks R11/R12): provision the pinned bootstrap on the x86_64
 # API 30 emulator and measure what actually executes (linker64 hop, W^X, prefix
-# behavior, termux-exec preload). Manual only; not a gate. Runs on GitHub-hosted
+# behavior, termux-exec preload, Bionic bash PTY). Manual only; not a gate. Runs on GitHub-hosted
 # runners only (master prompt §0.1, §5); never on the phone.
 
 on:
@@ -12,8 +12,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: runtime-spike-${{ github.ref }}
-  cancel-in-progress: true
+  group: runtime-spike-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   spike:
@@ -48,7 +48,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Provision and execute the pinned bootstrap
+      - name: Provision, execute, and run the Bionic PTY session
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d  # v2
         with:
           api-level: 30
@@ -60,7 +60,7 @@ jobs:
             -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
             -camera-back none -camera-front none
           script: |
-            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest -Pandroid.testInstrumentationRunnerArguments.runtimeSpike=true
+            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest,dev.pocketdev.TerminalViewModelTest,dev.pocketdev.PtyReliabilityTest -Pandroid.testInstrumentationRunnerArguments.runtimeSpike=true -Pandroid.testInstrumentationRunnerArguments.bionicPty=true
             adb logcat -d | grep -a RUNTIME_SPIKE | sed 's/.*RUNTIME_SPIKE //' > runtime-spike-report.txt || true
             cat runtime-spike-report.txt || true
 
