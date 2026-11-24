@@ -532,3 +532,36 @@
 - ARM64 device execution and the real OpenCode env-auth handshake remain unverified;
   R1 is unchanged. x86_64 instrumentation proves wiring, persistence, redaction, and
   state flows, not the pinned aarch64 binary or provider API response.
+
+## Session 19 — 2026-11-24
+
+### M7 code editor implementation
+- Branch `feat/m7-code-editor` was created from `main` at `012d7d4`.
+- Editor technology decision: native Compose editor plus a pure-JVM editor core in
+  `:core`; no WebView, CDN runtime, or heavy desktop editor dependency. The existing
+  app has no WebView dependency, no network/runtime CDN should be required for basic
+  editing, and desktop editor bundles are too heavy for the mobile memory/startup
+  profile. Large files are loaded only through `WorkspaceFiles.DEFAULT_MAX_TEXT_BYTES`
+  (`1_048_576` bytes), marked truncated, and opened read-only with a UI warning.
+- `:core` editor package adds `TextFileSnapshot`, `TextFileCodec`, `TextLines`,
+  `EditorBuffer`, `TextSearch`, `EditorLanguage`, `SyntaxHighlighter`, and
+  `EditorFormatter`. Text is normalized to `\n` internally and saved with the original
+  encoding (`UTF-8`/`UTF-8 BOM`) and newline style (`LF`/`CRLF`/`CR`).
+- `WorkspaceFiles` now has `readTextFile` and `writeTextFile`. Reads reject symlinks
+  and binary/NUL content, cap text at 1 MiB, and return a `FileSignature`; writes
+  refuse symlink/binary targets, preserve encoding/newline style, and fail on stale
+  `expectedSignature` instead of overwriting an externally changed file.
+- `EditorViewModel` implements multi-file tabs, selection/dirty state, save, undo/redo,
+  format, search/replace, read-only/truncated state, and external-change conflict
+  handling. Dirty conflicts expose reload-from-disk, keep-local, and discard-local
+  choices; clean external changes reload automatically.
+- `EditorScreen` is a native Compose editor with syntax highlighting, line-number
+  gutter, tabs, toolbar, Ctrl+S/Ctrl+Z/Ctrl+Y/Ctrl+F shortcuts, search/replace panel,
+  conflict banner, and encoding/newline/cursor status. Highlighting is capped at
+  `250_000` characters for responsiveness.
+- Files integration adds “Open in editor” for `FileKind.TEXT`; navigation adds an
+  `Editor` destination and route.
+- Tests added: pure-JVM codec/buffer/search/syntax/formatter and `WorkspaceFiles`
+  editor tests; instrumentation tests for `EditorViewModel`, `EditorUiTest`, and
+  `NavigationTest.dashboardToEditor`. No tests were skipped or weakened.
+- CI evidence is pending for this branch; no local Gradle build or test was run.
