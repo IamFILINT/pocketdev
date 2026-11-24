@@ -78,7 +78,14 @@ class AgentSessionViewModelTest {
     ) : OpenCodeSessionApi {
         val replies = mutableListOf<Triple<String, String, PermissionDecision>>()
         override fun listSessions(limit: Int): List<OpenCodeSession> = emptyList()
-        override fun createSession(title: String?): OpenCodeSession = OpenCodeSession("ses_test", title, null)
+        override fun createSession(
+            title: String?,
+            model: dev.pocketdev.core.settings.AgentModelSelection?,
+        ): OpenCodeSession = OpenCodeSession("ses_test", title, null)
+        override fun switchModel(
+            sessionId: String,
+            model: dev.pocketdev.core.settings.AgentModelSelection,
+        ) = Unit
         override fun prompt(sessionId: String, text: String): String = "{}"
         override fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision) {
             replies.add(Triple(sessionId, requestId, decision))
@@ -97,7 +104,14 @@ class AgentSessionViewModelTest {
     private class BlockingApi : OpenCodeSessionApi {
         val started = CountDownLatch(1)
         override fun listSessions(limit: Int): List<OpenCodeSession> = emptyList()
-        override fun createSession(title: String?): OpenCodeSession = OpenCodeSession("ses_test", title, null)
+        override fun createSession(
+            title: String?,
+            model: dev.pocketdev.core.settings.AgentModelSelection?,
+        ): OpenCodeSession = OpenCodeSession("ses_test", title, null)
+        override fun switchModel(
+            sessionId: String,
+            model: dev.pocketdev.core.settings.AgentModelSelection,
+        ) = Unit
         override fun prompt(sessionId: String, text: String): String = "{}"
         override fun replyPermission(sessionId: String, requestId: String, decision: PermissionDecision) = Unit
         override fun streamEvents(sessionId: String?, onEvent: (ServerSentEvent) -> Boolean): Int {

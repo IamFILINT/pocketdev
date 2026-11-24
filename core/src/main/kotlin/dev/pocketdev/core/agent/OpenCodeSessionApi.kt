@@ -1,5 +1,7 @@
 package dev.pocketdev.core.agent
 
+import dev.pocketdev.core.settings.AgentModelSelection
+
 /**
  * Session operations PocketDev needs from a running OpenCode server.
  *
@@ -12,7 +14,16 @@ interface OpenCodeSessionApi {
     fun listSessions(limit: Int = 50): List<OpenCodeSession>
 
     /** `POST /api/session`. */
-    fun createSession(title: String? = null): OpenCodeSession
+    fun createSession(
+        title: String? = null,
+        model: AgentModelSelection? = null,
+    ): OpenCodeSession
+
+    /** `POST /api/session/{id}/model`. */
+    fun switchModel(
+        sessionId: String,
+        model: AgentModelSelection,
+    )
 
     /** `POST /api/session/{id}/prompt`. */
     fun prompt(sessionId: String, text: String): String

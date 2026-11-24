@@ -10,6 +10,7 @@ import dev.pocketdev.core.agent.OpenCodeSessionApi
 import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.ServerSentEvent
 import dev.pocketdev.core.ai.TaskState
+import dev.pocketdev.core.settings.AgentModelSelection
 import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.runtime.AgentRuntime
 import dev.pocketdev.runtime.OpenCodeServerState
@@ -51,15 +52,22 @@ class AgentWorkspaceViewModelTest {
         var created = 0
         val prompts = mutableListOf<Pair<String, String>>()
         val replies = mutableListOf<Triple<String, String, PermissionDecision>>()
+        val createdModels = mutableListOf<AgentModelSelection?>()
+        val switchedModels = mutableListOf<Pair<String, AgentModelSelection>>()
         var promptBlock: (() -> Unit)? = null
 
         override fun listSessions(limit: Int): List<OpenCodeSession> = sessions.toList()
 
-        override fun createSession(title: String?): OpenCodeSession {
+        override fun createSession(title: String?, model: AgentModelSelection?): OpenCodeSession {
             created++
+            createdModels.add(model)
             val session = OpenCodeSession("ses_new_$created", title, null)
             sessions.add(session)
             return session
+        }
+
+        override fun switchModel(sessionId: String, model: AgentModelSelection) {
+            switchedModels.add(sessionId to model)
         }
 
         override fun prompt(sessionId: String, text: String): String {

@@ -1,6 +1,7 @@
 package dev.pocketdev.core.agent
 
 import dev.pocketdev.core.json.Json
+import dev.pocketdev.core.settings.AgentModelSelection
 import dev.pocketdev.core.json.asArray
 import dev.pocketdev.core.json.asLong
 import dev.pocketdev.core.json.asObject
@@ -174,12 +175,19 @@ class OpenCodeApiClient(
     }
 
     /** Calls `POST /api/session`. */
-    override fun createSession(title: String?): OpenCodeSession {
+    override fun createSession(title: String?, model: AgentModelSelection?): OpenCodeSession {
         val body = StringBuilder().apply {
             append('{')
+            var first = true
             if (title != null) {
                 append("\"title\":")
                 appendString(this, title)
+                first = false
+            }
+            if (model != null) {
+                if (!first) append(',')
+                append("\"model\":")
+                appendModel(this, model)
             }
             append('}')
         }.toString()
@@ -189,6 +197,16 @@ class OpenCodeApiClient(
         val id = data.field("id")?.asString()
             ?: throw OpenCodeApiException(response.status, "session.create returned no id")
         return OpenCodeSession(id, data.field("title")?.asString(), data.field("parentID")?.asString())
+    }
+
+    /** Calls `POST /api/session/{sessionID}/model`. */
+    override fun switchModel(sessionId: String, model: AgentModelSelection) {
+        val body = StringBuilder().apply {
+            append("{\"model\":")
+            appendModel(this, model)
+            append('}')
+        }.toString()
+        post("/api/session/${encodePathSegment(sessionId)}/model", body)
     }
 
     /**
@@ -323,6 +341,18 @@ class OpenCodeApiClient(
 
     private fun encodePathSegment(segment: String): String =
         java.net.URLEncoder.encode(segment, StandardCharsets.UTF_8.name())
+
+    private fun appendModel(target: StringBuilder, model: AgentModelSelection) {
+        target.append("{\"providerID\":")
+        appendString(target, model.providerId)
+        target.append(",\"id\":")
+        appendString(target, model.modelId)
+        if (model.variant != null) {
+            target.append(",\"variant\":")
+            appendString(target, model.variant)
+        }
+        target.append('}')
+    }
 
     private fun appendString(target: StringBuilder, value: String) {
         target.append('"')
