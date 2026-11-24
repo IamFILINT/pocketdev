@@ -1,8 +1,8 @@
 package dev.pocketdev.credentials
 
 import android.content.Context
-import android.security.KeyProperties
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.KeyStore
 import javax.crypto.Cipher
