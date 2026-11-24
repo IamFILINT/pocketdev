@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-emulator-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: android-emulator-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   emulator:

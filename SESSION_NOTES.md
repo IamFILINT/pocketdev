@@ -384,3 +384,14 @@
 - Implementation order: CI stabilization, loopback HTTP, PTY/runtime integration,
   PTY reliability, project context, filesystem I/O, provider/model verification,
   then final docs. No M6.5 implementation changes are included in this commit.
+
+### M6.5 Phase 7 — CI enforcement hardening
+- Switched all five workflows to SHA-scoped concurrency groups with
+  `cancel-in-progress: false`, so a newer push cannot cancel an earlier SHA's
+  verification.
+- Removed path filters from `native-runtime-ci.yml`, so the static payload gate runs
+  on every PR/push and can be a required status check; pinned the remaining mutable
+  `actions/upload-artifact@v4` reference to `ea165f8d65b6e75b540449e92b4886f43607fa02`.
+- Documented the three required status checks and the manual branch-protection step
+  in `docs/CI_CD.md`; reconciled `docs/TESTING.md` and `docs/TEST_AUDIT.md`.
+- Branch protection itself remains absent; repository files cannot set it.

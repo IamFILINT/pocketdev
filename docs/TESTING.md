@@ -12,7 +12,7 @@
 | JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, serve-output parsing, ANSI terminal buffer, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
 | Android lint + `assembleDebug` | `verify.yml`, `ubuntu-latest` | Compiles `:app`/`:runtime`/`:core`, lint gates the debug build | Runtime correctness on device |
 | Instrumentation (x86_64 API 30) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real x86_64 PTY sessions | Any ARM64/Bionic behavior |
-| Static native-artifact checks | planned `native-runtime-ci.yml` | Pinned artifact identity (size, SHA-256, ELF machine/class), honest static validation of the aarch64 agent/bootstrap on an x86_64 runner | Execution |
+| Static native-artifact checks | `native-runtime-ci.yml`, x86_64 runner | Pinned artifact identity (size, SHA-256, ELF machine/class), honest static validation of the aarch64 agent/bootstrap | Execution |
 | ARM64 device run | not in CI | — | The accepted gap (risk R1) |
 
 ## What runs on a normal PR
