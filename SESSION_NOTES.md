@@ -407,3 +407,24 @@
 - The first API 36 run exposed a pre-existing `NavigationTest` assertion against
   off-screen scrollable content; the test now scrolls to "Task state" before asserting
   it is displayed, keeping the visibility assertion intact.
+
+### M6.5 Phase 2 — Bionic PTY launch path
+- Commit `818e758` adds `RuntimeLaunchPlan` (`executable`, `argv`, `environment`,
+  `workingDirectory`) to `:runtime`; `RuntimeLauncher`/`RuntimeController` expose it
+  for any child process, with linker64 as executable and argv[0].
+- `TerminalViewModel` now requires `RuntimeState.Ready` and fails with a visible
+  error instead of silently spawning `/system/bin/sh`; sessions are named `bash-*`.
+- `TerminalSession`, `PtyNative`, and `pty.cpp` now pass full argv and environment
+  into `execve`; JNI strings are copied before `fork`, so the child no longer uses
+  JNI pointers or allocates a fresh argv vector after forking.
+- `TerminalViewModelTest` is gated by `bionicPty=true`: it provisions the pinned
+  x86_64 bootstrap, then asserts real `$PREFIX/bin/bash -i` output, `PREFIX`
+  expansion, `command -v bash`, multi-session, resize, and close behavior. The
+  normal API 29/36 gate keeps this opt-in because it downloads the full bootstrap.
+- PR #39 checks green at `818e758`: verify push `45328936634`/PR `45328945207`,
+  API 29/36 push `45328936554`/PR `45328945230`, native-runtime push `45328936579`/
+  PR `45328945126`.
+- Manual `runtime-spike` run `45329524820` passed 2 tests with 0 skipped; the PTY
+  logcat records SELinux granting `linker64` execute on
+  `/data/user/0/dev.pocketdev/files/usr/bin/bash`. This proves the x86_64 linker-hop
+  Bionic PTY path, not ARM64 execution (R1 unchanged).

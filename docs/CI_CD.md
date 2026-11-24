@@ -77,6 +77,10 @@ bootstrap on an API 30 emulator and runs `RuntimeSpikeTest` plus
 `LD_LIBRARY_PATH`, and Termux data-dir variables. It is opt-in because it downloads
 the full bootstrap and proves x86_64 behavior only.
 
+Evidence: run `45329524820` passed both `RuntimeSpikeTest` and
+`TerminalViewModelTest` (2 tests, 0 skipped); the PTY logcat records `linker64`
+executing `$PREFIX/bin/bash` and the real Bionic shell resolving `PREFIX`.
+
 ### Planned (later milestones)
 
 - `release.yml` — signed APK + GitHub Release, gated on approved tags/dispatch.
