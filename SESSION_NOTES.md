@@ -471,3 +471,27 @@
 - Manual `runtime-spike` run `45347183919` on `dbd9ce9` passed 5 tests with 0
   failures/errors/skips; artifact XML reports `time="8.461"`. The gated terminal test
   verified context-bound sessions and project switching on x86_64 API 30; R1 unchanged.
+
+### M6.5 Phase 5 — filesystem and SAF off the main thread
+- Commits `5bb2b28` (implementation), `d090838` (suspend path helpers), `6010f81`
+  (wrapped refresh outcomes), and `de36fe8` (deterministic hidden-file await) implement
+  the phase.
+- `WorkspaceFiles` operations are suspend functions on coroutine context with
+  `ensureActive()` cancellation checks, progress callbacks, explicit
+  `WorkspaceResult.PartialFailure`, recursive copy/delete plans that skip symlink
+  escapes, and streamed copies that check cancellation per chunk; failed copies clean
+  up their destination.
+- `FilesViewModel` launches operations through `viewModelScope`, moves blocking listing,
+  mutation, project-store loads, SAF queries, and stream copies to `Dispatchers.IO`,
+  returns state updates to `Dispatchers.Main`, exposes `FilesOperation` progress/cancel
+  state, and maps success, failure, cancellation, and partial failure explicitly.
+- `FilesScreen` shows operation status/progress and a cancel action; SAF import no
+  longer resolves `DISPLAY_NAME` on the composition thread.
+- Interim failures were fixed without weakening tests: non-suspend `destination`/`source`
+  calling `wrapped` (`WorkspaceFiles.kt:156`, `:165`) in `d090838`; `ListingData` passed
+  where `WorkspaceResult` was expected (`FilesViewModel.kt:92`, `:106`) in `6010f81`;
+  a stale same-label `Refresh` success let the hidden-toggle assertion observe the old
+  listing on API 29, fixed with explicit state waits in `de36fe8`.
+- Required checks for `de36fe8` all green: verify push `45353945435`/PR `45353953532`,
+  API 29 push `45353945512`/PR `45353953646`, API 36 push `45353945512`/PR
+  `45353953646`, native-runtime push `45353945597`/PR `45353953703`.

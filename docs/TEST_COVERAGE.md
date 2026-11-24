@@ -29,7 +29,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | OpenCodeApiClient.streamEvents | streaming delivery + early stop | unit | `core/.../agent/OpenCodeApiClientTest.kt` | verify | Verified (PR #24) |
 | OpenCodeSessionApi | seam implemented by client, faked in VM tests | unit | (interface; client verified above) | verify | Verified (PR #32) |
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
-| WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
+| WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape, recursive progress, cancellation, partial failure | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (run 45353953532) |
 | FileEntry | kind detection and hidden flag | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
 | AnsiBuffer | ANSI SGR, cursor, erase, scrollback, resize, OSC, plain text | unit | `core/.../terminal/AnsiBufferTest.kt` | verify | Verified (PR #38) |
 | ProjectStore | CRUD/registry | unit | `core/.../workspace/ProjectStoreTest.kt` | verify | Verified |
@@ -75,7 +75,8 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | AgentWorkspaceViewModel project context | server stays bound until restart; mismatch after selection change | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | AgentWorkspaceViewModel permission | expose pending request and forward reply decision | instrumentation | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt` | android-emulator | Verified (PR #36) |
 | AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
-| FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
+| FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45353945512, 45353953646) |
+| FilesViewModel async filesystem/SAF | IO-dispatcher operations, progress/cancel state, explicit failure and partial failure | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45353945512, 45353953646) |
 | FilesViewModel displayed-root stability | external project switch does not retarget active file operations | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
 | TerminalSession state | exit decoding, input normalization, listener races, idempotent close, project context | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Verified (runs 45336260899, 45341646980) |

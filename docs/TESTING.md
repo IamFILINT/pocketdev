@@ -64,6 +64,7 @@ gated because they download the full bootstrap and prove x86_64 execution only.
 | ANSI terminal buffer | `core/.../terminal/AnsiBufferTest.kt` |
 | PTY session state and exit decoding | `app/src/test/.../terminal/TerminalSessionTest.kt` |
 | Project-context binding (agent, terminal, files) | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt`, `FilesViewModelTest.kt`, `TerminalViewModelTest.kt` |
+| Filesystem/SAF IO dispatcher, cancellation, progress, explicit failure | `core/.../workspace/WorkspaceFilesTest.kt`, `app/src/androidTest/.../FilesViewModelTest.kt` |
 | Bionic terminal sessions (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` |
 | PTY reliability, exit status, launch failure, stress (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` |
 | Navigation | `app/src/androidTest/.../NavigationTest.kt` |

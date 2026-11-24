@@ -46,7 +46,11 @@ cover app launch, navigation, Files, and real Android loopback HTTP through
 and screenshots.
 
 Evidence: baseline run `44672914788` (API 30, 3/3 tests); M6.5 API 29/36 matrix
-evidence is recorded in `SESSION_NOTES.md` after the green run.
+evidence is recorded in `SESSION_NOTES.md` after the green run. Phase 5 filesystem/SAF
+off-main-thread verification on `de36fe8` is green on both API 29 and API 36: push
+`45353945512` (API 29 job `138306981781`, API 36 job `138306981296`) and PR
+`45353953646` (API 29 job `138307009263`, API 36 job `138307008868`), including async
+FilesViewModel operations, cancellation/failure state, and hidden-file refresh waits.
 
 ### `arm64-spike.yml` — ARM64 feasibility spike (Milestone 2, prompt §5.4)
 
