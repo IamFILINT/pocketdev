@@ -133,7 +133,7 @@ class AgentWorkspaceViewModelTest {
                 viewModel.taskState.value == TaskState.COMPLETED &&
                 !viewModel.streaming.value
         }
-        assertEquals(projectDir, runtime.startedDir)
+        assertEquals(projectDir.canonicalPath, runtime.startedDir?.canonicalPath)
         assertTrue(runtime.api.streamCalls >= 1)
         assertEquals("First session", viewModel.sessions.value.single().title)
         assertNull(viewModel.actionError.value)

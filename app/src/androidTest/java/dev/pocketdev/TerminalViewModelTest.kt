@@ -43,7 +43,7 @@ class TerminalViewModelTest {
             val initialContext = viewModel.uiState.value.activeContext!!
             assertEquals(File(project.rootPath).canonicalPath, initialContext.rootPath)
             assertEquals(project.name, initialContext.projectName)
-            assertEquals(project.rootPath, viewModel.uiState.value.rootPath)
+            assertEquals(File(project.rootPath).canonicalPath, viewModel.uiState.value.rootPath)
             assertEquals(1, viewModel.uiState.value.sessions.size)
             assertEquals(null, viewModel.uiState.value.error)
 
