@@ -23,6 +23,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class AgentWorkspaceViewModelTest {
@@ -49,6 +51,7 @@ class AgentWorkspaceViewModelTest {
         var created = 0
         val prompts = mutableListOf<Pair<String, String>>()
         val replies = mutableListOf<Triple<String, String, PermissionDecision>>()
+        var promptBlock: (() -> Unit)? = null
 
         override fun listSessions(limit: Int): List<OpenCodeSession> = sessions.toList()
 
@@ -60,6 +63,7 @@ class AgentWorkspaceViewModelTest {
         }
 
         override fun prompt(sessionId: String, text: String): String {
+            promptBlock?.invoke()
             prompts.add(sessionId to text)
             return "{}"
         }
@@ -265,16 +269,24 @@ class AgentWorkspaceViewModelTest {
         val selected = selectedFlow(project("first", "First", first))
         val runtime = FakeRuntime()
         val viewModel = AgentWorkspaceViewModel(application, runtime, base, selected)
+        val promptStarted = CountDownLatch(1)
+        val promptRelease = CountDownLatch(1)
+        runtime.api.promptBlock = {
+            promptStarted.countDown()
+            promptRelease.await()
+        }
 
         viewModel.startServer()
         await { viewModel.serverContext.value != null && runtime.api.streamCalls > 0 && !viewModel.busy.value }
         viewModel.sendPrompt("hello")
-        await { viewModel.sending.value }
+        assertTrue(promptStarted.await(3, TimeUnit.SECONDS))
+        assertTrue(viewModel.sending.value)
         selected.value = project("second", "Second", second)
         await { viewModel.selectedProjectContext.value?.projectId == "second" }
 
         assertEquals(first.canonicalPath, viewModel.serverContext.value?.rootPath)
         assertEquals(first.canonicalPath, runtime.startedDir?.canonicalPath)
+        promptRelease.countDown()
         await { !viewModel.sending.value && runtime.api.prompts.size == 1 }
         assertEquals(first.canonicalPath, viewModel.serverContext.value?.rootPath)
     }
