@@ -428,3 +428,25 @@
   logcat records SELinux granting `linker64` execute on
   `/data/user/0/dev.pocketdev/files/usr/bin/bash`. This proves the x86_64 linker-hop
   Bionic PTY path, not ARM64 execution (R1 unchanged).
+
+### M6.5 Phase 3 — PTY lifecycle and status hardening
+- Commit `bc0a1d0` adds a pre-fork argv/env/error-pipe setup, checked child setup
+  calls, waitpid status caching, packed exit info, `exitInfo`/`waitForExit`/
+  `requestStop` JNI entry points, a poll-based reader with a close flag, process-group
+  termination, separate listener/lifecycle/operation locks, and idempotent close.
+- Added `PtyDriver` seam plus JVM `TerminalSessionTest` and gated instrumentation
+  `PtyReliabilityTest` covering normal/non-zero/signal exits, launch failures, rapid
+  lifecycle, and concurrent listeners. `runtime-spike.yml` now includes
+  `PtyReliabilityTest`; `android-emulator.yml` excludes it from the normal gate.
+- The first push failed native compilation because `isExited(const Handle*)` tried to
+  lock a const mutex; fixed in `23df376` by taking `Handle*`, then re-verified green.
+- Required checks for `23df376` all green: verify push `45336254935`/PR
+  `45336260899`, API 29 push `45336254876`/PR `45336260781`, API 36 push
+  `45336254876`/PR `45336260781`, native-runtime push `45336254863`/PR
+  `45336260847`.
+- Manual `runtime-spike` run `45336872176` on `23df376` passed 5 tests with 0
+  failures/errors/skips: `RuntimeSpikeTest.pinnedBootstrapRunsThroughTheSystemLinker`,
+  `TerminalViewModelTest.runsRealBionicPtyInSelectedProjectAndSupportsSessions`, and
+  all three `PtyReliabilityTest` cases. Artifact XML reports `time="9.217"`; the PTY
+  logcat again records SELinux granting `linker64` execute on Bionic `bash` and
+  `coreutils`. This proves x86_64 PTY reliability only; R1 remains unchanged.

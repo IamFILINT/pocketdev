@@ -79,9 +79,13 @@ including `PREFIX`, `HOME`, `LD_LIBRARY_PATH`, Termux data-dir variables, exit-s
 reporting, launch-failure propagation, and rapid/concurrent session lifecycles. It is
 opt-in because it downloads the full bootstrap and proves x86_64 behavior only.
 
-Evidence: run `45329524820` passed both `RuntimeSpikeTest` and
-`TerminalViewModelTest` (2 tests, 0 skipped); the PTY logcat records `linker64`
-executing `$PREFIX/bin/bash` and the real Bionic shell resolving `PREFIX`.
+Evidence: run `45329524820` passed the first two opt-in tests
+(`RuntimeSpikeTest` and `TerminalViewModelTest`). After PTY reliability hardening,
+run `45336872176` on `23df376` passed 5 tests with 0 failures, errors, or skips:
+`RuntimeSpikeTest`, `TerminalViewModelTest`, and all three `PtyReliabilityTest`
+cases. The artifact XML reports `time="9.217"`; PTY logcat records `linker64`
+executing Bionic `bash`/`coreutils` and the real shell resolving `PREFIX`. This is
+x86_64 evidence only and does not close ARM64 risk R1.
 
 ### Planned (later milestones)
 

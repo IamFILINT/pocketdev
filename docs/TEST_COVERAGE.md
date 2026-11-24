@@ -62,7 +62,7 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | Component | Expected behavior | Test type | Test location | Workflow | Status |
 | --- | --- | --- | --- | --- | --- |
 | Navigation | launch + nav | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified |
-| Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (manual) |
+| Runtime spike | Bionic exec on x86_64 | instrumentation | `app/src/androidTest/.../RuntimeSpikeTest.kt` | runtime-spike | Verified (runs 45329524820, 45336872176) |
 | DashboardViewModel | provisioning guards | instrumentation | `app/src/androidTest/.../DashboardViewModelTest.kt` | android-emulator | Verified (PR #22) |
 | ProjectsViewModel | create/delete/validate | instrumentation | `app/src/androidTest/.../ProjectsViewModelTest.kt` | android-emulator | Verified (PR #19) |
 | SettingsViewModel | theme/api key draft | instrumentation | `app/src/androidTest/.../SettingsViewModelTest.kt` | android-emulator | Verified (PR #22) |
@@ -76,9 +76,9 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | AgentScreen + nav | Agent tab renders task/server cards | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Pending CI (PR #33) |
 | FilesViewModel | selected-project file ops, search, preview | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
 | FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
-| TerminalSession state | exit decoding, input normalization, listener races, idempotent close | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Pending CI (PR #39) |
-| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (run 45329524820) |
-| PtyReliabilityTest | normal/non-zero/signal exit, launch failure, rapid lifecycle, concurrent listeners | instrumentation (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` | runtime-spike | Pending CI (PR #39) |
+| TerminalSession state | exit decoding, input normalization, listener races, idempotent close | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Verified (run 45336260899) |
+| TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (run 45336872176) |
+| PtyReliabilityTest | normal/non-zero/signal exit, launch failure, rapid lifecycle, concurrent listeners | instrumentation (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` | runtime-spike | Verified (run 45336872176) |
 | TerminalScreen + nav | Terminal tab renders terminal controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #38) |
 | AppContainer shared project selection | agent/explorer share one root | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (PR #37) |
 | AppContainer | object graph | unit | missing (Context-bound) | - | Pending |
