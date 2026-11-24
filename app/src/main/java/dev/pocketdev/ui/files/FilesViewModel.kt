@@ -89,7 +89,7 @@ class FilesViewModel @JvmOverloads constructor(
     }
 
     fun refresh() = runOperation("Refresh") { state, _ ->
-        OperationOutcome(loadListing(state))
+        OperationOutcome(WorkspaceResult.Success(Unit), listing = loadListing(state))
     }
 
     fun selectProject(id: String?) {
@@ -103,7 +103,7 @@ class FilesViewModel @JvmOverloads constructor(
         }
         runOperation("Switch project") { state, _ ->
             container.selectProject(id)
-            OperationOutcome(loadListing(state))
+            OperationOutcome(WorkspaceResult.Success(Unit), listing = loadListing(state))
         }
     }
 
