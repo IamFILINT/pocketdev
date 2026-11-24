@@ -133,6 +133,13 @@
     <string name="files_message">%1$s</string>
     <string name="files_error">Error: %1$s</string>
     <string name="files_dismiss">Dismiss</string>
+    <string name="files_operation_running">Working: %1$s</string>
+    <string name="files_operation_success">Done: %1$s</string>
+    <string name="files_operation_failure">Failed: %1$s</string>
+    <string name="files_operation_cancelled">Cancelled: %1$s</string>
+    <string name="files_operation_partial">Partially completed: %1$s (%2$d/%3$d)</string>
+    <string name="files_operation_progress">%1$d / %2$d</string>
+    <string name="files_operation_indeterminate">In progress</string>
     <string name="files_preview_title">Preview: %1$s</string>
     <string name="files_preview_binary">Binary or unsupported preview.</string>
     <string name="files_dialog_create_folder">New folder</string>

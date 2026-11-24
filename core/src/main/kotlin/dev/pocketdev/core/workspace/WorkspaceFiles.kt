@@ -2,18 +2,27 @@ package dev.pocketdev.core.workspace
 
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.StandardCopyOption
 import java.util.ArrayDeque
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 class WorkspaceFiles(private val root: File) {
 
     private val canonicalRoot: File = root.canonicalFile
 
-    fun list(relativeDirectory: String = "", showHidden: Boolean = false): WorkspaceResult<DirectoryListing> =
+    suspend fun list(
+        relativeDirectory: String = "",
+        showHidden: Boolean = false,
+    ): WorkspaceResult<DirectoryListing> =
         wrapped {
+            currentCoroutineContext().ensureActive()
             val directory = resolve(relativeDirectory)
             require(directory.isDirectory) { "Not a directory" }
             val entries = (directory.listFiles() ?: throw IOException("Could not read directory"))
@@ -26,8 +35,13 @@ class WorkspaceFiles(private val root: File) {
             DirectoryListing(normalize(relativeDirectory), entries)
         }
 
-    fun create(relativeDirectory: String, name: String, directory: Boolean): WorkspaceResult<String> =
+    suspend fun create(
+        relativeDirectory: String,
+        name: String,
+        directory: Boolean,
+    ): WorkspaceResult<String> =
         wrapped {
+            currentCoroutineContext().ensureActive()
             requireValidName(name)
             val parent = resolve(relativeDirectory)
             require(parent.isDirectory) { "Not a directory" }
@@ -38,8 +52,9 @@ class WorkspaceFiles(private val root: File) {
             relativePathOf(target)
         }
 
-    fun rename(relativePath: String, newName: String): WorkspaceResult<String> =
+    suspend fun rename(relativePath: String, newName: String): WorkspaceResult<String> =
         wrapped {
+            currentCoroutineContext().ensureActive()
             requireValidName(newName)
             val source = resolveExisting(relativePath)
             val target = File(source.parentFile, newName)
@@ -48,17 +63,35 @@ class WorkspaceFiles(private val root: File) {
             relativePathOf(target)
         }
 
-    fun delete(relativePath: String): WorkspaceResult<Unit> =
+    suspend fun delete(
+        relativePath: String,
+        onProgress: suspend (Long, Long) -> Unit = { _, _ -> },
+    ): WorkspaceResult<Unit> =
         wrapped {
             val source = resolveExisting(relativePath)
             require(source.canonicalFile != canonicalRoot) { "Cannot delete project root" }
-            require(source.deleteRecursively()) { "Could not delete entry" }
+            val plan = collectDeletePlan(source)
+            val total = plan.size.toLong()
+            var completed = 0L
+            try {
+                for (file in plan.asReversed()) {
+                    currentCoroutineContext().ensureActive()
+                    require(Files.deleteIfExists(file.toPath())) { "Could not delete entry" }
+                    completed++
+                    onProgress(completed, total)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                throw PartialWorkspaceException(error.message ?: "Could not delete entry", completed, total)
+            }
         }
 
-    fun copy(
+    suspend fun copy(
         relativePath: String,
         targetDirectory: String,
         newName: String? = null,
+        onProgress: suspend (Long, Long) -> Unit = { _, _ -> },
     ): WorkspaceResult<String> =
         wrapped {
             val source = resolveExisting(relativePath)
@@ -72,16 +105,38 @@ class WorkspaceFiles(private val root: File) {
             require(!destination.canonicalFile.path.startsWith(source.canonicalFile.path + File.separator)) {
                 "Cannot copy into itself"
             }
-            copyTree(source, destination)
+            val plan = collectCopyPlan(source, destination)
+            val total = plan.size.toLong()
+            var completed = 0L
+            try {
+                for ((entry, target) in plan) {
+                    currentCoroutineContext().ensureActive()
+                    if (entry.isDirectory) {
+                        require(target.isDirectory || target.mkdirs()) { "Could not create directory" }
+                    } else {
+                        target.parentFile?.mkdirs()
+                        copyFile(entry, target)
+                    }
+                    completed++
+                    onProgress(completed, total)
+                }
+            } catch (cancelled: CancellationException) {
+                destination.deleteRecursively()
+                throw cancelled
+            } catch (error: Exception) {
+                destination.deleteRecursively()
+                throw PartialWorkspaceException(error.message ?: "Could not copy entry", completed, total)
+            }
             relativePathOf(destination)
         }
 
-    fun move(
+    suspend fun move(
         relativePath: String,
         targetDirectory: String,
         newName: String? = null,
     ): WorkspaceResult<String> =
         wrapped {
+            currentCoroutineContext().ensureActive()
             val source = resolveExisting(relativePath)
             require(source.canonicalFile != canonicalRoot) { "Cannot move project root" }
             val name = newName ?: source.name
@@ -109,10 +164,37 @@ class WorkspaceFiles(private val root: File) {
 
     fun source(relativePath: String): WorkspaceResult<File> = wrapped { resolveExisting(relativePath) }
 
-    fun search(
+    suspend fun copyStream(
+        input: InputStream,
+        output: OutputStream,
+        totalBytes: Long = 0,
+        onProgress: suspend (Long, Long) -> Unit = { _, _ -> },
+    ): WorkspaceResult<Long> =
+        wrapped {
+            var copied = 0L
+            val buffer = ByteArray(64 * 1024)
+            try {
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                    copied += read
+                    onProgress(copied, totalBytes.coerceAtLeast(0))
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                throw PartialWorkspaceException(error.message ?: "Could not copy stream", copied, totalBytes.coerceAtLeast(0))
+            }
+            copied
+        }
+
+    suspend fun search(
         query: String,
         showHidden: Boolean = false,
         maxResults: Int = 200,
+        onProgress: suspend (Long, Long) -> Unit = { _, _ -> },
     ): WorkspaceResult<List<FileEntry>> =
         wrapped {
             val needle = query.trim()
@@ -121,13 +203,17 @@ class WorkspaceFiles(private val root: File) {
             val stack = ArrayDeque<Pair<File, Int>>()
             stack.add(canonicalRoot to 0)
             while (stack.isNotEmpty() && matches.size < maxResults) {
+                currentCoroutineContext().ensureActive()
                 val (directory, depth) = stack.removeLast()
                 val children = directory.listFiles() ?: continue
                 for (child in children) {
                     if (Files.isSymbolicLink(child.toPath())) continue
                     val entry = FileEntry.from(canonicalRoot, child)
                     if (!showHidden && entry.isHidden) continue
-                    if (entry.name.contains(needle, ignoreCase = true)) matches.add(entry)
+                    if (entry.name.contains(needle, ignoreCase = true)) {
+                        matches.add(entry)
+                        onProgress(matches.size.toLong(), 0)
+                    }
                     if (child.isDirectory && depth < MAX_SEARCH_DEPTH) {
                         stack.add(child to depth + 1)
                     }
@@ -137,8 +223,9 @@ class WorkspaceFiles(private val root: File) {
             matches.sortedWith(ENTRY_ORDER)
         }
 
-    fun preview(relativePath: String, maxBytes: Int = 16_384): WorkspaceResult<String?> =
+    suspend fun preview(relativePath: String, maxBytes: Int = 16_384): WorkspaceResult<String?> =
         wrapped {
+            currentCoroutineContext().ensureActive()
             val source = resolveExisting(relativePath)
             require(source.isFile) { "Not a file" }
             val bytes = ByteArray(maxBytes.coerceAtLeast(1))
@@ -174,23 +261,68 @@ class WorkspaceFiles(private val root: File) {
     private fun normalize(relativeDirectory: String): String =
         relativeDirectory.replace('\\', '/').trim('/')
 
-    private fun copyTree(source: File, destination: File) {
-        if (Files.isSymbolicLink(source.toPath())) return
-        if (source.isFile) {
-            destination.parentFile?.mkdirs()
-            Files.copy(source.toPath(), destination.toPath())
-            return
+    private fun collectDeletePlan(source: File): List<File> {
+        val plan = mutableListOf<File>()
+        fun walk(file: File) {
+            plan.add(file)
+            if (Files.isSymbolicLink(file.toPath())) return
+            if (file.isDirectory) {
+                file.listFiles()?.forEach(::walk) ?: throw IOException("Could not read directory")
+            }
         }
-        require(destination.mkdirs()) { "Could not create directory" }
-        source.listFiles()?.forEach { child -> copyTree(child, File(destination, child.name)) }
-            ?: throw IOException("Could not read directory")
+        walk(source)
+        return plan
     }
 
-    private inline fun <T> wrapped(block: () -> T): WorkspaceResult<T> =
-        runCatching(block).fold(
+    private fun collectCopyPlan(source: File, destination: File): List<Pair<File, File>> {
+        val plan = mutableListOf<Pair<File, File>>()
+        fun walk(file: File, target: File) {
+            if (Files.isSymbolicLink(file.toPath())) return
+            plan.add(file to target)
+            if (file.isDirectory) {
+                file.listFiles()?.forEach { child -> walk(child, File(target, child.name)) }
+                    ?: throw IOException("Could not read directory")
+            }
+        }
+        walk(source, destination)
+        return plan
+    }
+
+    private suspend fun copyFile(source: File, target: File) {
+        Files.newInputStream(source.toPath()).use { input ->
+            target.outputStream().use { output ->
+                val buffer = ByteArray(64 * 1024)
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    output.write(buffer, 0, read)
+                }
+            }
+        }
+    }
+
+    private suspend inline fun <T> wrapped(block: suspend () -> T): WorkspaceResult<T> =
+        runCatching { block() }.fold(
             onSuccess = { WorkspaceResult.Success(it) },
-            onFailure = { WorkspaceResult.Failure(it.message ?: it::class.simpleName ?: "Failed") },
+            onFailure = { error ->
+                when (error) {
+                    is CancellationException -> throw error
+                    is PartialWorkspaceException -> WorkspaceResult.PartialFailure(
+                        error.message ?: "Partial operation failed",
+                        error.completed,
+                        error.total,
+                    )
+                    else -> WorkspaceResult.Failure(error.message ?: error::class.simpleName ?: "Failed")
+                }
+            },
         )
+
+    private class PartialWorkspaceException(
+        message: String,
+        val completed: Long,
+        val total: Long,
+    ) : IOException(message)
 
     companion object {
         private const val MAX_SEARCH_DEPTH = 12
