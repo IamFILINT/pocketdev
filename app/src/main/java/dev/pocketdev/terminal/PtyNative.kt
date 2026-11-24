@@ -10,7 +10,8 @@ object PtyNative {
         cols: Int,
         rows: Int,
         cwd: String,
-        shell: String,
+        executable: String,
+        argv: Array<String>,
         environment: Array<String>,
     ): Long
 

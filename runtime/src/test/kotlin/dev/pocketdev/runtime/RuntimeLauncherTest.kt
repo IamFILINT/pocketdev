@@ -57,6 +57,38 @@ class RuntimeLauncherTest {
     }
 
     @Test
+    fun planCarriesLinkerHopEnvironmentAndWorkingDirectory() {
+        val envBuilder = envBuilder()
+        val launcher = RuntimeLauncher.withoutPreload(envBuilder)
+        val program = File(envBuilder.baseEnv().getValue("PREFIX"), "bin/bash")
+        val workingDir = tmp.newFolder("project")
+
+        val plan = launcher.plan(program, "-i", workingDir = workingDir)
+        val home = envBuilder.baseEnv().getValue("HOME")
+
+        assertEquals("/system/bin/linker64", plan.executable)
+        assertEquals(launcher.command(program, "-i"), plan.argv)
+        assertEquals(launcher.environment(), plan.environment)
+        assertEquals(workingDir.absolutePath, plan.workingDirectory)
+        assertTrue(plan.envArray.contains("HOME=$home"))
+        assertFalse(plan.envArray.any { it.startsWith("LD_PRELOAD=") })
+    }
+
+    @Test
+    fun planWithPreloadExposesLdPreload() {
+        val envBuilder = envBuilder()
+        val preload = File(envBuilder.baseEnv().getValue("PREFIX"), "lib/libtermux-exec-ld-preload.so")
+        val launcher = RuntimeLauncher.withPreload(envBuilder, preload)
+        val program = File(envBuilder.baseEnv().getValue("PREFIX"), "bin/bash")
+        val workingDir = tmp.newFolder("preload-project")
+
+        val plan = launcher.plan(program, workingDir = workingDir)
+
+        assertEquals(preload.absolutePath, plan.environment["LD_PRELOAD"])
+        assertTrue(plan.envArray.contains("LD_PRELOAD=${preload.absolutePath}"))
+    }
+
+    @Test
     fun customLinkerPathIsHonored() {
         val envBuilder = envBuilder()
         val launcher = RuntimeLauncher(envBuilder, linker64 = "/system/bin/linker", preload = null)

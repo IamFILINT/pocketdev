@@ -27,6 +27,29 @@ void logError(const char* what) {
     __android_log_print(ANDROID_LOG_ERROR, kTag, "%s: %s", what, std::strerror(errno));
 }
 
+std::string stringOf(JNIEnv* env, jstring value) {
+    if (value == nullptr) return {};
+    const char* chars = env->GetStringUTFChars(value, nullptr);
+    std::string result = chars == nullptr ? "" : chars;
+    env->ReleaseStringUTFChars(value, chars);
+    return result;
+}
+
+std::vector<std::string> stringsOf(JNIEnv* env, jobjectArray values) {
+    std::vector<std::string> result;
+    if (values == nullptr) return result;
+    const jsize count = env->GetArrayLength(values);
+    result.reserve(static_cast<size_t>(count));
+    for (jsize i = 0; i < count; ++i) {
+        auto entry = static_cast<jstring>(env->GetObjectArrayElement(values, i));
+        if (entry == nullptr) continue;
+        const char* chars = env->GetStringUTFChars(entry, nullptr);
+        result.emplace_back(chars == nullptr ? "" : chars);
+        env->ReleaseStringUTFChars(entry, chars);
+    }
+    return result;
+}
+
 Handle* handleOf(jlong pointer) {
     return reinterpret_cast<Handle*>(pointer);
 }
@@ -40,27 +63,26 @@ Java_dev_pocketdev_terminal_PtyNative_open(
         jint cols,
         jint rows,
         jstring cwd,
-        jstring shell,
+        jstring executable,
+        jobjectArray argv,
         jobjectArray environment) {
     if (cols <= 0 || rows <= 0) return 0;
 
-    const char* cwdChars = env->GetStringUTFChars(cwd, nullptr);
-    const char* shellChars = env->GetStringUTFChars(shell, nullptr);
-    if (cwdChars == nullptr || shellChars == nullptr) {
-        if (cwdChars != nullptr) env->ReleaseStringUTFChars(cwd, cwdChars);
-        if (shellChars != nullptr) env->ReleaseStringUTFChars(shell, shellChars);
-        return 0;
-    }
+    const std::string workingDirectory = stringOf(env, cwd);
+    const std::string executablePath = stringOf(env, executable);
+    const std::vector<std::string> arguments = stringsOf(env, argv);
+    const std::vector<std::string> envStrings = stringsOf(env, environment);
+    if (workingDirectory.empty() || executablePath.empty() || arguments.empty()) return 0;
 
-    std::vector<std::string> envStrings;
-    const jsize count = env->GetArrayLength(environment);
-    for (jsize i = 0; i < count; ++i) {
-        auto entry = static_cast<jstring>(env->GetObjectArrayElement(environment, i));
-        if (entry == nullptr) continue;
-        const char* chars = env->GetStringUTFChars(entry, nullptr);
-        envStrings.emplace_back(chars == nullptr ? "" : chars);
-        env->ReleaseStringUTFChars(entry, chars);
-    }
+    std::vector<char*> childArguments;
+    childArguments.reserve(arguments.size() + 1);
+    for (const auto& value : arguments) childArguments.push_back(const_cast<char*>(value.c_str()));
+    childArguments.push_back(nullptr);
+
+    std::vector<char*> childEnvironment;
+    childEnvironment.reserve(envStrings.size() + 1);
+    for (const auto& value : envStrings) childEnvironment.push_back(const_cast<char*>(value.c_str()));
+    childEnvironment.push_back(nullptr);
 
     int master = -1;
     int slave = -1;
@@ -69,8 +91,6 @@ Java_dev_pocketdev_terminal_PtyNative_open(
     window.ws_row = static_cast<unsigned short>(rows);
     if (::openpty(&master, &slave, nullptr, nullptr, &window) != 0) {
         logError("openpty");
-        env->ReleaseStringUTFChars(cwd, cwdChars);
-        env->ReleaseStringUTFChars(shell, shellChars);
         return 0;
     }
 
@@ -79,8 +99,6 @@ Java_dev_pocketdev_terminal_PtyNative_open(
         logError("fork");
         ::close(master);
         ::close(slave);
-        env->ReleaseStringUTFChars(cwd, cwdChars);
-        env->ReleaseStringUTFChars(shell, shellChars);
         return 0;
     }
 
@@ -92,21 +110,12 @@ Java_dev_pocketdev_terminal_PtyNative_open(
         ::dup2(slave, STDOUT_FILENO);
         ::dup2(slave, STDERR_FILENO);
         if (slave > STDERR_FILENO) ::close(slave);
-        ::chdir(cwdChars);
-
-        std::vector<char*> childEnvironment;
-        childEnvironment.reserve(envStrings.size() + 1);
-        for (auto& value : envStrings) childEnvironment.push_back(const_cast<char*>(value.c_str()));
-        childEnvironment.push_back(nullptr);
-
-        char* arguments[] = {const_cast<char*>(shellChars), nullptr};
-        ::execve(shellChars, arguments, childEnvironment.data());
+        ::chdir(workingDirectory.c_str());
+        ::execve(executablePath.c_str(), childArguments.data(), childEnvironment.data());
         ::_exit(127);
     }
 
     ::close(slave);
-    env->ReleaseStringUTFChars(cwd, cwdChars);
-    env->ReleaseStringUTFChars(shell, shellChars);
     return reinterpret_cast<jlong>(new Handle{master, pid, 0, false});
 }
 

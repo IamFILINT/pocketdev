@@ -2,21 +2,27 @@ package dev.pocketdev.terminal
 
 import dev.pocketdev.core.terminal.AnsiBuffer
 import dev.pocketdev.core.terminal.TerminalSnapshot
+import dev.pocketdev.runtime.RuntimeLaunchPlan
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 class TerminalSession(
     val name: String,
-    cwd: String,
-    environment: List<String>,
+    plan: RuntimeLaunchPlan,
     cols: Int = 80,
     rows: Int = 24,
-    shell: String = "/system/bin/sh",
 ) {
 
     val id: String = UUID.randomUUID().toString()
     private val buffer = AnsiBuffer(cols, rows)
-    private val pointer = PtyNative.open(cols, rows, cwd, shell, environment.toTypedArray())
+    private val pointer = PtyNative.open(
+        cols,
+        rows,
+        plan.workingDirectory,
+        plan.executable,
+        plan.argv.toTypedArray(),
+        plan.envArray,
+    )
     private val readers = ByteArray(8192)
     private var closed = false
     private val onSnapshotListeners = mutableListOf<(TerminalSnapshot) -> Unit>()

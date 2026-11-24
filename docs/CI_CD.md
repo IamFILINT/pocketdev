@@ -68,6 +68,15 @@ build or boot Android on ARM64 with the stock toolchain — x86_64 hosts reject 
 guests (emulator arch check), `ubuntu-24.04-arm` has neither an emulator host package
 nor `/dev/kvm`, and its build fails because `aapt2` ships x86_64-only.
 
+### `runtime-spike.yml` — opt-in x86_64 Bionic execution
+
+Manual `workflow_dispatch` only, not a required gate. Provisions the pinned x86_64
+bootstrap on an API 30 emulator and runs `RuntimeSpikeTest` plus
+`TerminalViewModelTest` with `bionicPty=true`. This is the honest evidence for the
+`/system/bin/linker64` → `$PREFIX/bin/bash -i` PTY path, including `PREFIX`, `HOME`,
+`LD_LIBRARY_PATH`, and Termux data-dir variables. It is opt-in because it downloads
+the full bootstrap and proves x86_64 behavior only.
+
 ### Planned (later milestones)
 
 - `release.yml` — signed APK + GitHub Release, gated on approved tags/dispatch.

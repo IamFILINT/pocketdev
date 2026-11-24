@@ -25,6 +25,9 @@ class RuntimeLauncher(
     fun environment(): Map<String, String> =
         if (preload != null) envBuilder.childEnv(preload) else envBuilder.baseEnv()
 
+    fun plan(program: File, vararg args: String, workingDir: File): RuntimeLaunchPlan =
+        RuntimeLaunchPlan(linker64, command(program, *args), environment(), workingDir.absolutePath)
+
     /** Starts `program` (absolute path inside $PREFIX) with `args` via the system linker. */
     fun exec(program: File, vararg args: String): Process = execIn(null, program, *args)
 

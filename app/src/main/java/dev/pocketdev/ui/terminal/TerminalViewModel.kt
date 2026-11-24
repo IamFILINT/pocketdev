@@ -3,13 +3,13 @@ package dev.pocketdev.ui.terminal
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import dev.pocketdev.PocketDevApplication
+import dev.pocketdev.core.runtime.RuntimeState
 import dev.pocketdev.core.terminal.TerminalSnapshot
 import dev.pocketdev.terminal.TerminalSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.io.File
 
 data class TerminalSessionInfo(
     val id: String,
@@ -41,10 +41,27 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
 
     fun createSession() {
         val root = container.activeProjectRoot()
+        val runtime = container.runtime
+        if (runtime.state.value !is RuntimeState.Ready) {
+            _uiState.update {
+                it.copy(
+                    rootPath = root.absolutePath,
+                    error = "Bionic runtime is not ready; provision the runtime before opening a terminal.",
+                )
+            }
+            return
+        }
+        val plan = try {
+            runtime.launchPlan(runtime.bionicShell(), "-i", workingDir = root)
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(rootPath = root.absolutePath, error = "Could not build terminal launch plan: ${e.message}")
+            }
+            return
+        }
         val session = TerminalSession(
-            name = "sh-${nextSessionNumber++}",
-            cwd = root.absolutePath,
-            environment = environment(root),
+            name = "bash-${nextSessionNumber++}",
+            plan = plan,
         )
         val id = session.id
         val listener: (TerminalSnapshot) -> Unit = { snapshot ->
@@ -116,19 +133,4 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun activeSession(): TerminalSession? = sessions[_uiState.value.activeId]
-
-    private fun environment(root: File): List<String> {
-        val paths = container.paths
-        val temp = File(paths.filesDir, "tmp").apply { mkdirs() }
-        paths.home.mkdirs()
-        return listOf(
-            "TERM=xterm-256color",
-            "HOME=${paths.home.absolutePath}",
-            "PREFIX=${paths.prefix.absolutePath}",
-            "PATH=${paths.prefix.absolutePath}/bin:/system/bin:/system/xbin:/sbin:/vendor/bin",
-            "TMPDIR=${temp.absolutePath}",
-            "LANG=C.UTF-8",
-            "PWD=${root.absolutePath}",
-        )
-    }
 }

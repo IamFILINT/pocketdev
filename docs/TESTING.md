@@ -9,9 +9,10 @@
 
 | Layer | Where | What it proves | What it does **not** prove |
 | --- | --- | --- | --- |
-| JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, serve-output parsing, ANSI terminal buffer, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
+| JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, launch-plan argv/env/cwd, serve-output parsing, ANSI terminal buffer, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
 | Android lint + `assembleDebug` | `verify.yml`, `ubuntu-latest` | Compiles `:app`/`:runtime`/`:core`, lint gates the debug build | Runtime correctness on device |
-| Instrumentation (x86_64 API 29 and 36) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real x86_64 PTY sessions, real Android loopback HTTP | Any ARM64/Bionic behavior |
+| Instrumentation (x86_64 API 29 and 36) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real Android loopback HTTP | Bionic PTY sessions and any ARM64 behavior |
+| Opt-in Bionic execution (x86_64 API 30) | `runtime-spike.yml`, manual dispatch | Provisioning, linker64 execution, termux-exec behavior, real `$PREFIX/bin/bash -i` PTY session | ARM64 execution; required-gate enforcement |
 | Static native-artifact checks | `native-runtime-ci.yml`, x86_64 runner | Pinned artifact identity (size, SHA-256, ELF machine/class), honest static validation of the aarch64 agent/bootstrap | Execution |
 | ARM64 device run | not in CI | — | The accepted gap (risk R1) |
 
@@ -26,7 +27,13 @@
 Artifacts: unit-test reports, lint report, debug APK.
 
 `android-emulator.yml`: boots x86_64 API 29 and API 36 AVDs and runs
-`connectedDebugAndroidTest` (navigation, Files, terminal sessions, and loopback HTTP).
+`connectedDebugAndroidTest` (navigation, Files, and loopback HTTP).
+
+`runtime-spike.yml` is manual, not required: it provisions the pinned x86_64
+bootstrap on an API 30 emulator, runs `RuntimeSpikeTest`, and runs
+`TerminalViewModelTest` with `bionicPty=true` to prove the real linker-hop Bionic
+bash PTY path. The PTY test is gated because it downloads the full bootstrap and
+proves x86_64 execution only.
 
 ## What is deliberately *not* claimed
 
@@ -50,10 +57,11 @@ Artifacts: unit-test reports, lint report, debug APK.
 | API client (auth, body, path escaping, real loopback server) | `core/.../agent/OpenCodeApiClientTest.kt` |
 | API client on Android cleartext loopback | `app/src/androidTest/.../LoopbackHttpTest.kt` |
 | Bootstrap (checksums, archive, journal, manager, health) | `core/.../runtime/*Test.kt` |
-| Runtime env / preload / launcher / ABI | `runtime/.../*Test.kt` |
+| Runtime env / preload / launcher / launch plan / ABI | `runtime/.../*Test.kt` |
 | Server supervision state machine | `runtime/.../OpenCodeServerTest.kt` |
 | ANSI terminal buffer | `core/.../terminal/AnsiBufferTest.kt` |
-| Terminal sessions / navigation | `app/src/androidTest/.../TerminalViewModelTest.kt`, `app/src/androidTest/.../NavigationTest.kt` |
+| Bionic terminal sessions (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` |
+| Navigation | `app/src/androidTest/.../NavigationTest.kt` |
 | Compose navigation / runtime spike (opt-in) | `app/src/androidTest/...` |
 
 ## Running tests
