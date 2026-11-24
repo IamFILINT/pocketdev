@@ -6,6 +6,7 @@ import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 
@@ -32,7 +33,7 @@ class NavigationTest {
         composeRule.onNode(hasText("Agent") and isSelectable()).performClick()
 
         composeRule.onNodeWithText("Agent workspace").assertIsDisplayed()
-        composeRule.onNodeWithText("Task state").assertIsDisplayed()
+        composeRule.onNodeWithText("Task state").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("New session").fetchSemanticsNode()
         composeRule.onNodeWithText("Prompt").fetchSemanticsNode()
     }

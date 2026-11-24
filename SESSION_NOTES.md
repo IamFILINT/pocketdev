@@ -404,3 +404,6 @@
   asserting `/api/info` parsing, Basic auth, and response projection.
 - Expanded the emulator gate to API 29 and API 36 with API-scoped artifacts, covering
   the oldest practical supported API and a newer API without claiming ARM64 behavior.
+- The first API 36 run exposed a pre-existing `NavigationTest` assertion against
+  off-screen scrollable content; the test now scrolls to "Task state" before asserting
+  it is displayed, keeping the visibility assertion intact.
