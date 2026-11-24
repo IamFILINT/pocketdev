@@ -135,11 +135,18 @@ class FilesViewModelTest {
         awaitSuccess("Create .secret.txt")
 
         filesViewModel.setQuery("txt")
-        awaitSuccess("Refresh")
+        await {
+            filesViewModel.uiState.value.entries.map { it.name } == listOf("visible.txt") &&
+                filesViewModel.uiState.value.operation?.status == FilesOperationStatus.SUCCESS
+        }
         assertEquals(listOf("visible.txt"), filesViewModel.uiState.value.entries.map { it.name })
 
         filesViewModel.toggleHidden()
-        awaitSuccess("Refresh")
+        await {
+            filesViewModel.uiState.value.entries.map { it.name }.toSet() ==
+                setOf("visible.txt", ".secret.txt") &&
+                filesViewModel.uiState.value.operation?.status == FilesOperationStatus.SUCCESS
+        }
         assertEquals(
             setOf("visible.txt", ".secret.txt"),
             filesViewModel.uiState.value.entries.map { it.name }.toSet(),
