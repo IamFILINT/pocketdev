@@ -100,7 +100,9 @@ class RuntimeLauncherTest {
         val plan = launcher.plan(program, workingDir = workingDir)
 
         assertTrue(plan.envArray.contains("POCKETDEV_API_KEY=$secret"))
+        assertTrue(plan.envArray.contains("OPENCODE_CONFIG_CONTENT=${config.configContent}"))
         assertFalse(plan.toString().contains(secret))
+        assertFalse(plan.toString().contains(config.configContent!!))
         assertTrue(plan.toString().contains("environmentKeys="))
     }
 

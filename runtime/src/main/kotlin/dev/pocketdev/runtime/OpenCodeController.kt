@@ -35,16 +35,27 @@ class OpenCodeController(context: Context) : AgentRuntime {
     override val agentState: StateFlow<AgentState> get() = state
 
     private val installer = AgentInstaller(installDir, HttpAgentDownloader()) { _state.value = it }
-    private val launcher = RuntimeLauncher.withoutPreload(
-        RuntimeEnvBuilder.fromContext(appContext, paths),
-    )
+    private val envBuilder = RuntimeEnvBuilder.fromContext(appContext, paths)
+
+    @Volatile
+    private var runtimeConfig: RuntimeAgentConfig = RuntimeAgentConfig.NONE
+
+    private fun launcher(): RuntimeLauncher =
+        RuntimeLauncher.withoutPreload(envBuilder.withAgentConfig(runtimeConfig))
 
     /** Supervises `opencode serve` and captures its loopback URL + password. */
-    private val server = OpenCodeServer(RuntimeProcessLauncher(launcher))
+    private val server = OpenCodeServer(ProcessLauncher { workingDir, program, args ->
+        launcher().execIn(workingDir, program, *args.toTypedArray())
+    })
     override val serverState: StateFlow<OpenCodeServerState> = server.state
 
     init {
         _state.value = initialState()
+    }
+
+    /** Updates the config/credential env used by subsequently launched processes. */
+    fun setRuntimeConfig(config: RuntimeAgentConfig) {
+        runtimeConfig = config
     }
 
     private var process: Process? = null
@@ -105,7 +116,7 @@ class OpenCodeController(context: Context) : AgentRuntime {
         check(binary.isFile) { "OpenCode is not installed; provision it first" }
         check(projectDir.isDirectory) { "project directory does not exist: $projectDir" }
         stop()
-        val started = launcher.execIn(projectDir, binary, *args).also { process = it }
+        val started = launcher().execIn(projectDir, binary, *args).also { process = it }
         return started
     }
 

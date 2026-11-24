@@ -13,13 +13,16 @@ data class RuntimeAgentConfig(
         }
 
     val environment: Map<String, String>
-        get() = if (model != null && !apiKey.isNullOrBlank()) {
-            mapOf(CREDENTIAL_ENV to apiKey)
-        } else {
-            emptyMap()
+        get() {
+            val content = configContent ?: return emptyMap()
+            return buildMap {
+                put(CONFIG_ENV, content)
+                if (!apiKey.isNullOrBlank()) put(CREDENTIAL_ENV, apiKey)
+            }
         }
 
     companion object {
+        const val CONFIG_ENV = "OPENCODE_CONFIG_CONTENT"
         const val CREDENTIAL_ENV = "POCKETDEV_API_KEY"
         val NONE = RuntimeAgentConfig()
     }

@@ -98,7 +98,7 @@
     <string name="settings_provider_placeholder">Server default</string>
     <string name="settings_model_label">Model</string>
     <string name="settings_model_placeholder">Server default</string>
-    <string name="settings_agent_defaults_hint">Leave provider or model blank to keep the OpenCode server default. These preferences are non-secret; applying them to a running server is not wired yet.</string>
+    <string name="settings_agent_defaults_hint">Leave provider or model blank to keep the OpenCode server default. The selected model is sent to new sessions and applied to the active session when changed.</string>
     <string name="settings_agent_settings_error">Invalid setting: %1$s</string>
     <string name="settings_ai_key_label">API key</string>
     <string name="settings_ai_key_placeholder">Paste a provider API key</string>

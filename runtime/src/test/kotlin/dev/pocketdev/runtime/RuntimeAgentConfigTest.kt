@@ -21,6 +21,8 @@ class RuntimeAgentConfigTest {
         )
         assertFalse(config.configContent!!.contains(secret))
         assertTrue(config.configContent!!.contains("{env:POCKETDEV_API_KEY}"))
+        assertEquals(config.configContent, config.environment[RuntimeAgentConfig.CONFIG_ENV])
+        assertEquals(secret, config.environment[RuntimeAgentConfig.CREDENTIAL_ENV])
     }
 
     @Test
@@ -32,14 +34,26 @@ class RuntimeAgentConfigTest {
     }
 
     @Test
-    fun environmentCarriesTheKeyOnlyWhenBothModelAndKeyArePresent() {
+    fun environmentCarriesConfigAndCarriesTheKeyOnlyWhenPresent() {
         val secret = "sk-agent-secret"
+        val withKey = RuntimeAgentConfig(model, secret)
+        val withoutKey = RuntimeAgentConfig(model, null)
+        val withBlankKey = RuntimeAgentConfig(model, "  ")
 
         assertEquals(
-            mapOf(RuntimeAgentConfig.CREDENTIAL_ENV to secret),
-            RuntimeAgentConfig(model, secret).environment,
+            mapOf(
+                RuntimeAgentConfig.CONFIG_ENV to withKey.configContent!!,
+                RuntimeAgentConfig.CREDENTIAL_ENV to secret,
+            ),
+            withKey.environment,
         )
-        assertEquals(emptyMap<String, String>(), RuntimeAgentConfig(model, null).environment)
-        assertEquals(emptyMap<String, String>(), RuntimeAgentConfig(model, "  ").environment)
+        assertEquals(
+            mapOf(RuntimeAgentConfig.CONFIG_ENV to withoutKey.configContent!!),
+            withoutKey.environment,
+        )
+        assertEquals(
+            mapOf(RuntimeAgentConfig.CONFIG_ENV to withBlankKey.configContent!!),
+            withBlankKey.environment,
+        )
     }
 }

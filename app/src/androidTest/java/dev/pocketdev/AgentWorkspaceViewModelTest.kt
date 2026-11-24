@@ -11,6 +11,7 @@ import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.ServerSentEvent
 import dev.pocketdev.core.ai.TaskState
 import dev.pocketdev.core.settings.AgentModelSelection
+import dev.pocketdev.core.settings.AgentSettings
 import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.runtime.AgentRuntime
 import dev.pocketdev.runtime.OpenCodeServerState
@@ -241,6 +242,69 @@ class AgentWorkspaceViewModelTest {
         assertTrue(viewModel.actionError.value != null)
         assertTrue(runtime.api.prompts.isEmpty())
         assertEquals(0, runtime.api.created)
+    }
+
+    @Test
+    fun createSessionSendsTheSelectedModel() {
+        val selection = AgentModelSelection("anthropic", "claude-sonnet-4")
+        val settings = MutableStateFlow(AgentSettings("anthropic", "claude-sonnet-4"))
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(
+            application,
+            runtime,
+            projectDir,
+            selectedFlow(project("test", "Test", projectDir)),
+            settings,
+        )
+        viewModel.startServer()
+        await { viewModel.sessions.value.isNotEmpty() && !viewModel.busy.value }
+
+        viewModel.createSession()
+
+        await { runtime.api.created == 1 }
+        assertEquals(selection, runtime.api.createdModels.single())
+    }
+
+    @Test
+    fun sendPromptUsesTheSelectedModelWhenItCreatesASession() {
+        val selection = AgentModelSelection("openai", "gpt-5")
+        val settings = MutableStateFlow(AgentSettings("openai", "gpt-5"))
+        val runtime = FakeRuntime(FakeApi(emptyList()))
+        val viewModel = AgentWorkspaceViewModel(
+            application,
+            runtime,
+            projectDir,
+            selectedFlow(project("test", "Test", projectDir)),
+            settings,
+        )
+        viewModel.startServer()
+        await { runtime.api.streamCalls > 0 && !viewModel.busy.value && viewModel.activeSessionId.value == null }
+
+        viewModel.sendPrompt("hello")
+
+        await { runtime.api.created == 1 && runtime.api.prompts.size == 1 }
+        assertEquals(selection, runtime.api.createdModels.single())
+    }
+
+    @Test
+    fun changingSettingsSwitchesTheActiveSessionModel() {
+        val settings = MutableStateFlow(AgentSettings.DEFAULT)
+        val runtime = FakeRuntime()
+        val viewModel = AgentWorkspaceViewModel(
+            application,
+            runtime,
+            projectDir,
+            selectedFlow(project("test", "Test", projectDir)),
+            settings,
+        )
+        viewModel.startServer()
+        await { viewModel.sessions.value.isNotEmpty() && runtime.api.switchedModels.isEmpty() }
+
+        settings.value = AgentSettings("openai", "gpt-5")
+
+        await { runtime.api.switchedModels.isNotEmpty() }
+        assertEquals("ses_1" to AgentModelSelection("openai", "gpt-5"), runtime.api.switchedModels.single())
+        assertNull(viewModel.actionError.value)
     }
 
     @Test

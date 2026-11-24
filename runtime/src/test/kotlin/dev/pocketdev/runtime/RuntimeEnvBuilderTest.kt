@@ -71,9 +71,12 @@ class RuntimeEnvBuilderTest {
         val (baseBuilder, prefix) = builder()
         val envBuilder = baseBuilder.withAgentConfig(config)
 
+        assertEquals(config.configContent, envBuilder.baseEnv()[RuntimeAgentConfig.CONFIG_ENV])
         assertEquals(secret, envBuilder.baseEnv()[RuntimeAgentConfig.CREDENTIAL_ENV])
         val childEnv = envBuilder.childEnv(File(prefix, "lib/libtermux-exec-ld-preload.so"))
+        assertEquals(config.configContent, childEnv[RuntimeAgentConfig.CONFIG_ENV])
         assertEquals(secret, childEnv[RuntimeAgentConfig.CREDENTIAL_ENV])
+        assertFalse("original builder must stay unchanged", baseBuilder.baseEnv().containsKey(RuntimeAgentConfig.CONFIG_ENV))
         assertFalse("original builder must stay unchanged", baseBuilder.baseEnv().containsKey(RuntimeAgentConfig.CREDENTIAL_ENV))
     }
 }

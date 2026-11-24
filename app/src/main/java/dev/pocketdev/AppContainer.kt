@@ -8,6 +8,7 @@ import dev.pocketdev.core.settings.AgentSettings
 import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.core.workspace.ProjectStore
 import dev.pocketdev.runtime.OpenCodeController
+import dev.pocketdev.runtime.RuntimeAgentConfig
 import dev.pocketdev.runtime.RuntimeController
 import dev.pocketdev.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,6 +128,7 @@ class AppContainer(
             .putString(KEY_AGENT_MODEL, settings.model)
             .apply()
         _agentSettings.value = settings
+        syncAgentRuntimeConfig()
     }
 
     fun saveApiKey(key: String) {
@@ -134,11 +136,13 @@ class AppContainer(
         require(trimmed.isNotEmpty()) { "API key must not be blank" }
         secretStore.save(trimmed)
         _apiKeyConfigured.value = true
+        syncAgentRuntimeConfig()
     }
 
     fun clearApiKey() {
         secretStore.clear()
         _apiKeyConfigured.value = false
+        syncAgentRuntimeConfig()
     }
 
     fun currentApiKey(): String? =
@@ -146,6 +150,12 @@ class AppContainer(
 
     private fun hasStoredApiKey(): Boolean =
         runCatching { currentApiKey() != null }.getOrDefault(false)
+
+    private fun syncAgentRuntimeConfig() {
+        openCode.setRuntimeConfig(
+            RuntimeAgentConfig(agentSettings.value.modelSelection, currentApiKey()),
+        )
+    }
 
     private val _themeMode = MutableStateFlow(
         ThemeMode.fromStorage(preferences.getString(KEY_THEME_MODE, null)),
@@ -155,6 +165,10 @@ class AppContainer(
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
         preferences.edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
+
+    init {
+        syncAgentRuntimeConfig()
     }
 
     private companion object {
