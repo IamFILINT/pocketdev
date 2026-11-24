@@ -102,7 +102,12 @@
     <string name="settings_agent_settings_error">Invalid setting: %1$s</string>
     <string name="settings_ai_key_label">API key</string>
     <string name="settings_ai_key_placeholder">Paste a provider API key</string>
-    <string name="settings_ai_key_warning">Keys are held in memory only for now. Encrypted, Keystore-backed persistence is added with the AI integration milestone; nothing is written to disk yet.</string>
+    <string name="settings_ai_key_warning">Keys are encrypted by Android Keystore. Only provider/model preferences are readable as plain settings; saved keys apply to the next agent server start.</string>
+    <string name="settings_ai_key_saved">API key saved in Android Keystore.</string>
+    <string name="settings_ai_key_missing">No API key saved.</string>
+    <string name="settings_ai_key_save">Save key</string>
+    <string name="settings_ai_key_clear">Clear key</string>
+    <string name="settings_ai_key_error">Unable to update API key: %1$s</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about_body">PocketDev is built and tested exclusively on GitHub Actions. This device is the control surface, not the build server.</string>
     <string name="settings_delete_all_title">Workspace</string>

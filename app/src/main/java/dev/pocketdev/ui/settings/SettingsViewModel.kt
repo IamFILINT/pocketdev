@@ -21,9 +21,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _agentSettingsError = MutableStateFlow<String?>(null)
     val agentSettingsError: StateFlow<String?> = _agentSettingsError.asStateFlow()
 
-    /**
-     * In-memory only. Never persisted until the Keystore-backed secret store lands.
-     */
+    val apiKeyConfigured: StateFlow<Boolean> = container.apiKeyConfigured
+
+    private val _apiKeyError = MutableStateFlow<String?>(null)
+    val apiKeyError: StateFlow<String?> = _apiKeyError.asStateFlow()
+
     private val _apiKeyDraft = MutableStateFlow("")
     val apiKeyDraft: StateFlow<String> = _apiKeyDraft.asStateFlow()
 
@@ -41,6 +43,28 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setApiKeyDraft(value: String) {
         _apiKeyDraft.value = value
+    }
+
+    fun saveApiKey(value: String) {
+        runCatching { container.saveApiKey(value) }
+            .onSuccess {
+                _apiKeyError.value = null
+                _apiKeyDraft.value = ""
+            }
+            .onFailure {
+                _apiKeyError.value = it.message ?: "Unable to save API key"
+            }
+    }
+
+    fun clearApiKey() {
+        runCatching { container.clearApiKey() }
+            .onSuccess {
+                _apiKeyError.value = null
+                _apiKeyDraft.value = ""
+            }
+            .onFailure {
+                _apiKeyError.value = it.message ?: "Unable to clear API key"
+            }
     }
 
     fun clearProjects() {

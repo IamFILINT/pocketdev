@@ -1,6 +1,8 @@
 package dev.pocketdev
 
 import android.content.Context
+import dev.pocketdev.credentials.ApiKeyStore
+import dev.pocketdev.credentials.KeystoreApiKeyStore
 import dev.pocketdev.core.runtime.RuntimePaths
 import dev.pocketdev.core.settings.AgentSettings
 import dev.pocketdev.core.workspace.Project
@@ -22,12 +24,15 @@ data class ProjectContext(
 /**
  * Process-wide object graph for the app shell.
  *
- * Only non-secret state is persisted here. API keys are deliberately held in memory
- * until the Keystore-backed secret store is implemented.
+ * Non-secret preferences use SharedPreferences; API keys use Android Keystore.
  */
-class AppContainer(context: Context) {
+class AppContainer(
+    context: Context,
+    apiKeyStore: ApiKeyStore = KeystoreApiKeyStore(context.applicationContext),
+) {
 
     private val appContext = context.applicationContext
+    private val secretStore = apiKeyStore
 
     /** Canonical layout from docs/BOOTSTRAP_LAYOUT.md; projects live outside $PREFIX. */
     val paths: RuntimePaths = RuntimePaths(appContext.filesDir).apply { ensureBaseDirectories() }
@@ -112,6 +117,9 @@ class AppContainer(context: Context) {
     )
     val agentSettings: StateFlow<AgentSettings> = _agentSettings.asStateFlow()
 
+    private val _apiKeyConfigured = MutableStateFlow(hasStoredApiKey())
+    val apiKeyConfigured: StateFlow<Boolean> = _apiKeyConfigured.asStateFlow()
+
     /** Persists only non-secret provider/model preferences. */
     fun setAgentSettings(settings: AgentSettings) {
         preferences.edit()
@@ -120,6 +128,24 @@ class AppContainer(context: Context) {
             .apply()
         _agentSettings.value = settings
     }
+
+    fun saveApiKey(key: String) {
+        val trimmed = key.trim()
+        require(trimmed.isNotEmpty()) { "API key must not be blank" }
+        secretStore.save(trimmed)
+        _apiKeyConfigured.value = true
+    }
+
+    fun clearApiKey() {
+        secretStore.clear()
+        _apiKeyConfigured.value = false
+    }
+
+    fun currentApiKey(): String? =
+        runCatching { secretStore.read()?.trim()?.takeIf { it.isNotEmpty() } }.getOrNull()
+
+    private fun hasStoredApiKey(): Boolean =
+        runCatching { currentApiKey() != null }.getOrDefault(false)
 
     private val _themeMode = MutableStateFlow(
         ThemeMode.fromStorage(preferences.getString(KEY_THEME_MODE, null)),

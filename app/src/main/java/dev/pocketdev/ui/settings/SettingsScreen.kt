@@ -36,17 +36,23 @@ import dev.pocketdev.settings.ThemeMode
 fun SettingsRoute(viewModel: SettingsViewModel) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val apiKeyDraft by viewModel.apiKeyDraft.collectAsStateWithLifecycle()
+    val apiKeyConfigured by viewModel.apiKeyConfigured.collectAsStateWithLifecycle()
+    val apiKeyError by viewModel.apiKeyError.collectAsStateWithLifecycle()
     val agentSettings by viewModel.agentSettings.collectAsStateWithLifecycle()
     val agentSettingsError by viewModel.agentSettingsError.collectAsStateWithLifecycle()
 
     SettingsScreen(
         themeMode = themeMode,
         apiKeyDraft = apiKeyDraft,
+        apiKeyConfigured = apiKeyConfigured,
+        apiKeyError = apiKeyError,
         agentSettings = agentSettings,
         agentSettingsError = agentSettingsError,
         workspaceRoot = viewModel.workspaceRoot,
         onThemeChange = viewModel::setThemeMode,
         onApiKeyChange = viewModel::setApiKeyDraft,
+        onSaveApiKey = viewModel::saveApiKey,
+        onClearApiKey = viewModel::clearApiKey,
         onAgentSettingsChange = viewModel::setAgentSettings,
         onClearProjects = viewModel::clearProjects,
     )
@@ -56,11 +62,15 @@ fun SettingsRoute(viewModel: SettingsViewModel) {
 fun SettingsScreen(
     themeMode: ThemeMode,
     apiKeyDraft: String,
+    apiKeyConfigured: Boolean,
+    apiKeyError: String?,
     agentSettings: AgentSettings,
     agentSettingsError: String?,
     workspaceRoot: String,
     onThemeChange: (ThemeMode) -> Unit,
     onApiKeyChange: (String) -> Unit,
+    onSaveApiKey: (String) -> Unit,
+    onClearApiKey: () -> Unit,
     onAgentSettingsChange: (String, String) -> Unit,
     onClearProjects: () -> Unit,
     modifier: Modifier = Modifier,
@@ -137,6 +147,34 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                text = stringResource(
+                    if (apiKeyConfigured) R.string.settings_ai_key_saved else R.string.settings_ai_key_missing,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    enabled = apiKeyDraft.isNotBlank(),
+                    onClick = { onSaveApiKey(apiKeyDraft) },
+                ) {
+                    Text(stringResource(R.string.settings_ai_key_save))
+                }
+                TextButton(
+                    enabled = apiKeyConfigured,
+                    onClick = onClearApiKey,
+                ) {
+                    Text(stringResource(R.string.settings_ai_key_clear))
+                }
+            }
+            apiKeyError?.let {
+                Text(
+                    text = stringResource(R.string.settings_ai_key_error, it),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         SectionCard(title = stringResource(R.string.settings_delete_all_title)) {
