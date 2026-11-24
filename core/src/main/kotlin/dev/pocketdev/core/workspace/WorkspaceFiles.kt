@@ -152,7 +152,7 @@ class WorkspaceFiles(private val root: File) {
             relativePathOf(destination)
         }
 
-    fun destination(relativeDirectory: String, name: String): WorkspaceResult<File> =
+    suspend fun destination(relativeDirectory: String, name: String): WorkspaceResult<File> =
         wrapped {
             requireValidName(name)
             val directory = resolve(relativeDirectory)
@@ -162,7 +162,7 @@ class WorkspaceFiles(private val root: File) {
             target
         }
 
-    fun source(relativePath: String): WorkspaceResult<File> = wrapped { resolveExisting(relativePath) }
+    suspend fun source(relativePath: String): WorkspaceResult<File> = wrapped { resolveExisting(relativePath) }
 
     suspend fun copyStream(
         input: InputStream,
