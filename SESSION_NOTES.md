@@ -395,3 +395,12 @@
 - Documented the three required status checks and the manual branch-protection step
   in `docs/CI_CD.md`; reconciled `docs/TESTING.md` and `docs/TEST_AUDIT.md`.
 - Branch protection itself remains absent; repository files cannot set it.
+
+### M6.5 Phase 1 — loopback HTTP on Android
+- Added a narrow Network Security Config permitting cleartext only for
+  `127.0.0.1`, `localhost`, and `::1`; production traffic remains TLS-only.
+- Added `LoopbackHttpTest` instrumentation coverage that drives the real
+  `OpenCodeApiClient`/`HttpUrlConnectionTransport` against a loopback HTTP server,
+  asserting `/api/info` parsing, Basic auth, and response projection.
+- Expanded the emulator gate to API 29 and API 36 with API-scoped artifacts, covering
+  the oldest practical supported API and a newer API without claiming ARM64 behavior.

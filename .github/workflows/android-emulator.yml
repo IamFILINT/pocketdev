@@ -20,9 +20,13 @@ concurrency:
 
 jobs:
   emulator:
-    name: Launch and navigation
+    name: Launch and navigation (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [29, 36]
     steps:
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # actions/checkout v5
@@ -55,7 +59,7 @@ jobs:
       - name: Run instrumentation tests
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d  # v2
         with:
-          api-level: 30
+          api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
           disable-animations: true
@@ -69,7 +73,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # actions/upload-artifact v5
         with:
-          name: android-test-reports
+          name: android-test-reports-API${{ matrix.api-level }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
@@ -85,7 +89,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # actions/upload-artifact v5
         with:
-          name: emulator-failure-screenshot
+          name: emulator-failure-screenshot-API${{ matrix.api-level }}
           path: emulator-failure.png
           if-no-files-found: ignore
           retention-days: 14
@@ -94,7 +98,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4  # actions/upload-artifact v5
         with:
-          name: emulator-test-log
+          name: emulator-test-log-API${{ matrix.api-level }}
           path: emulator-test.log
           if-no-files-found: ignore
           retention-days: 14

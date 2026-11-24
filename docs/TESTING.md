@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, serve-output parsing, ANSI terminal buffer, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
 | Android lint + `assembleDebug` | `verify.yml`, `ubuntu-latest` | Compiles `:app`/`:runtime`/`:core`, lint gates the debug build | Runtime correctness on device |
-| Instrumentation (x86_64 API 30) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real x86_64 PTY sessions | Any ARM64/Bionic behavior |
+| Instrumentation (x86_64 API 29 and 36) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real x86_64 PTY sessions, real Android loopback HTTP | Any ARM64/Bionic behavior |
 | Static native-artifact checks | `native-runtime-ci.yml`, x86_64 runner | Pinned artifact identity (size, SHA-256, ELF machine/class), honest static validation of the aarch64 agent/bootstrap | Execution |
 | ARM64 device run | not in CI | — | The accepted gap (risk R1) |
 
@@ -25,8 +25,8 @@
 
 Artifacts: unit-test reports, lint report, debug APK.
 
-`android-emulator.yml`: boots an x86_64 API 30 AVD and runs
-`connectedDebugAndroidTest` (navigation, Files, and terminal-session tests).
+`android-emulator.yml`: boots x86_64 API 29 and API 36 AVDs and runs
+`connectedDebugAndroidTest` (navigation, Files, terminal sessions, and loopback HTTP).
 
 ## What is deliberately *not* claimed
 
@@ -37,7 +37,7 @@ Artifacts: unit-test reports, lint report, debug APK.
   supervision logic against `/bin/sh` scripts, and `OpenCodeApiClientTest` drives the
   *same* client against a real loopback `com.sun.net.httpserver.HttpServer`. Neither
   proves the aarch64 binary boots on a device.
-- **Instrumentation tests run on x86_64**, so they say nothing about the runtime ABI.
+- **Instrumentation tests run on x86_64 API 29 and API 36**, so they say nothing about the runtime ABI.
 
 ## Test inventory (current)
 
@@ -48,6 +48,7 @@ Artifacts: unit-test reports, lint report, debug APK.
 | Serve-output parser | `core/.../agent/OpenCodeServeOutputParserTest.kt` |
 | JSON reader | `core/.../json/JsonTest.kt` |
 | API client (auth, body, path escaping, real loopback server) | `core/.../agent/OpenCodeApiClientTest.kt` |
+| API client on Android cleartext loopback | `app/src/androidTest/.../LoopbackHttpTest.kt` |
 | Bootstrap (checksums, archive, journal, manager, health) | `core/.../runtime/*Test.kt` |
 | Runtime env / preload / launcher / ABI | `runtime/.../*Test.kt` |
 | Server supervision state machine | `runtime/.../OpenCodeServerTest.kt` |

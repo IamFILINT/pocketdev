@@ -38,13 +38,14 @@ it does not claim ARM64 execution (risk R1). All action references are immutable
 
 ### `android-emulator.yml` — instrumentation gate (Milestone 1)
 
-Boots an x86_64 API 30 emulator with KVM enabled via
+Boots x86_64 API 29 and API 36 AVDs with KVM enabled via
 `ReactiveCircus/android-emulator-runner` (pinned SHA) and runs
-`./gradlew connectedDebugAndroidTest`. Tests cover app launch plus
-dashboard → projects → settings navigation. On failure the job uploads the
-instrumentation reports and an emulator screenshot.
+`./gradlew connectedDebugAndroidTest`. Tests cover app launch, navigation, Files,
+terminal sessions, and real Android loopback HTTP through `OpenCodeApiClient`.
+On failure the job uploads API-scoped instrumentation reports and screenshots.
 
-Evidence: run `44672914788` (3/3 tests passed).
+Evidence: baseline run `44672914788` (API 30, 3/3 tests); M6.5 API 29/36 matrix
+evidence is recorded in `SESSION_NOTES.md` after the green run.
 
 ### `arm64-spike.yml` — ARM64 feasibility spike (Milestone 2, prompt §5.4)
 
@@ -78,7 +79,8 @@ Baseline on 2026-11-24: `main` has no branch protection (`main/protection` retur
 required status checks:
 
 - `Build, test, lint` (`verify.yml`)
-- `Launch and navigation` (`android-emulator.yml`)
+- `Launch and navigation (API 29)` (`android-emulator.yml`)
+- `Launch and navigation (API 36)` (`android-emulator.yml`)
 - `Verify pinned aarch64 payloads (static, x86_64 runner)` (`native-runtime-ci.yml`)
 
 This cannot be enforced from repository files. Until it is set in GitHub settings,
