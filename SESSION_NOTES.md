@@ -495,3 +495,40 @@
 - Required checks for `de36fe8` all green: verify push `45353945435`/PR `45353953532`,
   API 29 push `45353945512`/PR `45353953646`, API 36 push `45353945512`/PR
   `45353953646`, native-runtime push `45353945597`/PR `45353953703`.
+
+## Session 18 — 2026-11-24
+
+### M6.5 Phase 6 — provider/model, runtime config, and credentials
+- Commits: `dfdba3f` (session model wire shape), `fd55516` (redacted runtime config),
+  `6701e62` (Keystore-backed credentials), `8017071` (Keystore import fix), and
+  `a89442a` (AppContainer/controller/workspace wiring).
+- `dfdba3f`: `AgentSettings.modelSelection` is sent as the `model` object
+  (`providerID`, `id`) on `POST /api/session`; `OpenCodeSessionApi.switchModel` posts to
+  `/api/session/{id}/model`. Core and instrumentation fakes assert both endpoints.
+- `fd55516`: added `RuntimeAgentConfig` with inline `OPENCODE_CONFIG_CONTENT` JSON and
+  the `{env:POCKETDEV_API_KEY}` placeholder; `RuntimeEnvBuilder.withAgentConfig` injects
+  config/credential env; `RuntimeLaunchPlan.toString()` reports only `environmentKeys`,
+  never values. Tests prove placeholder-only config, env injection, and redaction.
+- `6701e62`: added `ApiKeyStore`/`KeystoreApiKeyStore` (Android Keystore AES/GCM,
+  randomized IV, SharedPreferences ciphertext/IV), injected it into `AppContainer`,
+  and added Settings UI status/save/clear plus instrumented persistence, clear, and
+  blank-key rejection tests. No plaintext key is stored in preferences.
+- `6701e62` failed CI on a wrong `android.security.KeyProperties` import
+  (`Unresolved reference 'KeyProperties'`); `8017071` switched to
+  `android.security.keystore.KeyProperties` and restored all green checks.
+- `a89442a`: `AppContainer.syncAgentRuntimeConfig()` refreshes the controller config
+  from the selected model and saved key; `OpenCodeController` builds its launcher per
+  launch with the current config so config/credential env apply to subsequently
+  started processes; `AgentWorkspaceViewModel` sends the selected model when creating
+  sessions and calls `switchModel` when the active session's settings change.
+- First `a89442a` API 36 push job failed on the pre-existing Compose navigation flake
+  (`Method removeObserver must be called on the main thread`); no test was skipped,
+  weakened, or deleted. `gh run rerun 45366893850 --failed` passed, and duplicate PR
+  API 36 jobs also passed.
+- Required checks at final code head `a89442a` are green: verify push `45366893894`/
+  PR `45366907136`; API 29 push `45366893850` (rerun job `138354227724`)/PR
+  `45366907176`; API 36 push `45366893850` (rerun job `138354226028`)/PR
+  `45366907176`; native-runtime push `45366893798`/PR `45366907218`.
+- ARM64 device execution and the real OpenCode env-auth handshake remain unverified;
+  R1 is unchanged. x86_64 instrumentation proves wiring, persistence, redaction, and
+  state flows, not the pinned aarch64 binary or provider API response.

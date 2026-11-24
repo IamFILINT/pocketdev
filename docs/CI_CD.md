@@ -26,7 +26,8 @@ APK artifacts.
 Evidence: run `44623877843` (Milestone 0), run `44670913592` (Milestone 1 green),
 run `44999755169` (Milestone 4 PR #16 green: +`OpenCodeServeOutputParser`,
 `Json`, `OpenCodeApiClient`, `OpenCodeServer` tests), run `45006056315`
-(native-runtime static verification green).
+(native-runtime static verification green), Phase 6 code-head `a89442a` push
+`45366893894` / PR `45366907136` green.
 
 ### `native-runtime-ci.yml` — static native payload gate
 
@@ -35,22 +36,30 @@ pinned OpenCode Bionic release and Termux bootstrap, verifies size + SHA-256 aga
 the in-source pins, confirms the agent ELF is 64-bit AArch64, validates the bootstrap
 zip, and uploads an evidence artifact. This is static validation on an x86_64 runner;
 it does not claim ARM64 execution (risk R1). All action references are immutable SHAs.
+Evidence: Phase 6 code-head `a89442a` push `45366893798` / PR `45366907218` green.
 
 ### `android-emulator.yml` — instrumentation gate (Milestone 1)
 
 Boots x86_64 API 29 and API 36 AVDs with KVM enabled via
 `ReactiveCircus/android-emulator-runner` (pinned SHA) and runs
 `./gradlew connectedDebugAndroidTest` with the opt-in PTY classes excluded. Tests
-cover app launch, navigation, Files, and real Android loopback HTTP through
-`OpenCodeApiClient`. On failure the job uploads API-scoped instrumentation reports
-and screenshots.
+cover app launch, navigation, Files, real Android loopback HTTP through
+`OpenCodeApiClient`, provider/model settings, Keystore-backed API-key status and
+workspace selected-model flows. On failure the job uploads API-scoped
+instrumentation reports and screenshots.
 
 Evidence: baseline run `44672914788` (API 30, 3/3 tests); M6.5 API 29/36 matrix
 evidence is recorded in `SESSION_NOTES.md` after the green run. Phase 5 filesystem/SAF
 off-main-thread verification on `de36fe8` is green on both API 29 and API 36: push
 `45353945512` (API 29 job `138306981781`, API 36 job `138306981296`) and PR
 `45353953646` (API 29 job `138307009263`, API 36 job `138307008868`), including async
-FilesViewModel operations, cancellation/failure state, and hidden-file refresh waits.
+  FilesViewModel operations, cancellation/failure state, and hidden-file refresh waits.
+
+- Phase 6 code-head `a89442a` instrumentation checks are green: API 29 push
+  `45366893850` / PR `45366907176`, API 36 push `45366893850` / PR `45366907176`.
+  One initial API 36 push job hit the pre-existing Compose navigation flake
+  (`Method removeObserver must be called on the main thread`); a clean rerun
+  (`138354226028`) passed with no test changes.
 
 ### `arm64-spike.yml` — ARM64 feasibility spike (Milestone 2, prompt §5.4)
 
