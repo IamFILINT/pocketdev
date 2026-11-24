@@ -9,7 +9,7 @@
 
 | Layer | Where | What it proves | What it does **not** prove |
 | --- | --- | --- | --- |
-| JVM unit tests (`:core`, `:runtime`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, launch-plan argv/env/cwd, serve-output parsing, ANSI terminal buffer, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
+| JVM unit tests (`:core`, `:runtime`, `:app`) | `verify.yml`, `ubuntu-latest`, JDK 17 | Pure logic: pins, checksums, archive safety, journal/resume, path safety, state machines, launch-plan argv/env/cwd, serve-output parsing, ANSI terminal buffer, PTY session state/exit decoding, JSON reading, API client auth/encoding, supervision state transitions | Real Android/Bionic behavior |
 | Android lint + `assembleDebug` | `verify.yml`, `ubuntu-latest` | Compiles `:app`/`:runtime`/`:core`, lint gates the debug build | Runtime correctness on device |
 | Instrumentation (x86_64 API 29 and 36) | `android-emulator.yml`, KVM, `ReactiveCircus/android-emulator-runner` (pinned) | App launch, navigation, Compose UI basics, real Android loopback HTTP | Bionic PTY sessions and any ARM64 behavior |
 | Opt-in Bionic execution (x86_64 API 30) | `runtime-spike.yml`, manual dispatch | Provisioning, linker64 execution, termux-exec behavior, real `$PREFIX/bin/bash -i` PTY session | ARM64 execution; required-gate enforcement |
@@ -27,13 +27,15 @@
 Artifacts: unit-test reports, lint report, debug APK.
 
 `android-emulator.yml`: boots x86_64 API 29 and API 36 AVDs and runs
-`connectedDebugAndroidTest` (navigation, Files, and loopback HTTP).
+`connectedDebugAndroidTest` (navigation, Files, and loopback HTTP), excluding the
+opt-in PTY classes that run only in `runtime-spike.yml`.
 
 `runtime-spike.yml` is manual, not required: it provisions the pinned x86_64
 bootstrap on an API 30 emulator, runs `RuntimeSpikeTest`, and runs
-`TerminalViewModelTest` with `bionicPty=true` to prove the real linker-hop Bionic
-bash PTY path. The PTY test is gated because it downloads the full bootstrap and
-proves x86_64 execution only.
+`TerminalViewModelTest` and `PtyReliabilityTest` with `bionicPty=true` to prove the
+real linker-hop Bionic bash PTY path, exit-status reporting, launch-failure
+propagation, and repeated/concurrent session lifecycle behavior. The PTY tests are
+gated because they download the full bootstrap and prove x86_64 execution only.
 
 ## What is deliberately *not* claimed
 
@@ -60,7 +62,9 @@ proves x86_64 execution only.
 | Runtime env / preload / launcher / launch plan / ABI | `runtime/.../*Test.kt` |
 | Server supervision state machine | `runtime/.../OpenCodeServerTest.kt` |
 | ANSI terminal buffer | `core/.../terminal/AnsiBufferTest.kt` |
+| PTY session state and exit decoding | `app/src/test/.../terminal/TerminalSessionTest.kt` |
 | Bionic terminal sessions (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` |
+| PTY reliability, exit status, launch failure, stress (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` |
 | Navigation | `app/src/androidTest/.../NavigationTest.kt` |
 | Compose navigation / runtime spike (opt-in) | `app/src/androidTest/...` |
 

@@ -34,6 +34,13 @@ module; the module split remains deferred. `TerminalViewModel` now requires
 its executable, argv, environment, and working directory to `PtyNative`; the native
 child `execve()`s `/system/bin/linker64` → `$PREFIX/bin/bash -i`.
 
+`pty.cpp` prepares argv/env and the child-error pipe before `fork()`, restricts the
+child to async-signal-safe setup calls, and reports setup failures to the parent.
+The parent reaps child status and exposes normal exit, non-zero exit, signal
+termination, and launch failure through `PtyExitInfo`. `TerminalSession` guards
+listeners and lifecycle state with separate locks, calls listeners outside locks,
+uses a poll-based reader that observes close requests, and makes `close()` idempotent.
+
 ## Layer boundaries (master prompt §4.1)
 
 - UI must not touch runtime internals directly.

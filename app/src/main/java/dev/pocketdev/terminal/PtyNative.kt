@@ -23,9 +23,15 @@ object PtyNative {
 
     external fun isRunning(pointer: Long): Boolean
 
+    external fun exitInfo(pointer: Long): Long
+
+    external fun waitForExit(pointer: Long, timeoutMillis: Int): Long
+
     external fun hangup(pointer: Long)
 
     external fun terminate(pointer: Long)
+
+    external fun requestStop(pointer: Long)
 
     external fun close(pointer: Long)
 }

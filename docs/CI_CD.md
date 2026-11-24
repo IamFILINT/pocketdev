@@ -40,9 +40,10 @@ it does not claim ARM64 execution (risk R1). All action references are immutable
 
 Boots x86_64 API 29 and API 36 AVDs with KVM enabled via
 `ReactiveCircus/android-emulator-runner` (pinned SHA) and runs
-`./gradlew connectedDebugAndroidTest`. Tests cover app launch, navigation, Files,
-terminal sessions, and real Android loopback HTTP through `OpenCodeApiClient`.
-On failure the job uploads API-scoped instrumentation reports and screenshots.
+`./gradlew connectedDebugAndroidTest` with the opt-in PTY classes excluded. Tests
+cover app launch, navigation, Files, and real Android loopback HTTP through
+`OpenCodeApiClient`. On failure the job uploads API-scoped instrumentation reports
+and screenshots.
 
 Evidence: baseline run `44672914788` (API 30, 3/3 tests); M6.5 API 29/36 matrix
 evidence is recorded in `SESSION_NOTES.md` after the green run.
@@ -71,11 +72,12 @@ nor `/dev/kvm`, and its build fails because `aapt2` ships x86_64-only.
 ### `runtime-spike.yml` — opt-in x86_64 Bionic execution
 
 Manual `workflow_dispatch` only, not a required gate. Provisions the pinned x86_64
-bootstrap on an API 30 emulator and runs `RuntimeSpikeTest` plus
-`TerminalViewModelTest` with `bionicPty=true`. This is the honest evidence for the
-`/system/bin/linker64` → `$PREFIX/bin/bash -i` PTY path, including `PREFIX`, `HOME`,
-`LD_LIBRARY_PATH`, and Termux data-dir variables. It is opt-in because it downloads
-the full bootstrap and proves x86_64 behavior only.
+bootstrap on an API 30 emulator and runs `RuntimeSpikeTest`,
+`TerminalViewModelTest`, and `PtyReliabilityTest` with `bionicPty=true`. This is the
+honest evidence for the `/system/bin/linker64` → `$PREFIX/bin/bash -i` PTY path,
+including `PREFIX`, `HOME`, `LD_LIBRARY_PATH`, Termux data-dir variables, exit-status
+reporting, launch-failure propagation, and rapid/concurrent session lifecycles. It is
+opt-in because it downloads the full bootstrap and proves x86_64 behavior only.
 
 Evidence: run `45329524820` passed both `RuntimeSpikeTest` and
 `TerminalViewModelTest` (2 tests, 0 skipped); the PTY logcat records `linker64`

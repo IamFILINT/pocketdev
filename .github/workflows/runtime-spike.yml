@@ -60,7 +60,7 @@ jobs:
             -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
             -camera-back none -camera-front none
           script: |
-            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest,dev.pocketdev.TerminalViewModelTest -Pandroid.testInstrumentationRunnerArguments.runtimeSpike=true -Pandroid.testInstrumentationRunnerArguments.bionicPty=true
+            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.pocketdev.RuntimeSpikeTest,dev.pocketdev.TerminalViewModelTest,dev.pocketdev.PtyReliabilityTest -Pandroid.testInstrumentationRunnerArguments.runtimeSpike=true -Pandroid.testInstrumentationRunnerArguments.bionicPty=true
             adb logcat -d | grep -a RUNTIME_SPIKE | sed 's/.*RUNTIME_SPIKE //' > runtime-spike-report.txt || true
             cat runtime-spike-report.txt || true
 

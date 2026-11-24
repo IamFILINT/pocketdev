@@ -67,7 +67,7 @@ jobs:
           emulator-options: >-
             -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
             -camera-back none -camera-front none
-          script: set -o pipefail && ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest 2>&1 | tee emulator-test.log
+          script: set -o pipefail && ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notClass=dev.pocketdev.TerminalViewModelTest,dev.pocketdev.PtyReliabilityTest 2>&1 | tee emulator-test.log
 
       - name: Upload instrumentation test reports
         if: always()
