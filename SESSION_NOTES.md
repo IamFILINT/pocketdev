@@ -361,3 +361,26 @@
 - PR #38 merged into `main` at `27dbcc7`; final docs verification green on verify
   `45257636050`/`45257644825` and android-emulator `45257635719`/`45257644889`.
 - Next: Milestone 7 code editor. Physical ARM64 device run remains R1.
+
+## Session 17 — 2026-11-24
+
+### M6.5 Phase 0 — runtime integration reconnaissance
+- Started Milestone 6.5 from clean `main` at `a1cfff7` with PR #38 merged at
+  `27dbcc7`. Baseline M6 green evidence: verify `45259268881`,
+  android-emulator `45259268072`. No local build or device verification.
+- Confirmed prompt source is external
+  `/storage/emulated/0/Download/POCKETDEV_MILESTONE_6_5_PROMPT.md`; no literal
+  M6.5 phase text exists in the repository.
+- Verified current manifest has `INTERNET` but no cleartext opt-in; with
+  `minSdk 29`/`targetSdk 36`, loopback HTTP needs a narrow domain config.
+- Verified PTY creation still uses `/system/bin/sh` directly and does not consume
+  `RuntimeLauncher`/`RuntimeEnvBuilder`; runtime execution on a real ARM64 device
+  remains an accepted R1 gap, not a passing claim.
+- Verified branch protection is absent (`main/protection` 404, rulesets `[]`),
+  `verify.yml`/`android-emulator.yml` use mutable `cancel-in-progress: true`,
+  and `native-runtime-ci.yml` still uses mutable `actions/upload-artifact@v4`.
+- Verified docs still describe native-runtime-ci as planned in `docs/CI_CD.md`
+  and `docs/TESTING.md`; they need reconciliation after workflow stabilization.
+- Implementation order: CI stabilization, loopback HTTP, PTY/runtime integration,
+  PTY reliability, project context, filesystem I/O, provider/model verification,
+  then final docs. No M6.5 implementation changes are included in this commit.
