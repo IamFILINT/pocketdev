@@ -1,5 +1,6 @@
 package dev.pocketdev.terminal
 
+import dev.pocketdev.ProjectContext
 import dev.pocketdev.core.terminal.AnsiBuffer
 import dev.pocketdev.core.terminal.TerminalSnapshot
 import dev.pocketdev.runtime.RuntimeLaunchPlan
@@ -9,6 +10,7 @@ import java.util.UUID
 class TerminalSession(
     val name: String,
     plan: RuntimeLaunchPlan,
+    val context: ProjectContext = ProjectContext(null, "Unknown project", plan.workingDirectory),
     cols: Int = 80,
     rows: Int = 24,
     private val driver: PtyDriver = PtyNativeDriver,

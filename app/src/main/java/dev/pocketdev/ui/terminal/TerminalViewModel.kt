@@ -2,24 +2,32 @@ package dev.pocketdev.ui.terminal
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
+import dev.pocketdev.ProjectContext
 import dev.pocketdev.core.runtime.RuntimeState
 import dev.pocketdev.core.terminal.TerminalSnapshot
+import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.terminal.PtyExitInfo
 import dev.pocketdev.terminal.TerminalSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.io.File
 
 data class TerminalSessionInfo(
     val id: String,
     val name: String,
+    val context: ProjectContext,
     val exit: PtyExitInfo = PtyExitInfo(),
 )
 
 data class TerminalUiState(
     val rootPath: String = "",
+    val activeContext: ProjectContext? = null,
+    val selectedProjectContext: ProjectContext? = null,
     val sessions: List<TerminalSessionInfo> = emptyList(),
     val activeId: String? = null,
     val snapshot: TerminalSnapshot = TerminalSnapshot(emptyList(), 80, 24),
@@ -35,20 +43,41 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     private var nextSessionNumber = 1
     @Volatile private var shutdown = false
 
-    private val _uiState = MutableStateFlow(TerminalUiState())
+    private val _uiState = MutableStateFlow(
+        TerminalUiState(
+            selectedProjectContext = runCatching { container.projectContext() }.getOrNull(),
+        ),
+    )
     val uiState: StateFlow<TerminalUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            container.selectedProject.collect { project: Project? ->
+                _uiState.update {
+                    it.copy(
+                        selectedProjectContext = runCatching { container.projectContext(project) }.getOrNull(),
+                    )
+                }
+            }
+        }
         createSession()
     }
 
     fun createSession() {
-        val root = container.activeProjectRoot()
+        val context = runCatching { container.projectContext() }.getOrNull()
+        if (context == null) {
+            _uiState.update {
+                it.copy(error = "Selected project root is invalid.")
+            }
+            return
+        }
+        val root = File(context.rootPath)
         val runtime = container.runtime
         if (runtime.state.value !is RuntimeState.Ready) {
             _uiState.update {
                 it.copy(
-                    rootPath = root.absolutePath,
+                    rootPath = context.rootPath,
+                    selectedProjectContext = context,
                     error = "Bionic runtime is not ready; provision the runtime before opening a terminal.",
                 )
             }
@@ -56,10 +85,18 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         }
         val session = try {
             val plan = runtime.launchPlan(runtime.bionicShell(), "-i", workingDir = root)
-            TerminalSession(name = "bash-${nextSessionNumber++}", plan = plan)
+            TerminalSession(
+                name = "bash-${nextSessionNumber++}",
+                plan = plan,
+                context = context,
+            )
         } catch (e: Exception) {
             _uiState.update {
-                it.copy(rootPath = root.absolutePath, error = "Could not start terminal: ${e.message}")
+                it.copy(
+                    rootPath = context.rootPath,
+                    selectedProjectContext = context,
+                    error = "Could not start terminal: ${e.message}",
+                )
             }
             return
         }
@@ -79,7 +116,9 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
         session.addSnapshotListener(listener)
         _uiState.update {
             it.copy(
-                rootPath = root.absolutePath,
+                rootPath = context.rootPath,
+                activeContext = context,
+                selectedProjectContext = context,
                 sessions = sessionInfos(),
                 activeId = id,
                 snapshot = session.snapshot(),
@@ -91,10 +130,17 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     fun selectSession(id: String) {
         val session = synchronized(sessionLock) { sessions[id] }
         if (session == null) {
-            _uiState.update { it.copy(activeId = null) }
+            _uiState.update { it.copy(activeId = null, activeContext = null) }
             return
         }
-        _uiState.update { it.copy(activeId = id, snapshot = session.snapshot()) }
+        _uiState.update {
+            it.copy(
+                activeId = id,
+                activeContext = session.context,
+                rootPath = session.context.rootPath,
+                snapshot = session.snapshot(),
+            )
+        }
     }
 
     fun closeSession(id: String) {
@@ -114,6 +160,8 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
             it.copy(
                 sessions = synchronized(sessionLock) { sessionInfos() },
                 activeId = replacement.id,
+                activeContext = replacement.context,
+                rootPath = replacement.context.rootPath,
                 snapshot = replacement.snapshot(),
             )
         }
@@ -159,6 +207,6 @@ class TerminalViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun sessionInfos(): List<TerminalSessionInfo> = synchronized(sessionLock) {
-        sessions.values.map { TerminalSessionInfo(it.id, it.name, it.exitInfo()) }
+        sessions.values.map { TerminalSessionInfo(it.id, it.name, it.context, it.exitInfo()) }
     }
 }

@@ -125,6 +125,23 @@ fun TerminalScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Text(
+            text = state.activeContext?.let {
+                stringResource(R.string.terminal_session_context, it.projectName, it.rootPath)
+            } ?: stringResource(R.string.terminal_no_active_session),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.activeContext != null &&
+            state.selectedProjectContext != null &&
+            state.activeContext.rootPath != state.selectedProjectContext.rootPath
+        ) {
+            Text(
+                text = stringResource(R.string.terminal_project_mismatch),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
 
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()),

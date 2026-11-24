@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pocketdev.R
+import dev.pocketdev.ProjectContext
 import dev.pocketdev.core.agent.AgentState
 import dev.pocketdev.core.agent.OpenCodeSession
 import dev.pocketdev.core.agent.PermissionDecision
@@ -47,10 +48,14 @@ fun AgentRoute(viewModel: AgentWorkspaceViewModel) {
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val sending by viewModel.sending.collectAsStateWithLifecycle()
     val permissionRequest by viewModel.permissionRequest.collectAsStateWithLifecycle()
+    val serverContext by viewModel.serverContext.collectAsStateWithLifecycle()
+    val selectedProjectContext by viewModel.selectedProjectContext.collectAsStateWithLifecycle()
 
     AgentScreen(
         agentState = agentState,
         serverState = serverState,
+        serverContext = serverContext,
+        selectedProjectContext = selectedProjectContext,
         taskState = taskState,
         streaming = streaming,
         streamError = streamError,
@@ -74,6 +79,8 @@ fun AgentRoute(viewModel: AgentWorkspaceViewModel) {
 fun AgentScreen(
     agentState: AgentState,
     serverState: OpenCodeServerState,
+    serverContext: ProjectContext?,
+    selectedProjectContext: ProjectContext?,
     taskState: TaskState,
     streaming: Boolean,
     streamError: String?,
@@ -148,6 +155,23 @@ fun AgentScreen(
             title = stringResource(R.string.agent_server_title),
             status = serverStatusText(serverState),
         ) {
+            Text(
+                text = serverContext?.let {
+                    stringResource(R.string.agent_server_context, it.projectName, it.rootPath)
+                } ?: stringResource(R.string.agent_server_no_context),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (serverContext != null &&
+                selectedProjectContext != null &&
+                serverContext.rootPath != selectedProjectContext.rootPath
+            ) {
+                Text(
+                    text = stringResource(R.string.agent_project_mismatch),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (serverState is OpenCodeServerState.Stopped ||
                     serverState is OpenCodeServerState.Failed ||

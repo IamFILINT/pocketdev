@@ -12,6 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class TerminalViewModelTest {
@@ -39,6 +40,9 @@ class TerminalViewModelTest {
 
         val viewModel = TerminalViewModel(app)
         try {
+            val initialContext = viewModel.uiState.value.activeContext!!
+            assertEquals(File(project.rootPath).canonicalPath, initialContext.rootPath)
+            assertEquals(project.name, initialContext.projectName)
             assertEquals(project.rootPath, viewModel.uiState.value.rootPath)
             assertEquals(1, viewModel.uiState.value.sessions.size)
             assertEquals(null, viewModel.uiState.value.error)
@@ -53,12 +57,29 @@ class TerminalViewModelTest {
             viewModel.createSession()
             assertEquals(2, viewModel.uiState.value.sessions.size)
 
+            assertTrue(projectsViewModel.createProject("pty-bionic-other") is CreateProjectResult.Created)
+            val other = projectsViewModel.uiState.value.projects.first { it.name == "pty-bionic-other" }
+            app.container.selectProject(other.id)
+            waitUntil { viewModel.uiState.value.selectedProjectContext?.projectId == other.id }
+            assertEquals(initialContext, viewModel.uiState.value.activeContext)
+            assertEquals(initialContext.rootPath, viewModel.uiState.value.rootPath)
+
+            viewModel.createSession()
+            assertEquals(3, viewModel.uiState.value.sessions.size)
+            val contexts = viewModel.uiState.value.sessions.map { it.context }
+            assertEquals(2, contexts.count { it.rootPath == initialContext.rootPath })
+            assertTrue(contexts.any { it.rootPath == File(other.rootPath).canonicalPath })
+
+            viewModel.selectSession(viewModel.uiState.value.sessions.first { it.context.rootPath == initialContext.rootPath }.id)
+            assertEquals(initialContext, viewModel.uiState.value.activeContext)
+            assertEquals(initialContext.rootPath, viewModel.uiState.value.rootPath)
+
             viewModel.resize(60, 20)
             assertEquals(60, viewModel.uiState.value.snapshot.cols)
             assertEquals(20, viewModel.uiState.value.snapshot.rows)
 
             viewModel.closeSession(viewModel.uiState.value.activeId!!)
-            assertEquals(1, viewModel.uiState.value.sessions.size)
+            assertEquals(2, viewModel.uiState.value.sessions.size)
         } finally {
             viewModel.shutdown()
             projectsViewModel.clearRegistry()

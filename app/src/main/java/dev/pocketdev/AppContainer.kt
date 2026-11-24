@@ -13,6 +13,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 
+data class ProjectContext(
+    val projectId: String?,
+    val projectName: String,
+    val rootPath: String,
+)
+
 /**
  * Process-wide object graph for the app shell.
  *
@@ -35,9 +41,48 @@ class AppContainer(context: Context) {
     private val _selectedProject = MutableStateFlow(projectStore.load().firstOrNull())
     val selectedProject: StateFlow<Project?> = _selectedProject.asStateFlow()
 
-    /** Project root shared by the agent, file explorer, terminal, editor, and Git. */
-    fun activeProjectRoot(): File =
-        selectedProject.value?.let { File(it.rootPath) } ?: projectsRoot
+    fun activeProjectRoot(): File = validatedProjectRoot()
+
+    fun validatedProjectRoot(project: Project? = selectedProject.value, baseRoot: File = projectsRoot): File =
+        if (project == null) {
+            validatedDirectory(baseRoot, baseRoot)
+        } else {
+            validatedDirectory(File(project.rootPath), baseRoot)
+        }
+
+    fun validatedRootPath(path: String, baseRoot: File = projectsRoot): File =
+        validatedDirectory(File(path), baseRoot)
+
+    fun projectContext(
+        project: Project? = selectedProject.value,
+        baseRoot: File = projectsRoot,
+    ): ProjectContext {
+        val root = validatedProjectRoot(project, baseRoot)
+        return ProjectContext(
+            projectId = project?.id,
+            projectName = project?.name ?: "Shared projects root",
+            rootPath = root.absolutePath,
+        )
+    }
+
+    fun projectContextOrNull(
+        project: Project? = selectedProject.value,
+        baseRoot: File = projectsRoot,
+    ): ProjectContext? = runCatching { projectContext(project, baseRoot) }.getOrNull()
+
+    private fun validatedDirectory(candidate: File, baseRoot: File): File {
+        val root = runCatching { candidate.canonicalFile }
+            .getOrElse { throw IllegalArgumentException("Invalid project root: ${candidate.path}", it) }
+        val base = runCatching { baseRoot.canonicalFile }
+            .getOrElse { throw IllegalArgumentException("Invalid projects root: ${baseRoot.path}", it) }
+        if (root != base && !root.path.startsWith(base.path + File.separator)) {
+            throw IllegalArgumentException("Project root is outside the workspace: ${candidate.path}")
+        }
+        if (!root.isDirectory) {
+            throw IllegalStateException("Project directory does not exist: ${candidate.path}")
+        }
+        return root
+    }
 
     fun selectProject(id: String?) {
         _selectedProject.value = projectStore.load().firstOrNull { it.id == id }

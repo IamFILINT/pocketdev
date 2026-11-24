@@ -38,6 +38,9 @@
     <string name="agent_server_exited">Exited (code %1$d)</string>
     <string name="agent_server_start">Start server</string>
     <string name="agent_server_stop">Stop server</string>
+    <string name="agent_server_context">Server project: %1$s (%2$s)</string>
+    <string name="agent_server_no_context">Server project: none</string>
+    <string name="agent_project_mismatch">Selected project differs from the running agent project. Stop the server and start it again to target the selected project.</string>
     <string name="agent_task_title">Task state</string>
     <string name="agent_task_state">%1$s</string>
     <string name="agent_task_streaming">Streaming live events</string>
@@ -146,6 +149,9 @@
     <!-- Terminal -->
     <string name="terminal_title">Terminal</string>
     <string name="terminal_root_label">Working directory: %1$s</string>
+    <string name="terminal_session_context">Session project: %1$s (%2$s)</string>
+    <string name="terminal_no_active_session">Session project: none</string>
+    <string name="terminal_project_mismatch">Selected project differs from the active terminal session. New sessions use the selected project; existing sessions keep their original directory.</string>
     <string name="terminal_new_session">New session</string>
     <string name="terminal_close_session">Close session</string>
     <string name="terminal_copy">Copy</string>

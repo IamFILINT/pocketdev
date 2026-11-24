@@ -4,11 +4,13 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
+import dev.pocketdev.ProjectContext
 import dev.pocketdev.core.agent.OpenCodeSession
 import dev.pocketdev.core.agent.OpenCodeSessionApi
 import dev.pocketdev.core.agent.PermissionDecision
 import dev.pocketdev.core.agent.PermissionRequest
 import dev.pocketdev.core.ai.TaskState
+import dev.pocketdev.core.workspace.Project
 import dev.pocketdev.runtime.AgentRuntime
 import dev.pocketdev.runtime.OpenCodeServerState
 import kotlinx.coroutines.Dispatchers
@@ -29,10 +31,19 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     application: Application,
     private val runtime: AgentRuntime = (application as PocketDevApplication).container.openCode,
     val projectsRoot: File? = null,
+    private val selectedProjectFlow: StateFlow<Project?>? = null,
 ) : AndroidViewModel(application) {
 
     private val container = (application as PocketDevApplication).container
-    private var workspaceRoot: File = projectsRoot ?: container.projectsRoot
+    private val projectFlow = selectedProjectFlow ?: container.selectedProject
+    private val baseRoot = projectsRoot ?: container.projectsRoot
+    private val _selectedContext = MutableStateFlow(
+        runCatching { container.projectContext(projectFlow.value, baseRoot) }.getOrNull(),
+    )
+    val selectedProjectContext: StateFlow<ProjectContext?> = _selectedContext.asStateFlow()
+
+    private val _serverContext = MutableStateFlow<ProjectContext?>(null)
+    val serverContext: StateFlow<ProjectContext?> = _serverContext.asStateFlow()
 
     val agentState = runtime.agentState
     val serverState: StateFlow<OpenCodeServerState> = runtime.serverState
@@ -62,18 +73,22 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
     private var api: OpenCodeSessionApi? = null
 
     init {
-        if (projectsRoot == null) {
-            viewModelScope.launch {
-                container.selectedProject.collect { project ->
-                    workspaceRoot = project?.let { File(it.rootPath) } ?: container.projectsRoot
-                }
+        viewModelScope.launch {
+            projectFlow.collect { project ->
+                _selectedContext.value = runCatching { container.projectContext(project, baseRoot) }.getOrNull()
             }
         }
         viewModelScope.launch {
             runtime.serverState.collect { state ->
                 when (state) {
                     is OpenCodeServerState.Listening -> attach(state.connection.baseUrl)
-                    else -> detach()
+                    OpenCodeServerState.Stopped,
+                    is OpenCodeServerState.Failed,
+                    is OpenCodeServerState.Exited -> {
+                        detach()
+                        _serverContext.value = null
+                    }
+                    else -> Unit
                 }
             }
         }
@@ -81,9 +96,17 @@ class AgentWorkspaceViewModel @JvmOverloads constructor(
 
     fun installAgent() = runBusy { runtime.install() }
 
-    fun startServer() = runBusy { runtime.startServer(workspaceRoot) }
+    fun startServer() = runBusy {
+        val context = _selectedContext.value
+            ?: throw IllegalStateException("Selected project root is invalid")
+        runtime.startServer(File(context.rootPath))
+        _serverContext.value = context
+    }
 
-    fun stopServer() = runBusy { runtime.stopServer() }
+    fun stopServer() = runBusy {
+        runtime.stopServer()
+        _serverContext.value = null
+    }
 
     fun selectSession(id: String) {
         _activeSessionId.value = id

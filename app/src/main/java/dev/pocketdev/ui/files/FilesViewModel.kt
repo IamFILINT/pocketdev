@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.io.File
 
 data class FilesUiState(
     val projects: List<Project> = emptyList(),
@@ -41,22 +42,25 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
         val state = _uiState.value
         val projects = container.projectStore.load().sortedByDescending { it.createdAtEpochMs }
         val selected = container.selectedProject.value
-        val root = container.activeProjectRoot()
-        val files = WorkspaceFiles(root)
-        val entries: WorkspaceResult<List<FileEntry>> = if (state.query.isBlank()) {
-            when (val result = files.list(state.currentDirectory, state.showHidden)) {
-                is WorkspaceResult.Success -> WorkspaceResult.Success(result.value.entries)
-                is WorkspaceResult.Failure -> result
+        val context = runCatching { container.projectContext(selected) }
+        val rootPath = context.getOrNull()?.rootPath ?: container.projectsRoot.absolutePath
+        val entries: WorkspaceResult<List<FileEntry>> = context.getOrNull()?.let { projectContext ->
+            val files = WorkspaceFiles(File(projectContext.rootPath))
+            if (state.query.isBlank()) {
+                when (val listed = files.list(state.currentDirectory, state.showHidden)) {
+                    is WorkspaceResult.Success -> WorkspaceResult.Success(listed.value.entries)
+                    is WorkspaceResult.Failure -> listed
+                }
+            } else {
+                files.search(state.query, state.showHidden)
             }
-        } else {
-            files.search(state.query, state.showHidden)
-        }
+        } ?: WorkspaceResult.Failure(context.exceptionOrNull()?.message ?: "Invalid project root")
         when (entries) {
             is WorkspaceResult.Success -> _uiState.update {
                 it.copy(
                     projects = projects,
                     selectedProjectId = selected?.id,
-                    rootPath = root.absolutePath,
+                    rootPath = rootPath,
                     entries = entries.value,
                     error = null,
                 )
@@ -65,7 +69,7 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
                 it.copy(
                     projects = projects,
                     selectedProjectId = selected?.id,
-                    rootPath = root.absolutePath,
+                    rootPath = rootPath,
                     entries = emptyList(),
                     error = entries.message,
                 )
@@ -120,29 +124,29 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
 
     fun create(name: String, directory: Boolean) {
         val current = _uiState.value.currentDirectory
-        report(WorkspaceFiles(container.activeProjectRoot()).create(current, name, directory), "Created $name")
+        report(withDisplayedRoot { WorkspaceFiles(it).create(current, name, directory) }, "Created $name")
         refresh()
     }
 
     fun rename(entry: FileEntry, newName: String) {
-        report(WorkspaceFiles(container.activeProjectRoot()).rename(entry.relativePath, newName), "Renamed to $newName")
+        report(withDisplayedRoot { WorkspaceFiles(it).rename(entry.relativePath, newName) }, "Renamed to $newName")
         refresh()
     }
 
     fun delete(entry: FileEntry) {
-        report(WorkspaceFiles(container.activeProjectRoot()).delete(entry.relativePath), "Deleted ${entry.name}")
+        report(withDisplayedRoot { WorkspaceFiles(it).delete(entry.relativePath) }, "Deleted ${entry.name}")
         refresh()
     }
 
     fun copy(entry: FileEntry, newName: String? = null) {
         val current = _uiState.value.currentDirectory
-        report(WorkspaceFiles(container.activeProjectRoot()).copy(entry.relativePath, current, newName), "Copied ${entry.name}")
+        report(withDisplayedRoot { WorkspaceFiles(it).copy(entry.relativePath, current, newName) }, "Copied ${entry.name}")
         refresh()
     }
 
     fun move(entry: FileEntry, newName: String? = null) {
         val current = _uiState.value.currentDirectory
-        report(WorkspaceFiles(container.activeProjectRoot()).move(entry.relativePath, current, newName), "Moved ${entry.name}")
+        report(withDisplayedRoot { WorkspaceFiles(it).move(entry.relativePath, current, newName) }, "Moved ${entry.name}")
         refresh()
     }
 
@@ -151,7 +155,7 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
             openDirectory(entry.relativePath)
             return
         }
-        val result = WorkspaceFiles(container.activeProjectRoot()).preview(entry.relativePath)
+        val result = withDisplayedRoot { WorkspaceFiles(it).preview(entry.relativePath) }
         when (result) {
             is WorkspaceResult.Success -> _uiState.update {
                 it.copy(previewPath = entry.relativePath, preview = result.value, error = null)
@@ -163,8 +167,9 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun importDocument(uri: Uri, name: String) {
-        val destination = WorkspaceFiles(container.activeProjectRoot())
-            .destination(_uiState.value.currentDirectory, name)
+        val destination = withDisplayedRoot { root ->
+            WorkspaceFiles(root).destination(_uiState.value.currentDirectory, name)
+        }
         when (destination) {
             is WorkspaceResult.Failure -> report(destination, "")
             is WorkspaceResult.Success -> {
@@ -184,7 +189,7 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun exportDocument(entry: FileEntry, uri: Uri) {
-        val source = WorkspaceFiles(container.activeProjectRoot()).source(entry.relativePath)
+        val source = withDisplayedRoot { WorkspaceFiles(it).source(entry.relativePath) }
         when (source) {
             is WorkspaceResult.Failure -> report(source, "")
             is WorkspaceResult.Success -> {
@@ -200,6 +205,10 @@ class FilesViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    private fun <T> withDisplayedRoot(operation: (File) -> WorkspaceResult<T>): WorkspaceResult<T> =
+        runCatching { operation(container.validatedRootPath(_uiState.value.rootPath)) }
+            .getOrElse { WorkspaceResult.Failure(it.message ?: "Invalid project root") }
 
     private fun report(result: WorkspaceResult<*>, successMessage: String) {
         when (result) {

@@ -61,6 +61,20 @@ class FilesViewModelTest {
     }
 
     @Test
+    fun externalProjectSwitchDoesNotRetargetDisplayedFileOperations() {
+        val first = createProject("files-first")
+        val second = createProject("files-second")
+        filesViewModel.selectProject(first.id)
+
+        app.container.selectProject(second.id)
+        filesViewModel.create("stays-in-first.txt", directory = false)
+
+        assertTrue(File(first.rootPath, "stays-in-first.txt").isFile)
+        assertFalse(File(second.rootPath, "stays-in-first.txt").exists())
+        assertEquals(File(second.rootPath).canonicalPath, filesViewModel.uiState.value.rootPath)
+    }
+
+    @Test
     fun renameCopyMoveAndDeleteOperateOnSelectedProject() {
         val project = createProject("files-actions")
         filesViewModel.selectProject(project.id)

@@ -1,5 +1,6 @@
 package dev.pocketdev.terminal
 
+import dev.pocketdev.ProjectContext
 import dev.pocketdev.core.terminal.TerminalSnapshot
 import dev.pocketdev.runtime.RuntimeLaunchPlan
 import org.junit.Assert.assertEquals
@@ -45,6 +46,15 @@ class TerminalSessionTest {
     }
 
     @Test
+    fun carriesBoundProjectContext() {
+        val context = ProjectContext("project-1", "Project One", "/tmp/project")
+        val session = session(FakePtyDriver(), context)
+
+        assertEquals(context, session.context)
+        assertEquals(context.rootPath, session.context.rootPath)
+    }
+
+    @Test
     fun supportsConcurrentListenerChangesAndIdempotentClose() {
         val driver = FakePtyDriver()
         val session = session(driver)
@@ -74,8 +84,12 @@ class TerminalSessionTest {
         assertEquals(1, driver.stopCount)
     }
 
-    private fun session(driver: FakePtyDriver): TerminalSession = TerminalSession(
+    private fun session(
+        driver: FakePtyDriver,
+        context: ProjectContext = ProjectContext(null, "Test project", "/tmp"),
+    ): TerminalSession = TerminalSession(
         name = "test",
+        context = context,
         plan = RuntimeLaunchPlan(
             executable = "/bin/bash",
             argv = listOf("/bin/bash"),
