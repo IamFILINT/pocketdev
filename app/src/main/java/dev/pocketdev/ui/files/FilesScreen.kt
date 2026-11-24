@@ -36,9 +36,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.pocketdev.R
 import dev.pocketdev.core.workspace.FileEntry
+import dev.pocketdev.core.workspace.FileKind
 
 @Composable
-fun FilesRoute(viewModel: FilesViewModel) {
+fun FilesRoute(viewModel: FilesViewModel, onOpenInEditor: (FileEntry) -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pendingExport = remember { mutableStateOf<FileEntry?>(null) }
 
@@ -55,6 +56,7 @@ fun FilesRoute(viewModel: FilesViewModel) {
         state = state,
         onSelectProject = viewModel::selectProject,
         onOpen = viewModel::open,
+        onOpenInEditor = onOpenInEditor,
         onNavigateUp = viewModel::navigateUp,
         onToggleHidden = viewModel::toggleHidden,
         onQueryChange = viewModel::setQuery,
@@ -78,6 +80,7 @@ fun FilesScreen(
     state: FilesUiState,
     onSelectProject: (String?) -> Unit,
     onOpen: (FileEntry) -> Unit,
+    onOpenInEditor: (FileEntry) -> Unit,
     onNavigateUp: () -> Unit,
     onToggleHidden: () -> Unit,
     onQueryChange: (String) -> Unit,
@@ -287,6 +290,11 @@ fun FilesScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                if (entry.kind == FileKind.TEXT) {
+                                    TextButton(onClick = { onOpenInEditor(entry) }) {
+                                        Text(stringResource(R.string.files_open_in_editor))
+                                    }
+                                }
                                 TextButton(onClick = { showDialog(FileDialog.Rename(entry), entry.name) }) {
                                     Text(stringResource(R.string.files_rename))
                                 }

@@ -48,6 +48,14 @@ class NavigationTest {
     }
 
     @Test
+    fun dashboardToEditor() {
+        composeRule.onNode(hasText("Editor") and isSelectable()).performClick()
+
+        composeRule.onNodeWithText("Open a text file from Files").assertIsDisplayed()
+        composeRule.onNodeWithText("Save").fetchSemanticsNode()
+    }
+
+    @Test
     fun dashboardToTerminal() {
         composeRule.onNode(hasText("Terminal") and isSelectable()).performClick()
 

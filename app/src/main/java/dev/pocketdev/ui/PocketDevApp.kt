@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
@@ -33,6 +34,8 @@ import dev.pocketdev.ui.agent.AgentRoute
 import dev.pocketdev.ui.agent.AgentWorkspaceViewModel
 import dev.pocketdev.ui.dashboard.DashboardRoute
 import dev.pocketdev.ui.dashboard.DashboardViewModel
+import dev.pocketdev.ui.editor.EditorRoute
+import dev.pocketdev.ui.editor.EditorViewModel
 import dev.pocketdev.ui.files.FilesRoute
 import dev.pocketdev.ui.files.FilesViewModel
 import dev.pocketdev.ui.projects.ProjectsRoute
@@ -50,6 +53,7 @@ private enum class Destination(
     Dashboard("dashboard", R.string.nav_dashboard, Icons.Filled.Home),
     Agent("agent", R.string.nav_agent, Icons.Filled.Build),
     Files("files", R.string.nav_files, Icons.AutoMirrored.Filled.List),
+    Editor("editor", R.string.nav_editor, Icons.Filled.Edit),
     Terminal("terminal", R.string.nav_terminal, Icons.Filled.PlayArrow),
     Projects("projects", R.string.nav_projects, Icons.AutoMirrored.Filled.List),
     Settings("settings", R.string.nav_settings, Icons.Filled.Settings),
@@ -67,6 +71,7 @@ fun PocketDevApp() {
     val dashboardViewModel: DashboardViewModel = viewModel()
     val agentWorkspaceViewModel: AgentWorkspaceViewModel = viewModel()
     val filesViewModel: FilesViewModel = viewModel()
+    val editorViewModel: EditorViewModel = viewModel()
 
     val projectsState by projectsViewModel.uiState.collectAsStateWithLifecycle()
     val runtimeState by dashboardViewModel.runtimeState.collectAsStateWithLifecycle()
@@ -126,7 +131,16 @@ fun PocketDevApp() {
                 AgentRoute(viewModel = agentWorkspaceViewModel)
             }
             composable(Destination.Files.route) {
-                FilesRoute(viewModel = filesViewModel)
+                FilesRoute(
+                    viewModel = filesViewModel,
+                    onOpenInEditor = { entry ->
+                        editorViewModel.open(entry.relativePath)
+                        navController.navigate(Destination.Editor.route)
+                    },
+                )
+            }
+            composable(Destination.Editor.route) {
+                EditorRoute(viewModel = editorViewModel)
             }
             composable(Destination.Terminal.route) {
                 TerminalRoute(viewModel = viewModel())
