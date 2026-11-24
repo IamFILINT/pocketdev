@@ -1,5 +1,6 @@
 package dev.pocketdev.runtime
 
+import dev.pocketdev.core.settings.AgentModelSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -86,6 +87,21 @@ class RuntimeLauncherTest {
 
         assertEquals(preload.absolutePath, plan.environment["LD_PRELOAD"])
         assertTrue(plan.envArray.contains("LD_PRELOAD=${preload.absolutePath}"))
+    }
+
+    @Test
+    fun planRedactsCredentialValuesInDiagnosticsButKeepsThemForExec() {
+        val secret = "sk-plan-secret"
+        val config = RuntimeAgentConfig(AgentModelSelection("anthropic", "claude-sonnet-4"), secret)
+        val launcher = RuntimeLauncher.withoutPreload(envBuilder().withAgentConfig(config))
+        val program = File(launcher.environment().getValue("PREFIX"), "bin/bash")
+        val workingDir = tmp.newFolder("credential-project")
+
+        val plan = launcher.plan(program, workingDir = workingDir)
+
+        assertTrue(plan.envArray.contains("POCKETDEV_API_KEY=$secret"))
+        assertFalse(plan.toString().contains(secret))
+        assertTrue(plan.toString().contains("environmentKeys="))
     }
 
     @Test

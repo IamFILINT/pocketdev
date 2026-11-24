@@ -1,5 +1,6 @@
 package dev.pocketdev.runtime
 
+import dev.pocketdev.core.settings.AgentModelSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -61,5 +62,18 @@ class RuntimeEnvBuilderTest {
         assertEquals(preload.absolutePath, env["LD_PRELOAD"])
         assertEquals(prefix.absolutePath, env["PREFIX"])
         assertEquals(prefix.absolutePath, env["TERMUX__PREFIX"])
+    }
+
+    @Test
+    fun agentCredentialIsAddedToBaseAndChildEnvironment() {
+        val secret = "sk-env-secret"
+        val config = RuntimeAgentConfig(AgentModelSelection("openai", "gpt-5"), secret)
+        val (baseBuilder, prefix) = builder()
+        val envBuilder = baseBuilder.withAgentConfig(config)
+
+        assertEquals(secret, envBuilder.baseEnv()[RuntimeAgentConfig.CREDENTIAL_ENV])
+        val childEnv = envBuilder.childEnv(File(prefix, "lib/libtermux-exec-ld-preload.so"))
+        assertEquals(secret, childEnv[RuntimeAgentConfig.CREDENTIAL_ENV])
+        assertFalse("original builder must stay unchanged", baseBuilder.baseEnv().containsKey(RuntimeAgentConfig.CREDENTIAL_ENV))
     }
 }

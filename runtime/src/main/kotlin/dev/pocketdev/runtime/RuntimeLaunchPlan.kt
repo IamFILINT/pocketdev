@@ -15,4 +15,7 @@ data class RuntimeLaunchPlan(
 
     val envArray: Array<String>
         get() = environment.map { (key, value) -> "$key=$value" }.toTypedArray()
+
+    override fun toString(): String =
+        "RuntimeLaunchPlan(executable=$executable, argv=$argv, environmentKeys=${environment.keys.sorted()}, workingDirectory=$workingDirectory)"
 }

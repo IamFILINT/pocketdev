@@ -18,6 +18,7 @@ class RuntimeEnvBuilder(
     private val home: File,
     val dataDir: String,
     val legacyDataDir: String,
+    private val agentConfig: RuntimeAgentConfig = RuntimeAgentConfig.NONE,
 ) {
 
     private val tmpDir = File(prefix, "tmp")
@@ -36,11 +37,15 @@ class RuntimeEnvBuilder(
         put("TERMUX_APP__DATA_DIR", dataDir)
         put("TERMUX_APP__LEGACY_DATA_DIR", legacyDataDir)
         put("TERMUX__PREFIX", prefix.absolutePath)
+        putAll(agentConfig.environment)
     }
 
     /** Child-process environment: base environment plus the `LD_PRELOAD` hook. */
     fun childEnv(preload: File): Map<String, String> =
         baseEnv().plus("LD_PRELOAD" to preload.absolutePath)
+
+    fun withAgentConfig(config: RuntimeAgentConfig): RuntimeEnvBuilder =
+        RuntimeEnvBuilder(prefix, home, dataDir, legacyDataDir, config)
 
     companion object {
         /** Builds from the real Android app context and runtime layout. */
