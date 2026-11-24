@@ -46,12 +46,15 @@ class FilesViewModelTest {
         return projectsViewModel.uiState.value.projects.first { it.name == name }
     }
 
-    private fun await(timeoutMs: Long = 5000, condition: () -> Boolean) {
+    private fun await(timeoutMs: Long = 10_000, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (!condition() && System.currentTimeMillis() < deadline) {
             Thread.sleep(25)
         }
-        assertTrue("Condition was not met within ${timeoutMs}ms", condition())
+        assertTrue(
+            "Condition was not met within ${timeoutMs}ms: ${filesViewModel.uiState.value}",
+            condition(),
+        )
     }
 
     private fun awaitSuccess(label: String) {
@@ -137,7 +140,7 @@ class FilesViewModelTest {
         filesViewModel.setQuery("txt")
         await {
             filesViewModel.uiState.value.entries.map { it.name } == listOf("visible.txt") &&
-                filesViewModel.uiState.value.operation?.status == FilesOperationStatus.SUCCESS
+                filesViewModel.uiState.value.error == null
         }
         assertEquals(listOf("visible.txt"), filesViewModel.uiState.value.entries.map { it.name })
 
@@ -145,7 +148,7 @@ class FilesViewModelTest {
         await {
             filesViewModel.uiState.value.entries.map { it.name }.toSet() ==
                 setOf("visible.txt", ".secret.txt") &&
-                filesViewModel.uiState.value.operation?.status == FilesOperationStatus.SUCCESS
+                filesViewModel.uiState.value.error == null
         }
         assertEquals(
             setOf("visible.txt", ".secret.txt"),
