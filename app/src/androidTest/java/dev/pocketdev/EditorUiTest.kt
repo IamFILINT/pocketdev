@@ -41,6 +41,7 @@ class EditorUiTest {
     @Test
     fun opensTextFileFromFilesIntoSyntaxEditor() {
         composeRule.onNode(hasText("Files") and isSelectable()).performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Search", substring = false).assertIsDisplayed()
         composeRule.onNodeWithText("[file] editor-ui.kt", substring = false).assertIsDisplayed()
 
