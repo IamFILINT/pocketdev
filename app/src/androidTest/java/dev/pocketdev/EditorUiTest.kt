@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -41,7 +42,7 @@ class EditorUiTest {
     @Test
     fun opensTextFileFromFilesIntoSyntaxEditor() {
         composeRule.onNode(hasText("Files") and isSelectable()).performClick()
-        composeRule.onNode(hasText("[file] editor-ui.kt")).performScrollTo().assertIsDisplayed()
+        composeRule.onNode(hasText("[file] editor-ui.kt", substring = false)).assertIsDisplayed()
 
         composeRule.onNodeWithText("Open in editor").performScrollTo().performClick()
 
