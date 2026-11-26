@@ -10,12 +10,12 @@ data class TextChange(
 class EditorBuffer(initialText: String) {
     private var value: String = initialText
     private var savedValue: String = initialText
-    private var lineStarts: List<Int> = TextLines.starts(initialText)
+    private var lineStartsCache: List<Int> = TextLines.starts(initialText)
     private val undoStack = ArrayDeque<TextChange>()
     private val redoStack = ArrayDeque<TextChange>()
 
     val text: String get() = value
-    val lineStarts: List<Int> get() = lineStarts
+    val lineStarts: List<Int> get() = lineStartsCache
     val dirty: Boolean get() = value != savedValue
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -62,16 +62,16 @@ class EditorBuffer(initialText: String) {
     fun replaceAllText(replacement: String): Boolean = replace(0, value.length, replacement)
 
     fun lineText(line: Int): String {
-        if (line < 0 || line >= lineStarts.size) return ""
-        val start = lineStarts[line]
-        val end = if (line + 1 < lineStarts.size) lineStarts[line + 1] else value.length
+        if (line < 0 || line >= lineStartsCache.size) return ""
+        val start = lineStartsCache[line]
+        val end = if (line + 1 < lineStartsCache.size) lineStartsCache[line + 1] else value.length
         return value.substring(start, end).trimEnd('\n')
     }
 
     fun lineAndColumn(offset: Int): Pair<Int, Int> {
         val safeOffset = offset.coerceIn(0, value.length)
-        val line = TextLines.lineNumberAt(lineStarts, safeOffset)
-        val start = lineStarts[line]
+        val line = TextLines.lineNumberAt(lineStartsCache, safeOffset)
+        val start = lineStartsCache[line]
         return line + 1 to safeOffset - start + 1
     }
 
@@ -81,6 +81,6 @@ class EditorBuffer(initialText: String) {
             append(change.newText)
             append(value, change.end, value.length)
         }
-        lineStarts = TextLines.starts(value)
+        lineStartsCache = TextLines.starts(value)
     }
 }
