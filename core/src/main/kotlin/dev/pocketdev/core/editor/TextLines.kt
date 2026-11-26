@@ -21,6 +21,6 @@ object TextLines {
                 high = middle - 1
             }
         }
-        return high + 1
+        return (high + 1).coerceAtMost(starts.lastIndex)
     }
 }
