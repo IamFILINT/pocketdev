@@ -99,6 +99,12 @@ fun EditorScreen(
     val activeTab = state.tabs.firstOrNull { it.path == state.activePath }
     val language = activeTab?.language ?: EditorLanguage.PLAIN_TEXT
     val syntaxText = remember(state.text, language, MaterialTheme.colorScheme) {
+        val keywordColor = MaterialTheme.colorScheme.primary
+        val stringColor = MaterialTheme.colorScheme.tertiary
+        val commentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val numberColor = MaterialTheme.colorScheme.secondary
+        val annotationColor = MaterialTheme.colorScheme.primary
+        val defaultColor = MaterialTheme.colorScheme.onSurface
         if (state.text.length > MAX_HIGHLIGHT_CHARS) {
             buildAnnotatedString { append(state.text) }
         } else {
@@ -106,12 +112,12 @@ fun EditorScreen(
                 append(state.text)
                 SyntaxHighlighter.tokenize(state.text, language).forEach { token ->
                     val color = when (token.type) {
-                        SyntaxTokenType.KEYWORD -> MaterialTheme.colorScheme.primary
-                        SyntaxTokenType.STRING -> MaterialTheme.colorScheme.tertiary
-                        SyntaxTokenType.COMMENT -> MaterialTheme.colorScheme.onSurfaceVariant
-                        SyntaxTokenType.NUMBER -> MaterialTheme.colorScheme.secondary
-                        SyntaxTokenType.ANNOTATION -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurface
+                        SyntaxTokenType.KEYWORD -> keywordColor
+                        SyntaxTokenType.STRING -> stringColor
+                        SyntaxTokenType.COMMENT -> commentColor
+                        SyntaxTokenType.NUMBER -> numberColor
+                        SyntaxTokenType.ANNOTATION -> annotationColor
+                        else -> defaultColor
                     }
                     addStyle(SpanStyle(color = color), token.start, token.end)
                 }
