@@ -1,9 +1,12 @@
 package dev.pocketdev
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickable
+import androidx.compose.ui.test.hasDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -43,7 +46,7 @@ class EditorUiTest {
         composeRule.onNode(hasText("Files") and isSelectable()).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Search", substring = false).assertIsDisplayed()
-        composeRule.onNodeWithText("[file] editor-ui.kt", substring = false).assertIsDisplayed()
+        composeRule.onNode(hasDescendant(hasText("[file] editor-ui.kt", substring = false)) and hasClickable()).assertIsDisplayed()
 
         composeRule.onNodeWithText("Open in editor").performScrollTo().performClick()
 
