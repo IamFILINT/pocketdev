@@ -72,8 +72,12 @@ class EditorViewModelTest {
     }
 
     private fun documentId(path: String): EditorDocumentId {
-        val project = app.container.selectedProject.value!!
-        return EditorDocumentId(project.id, project.rootPath, path)
+        val context = app.container.projectContext()
+        return EditorDocumentId(
+            workspaceId = context.projectId ?: EditorDocumentId.SHARED_WORKSPACE_ID,
+            rootPath = context.rootPath,
+            relativePath = path,
+        )
     }
 
     private fun viewModelWith(
