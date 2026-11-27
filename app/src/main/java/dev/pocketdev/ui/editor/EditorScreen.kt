@@ -42,6 +42,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.pocketdev.core.editor.EditorFormatter
 import dev.pocketdev.core.editor.EditorLanguage
 import dev.pocketdev.core.editor.SyntaxHighlighter
 import dev.pocketdev.core.editor.SyntaxTokenType
@@ -231,8 +232,13 @@ fun EditorScreen(
             OutlinedButton(onClick = onRedo, enabled = state.canRedo && state.busyLabel == null) {
                 Text("Redo")
             }
-            OutlinedButton(onClick = onFormat, enabled = state.activePath != null && state.busyLabel == null) {
-                Text("Format")
+            OutlinedButton(
+                onClick = onFormat,
+                enabled = state.activePath != null &&
+                    EditorFormatter.supportsFormatting(language) &&
+                    state.busyLabel == null,
+            ) {
+                Text(if (EditorFormatter.supportsFormatting(language)) "Format" else "Format unavailable")
             }
             OutlinedButton(onClick = onToggleSearch, enabled = state.activePath != null) {
                 Text(if (state.searchVisible) "Hide search" else "Search")

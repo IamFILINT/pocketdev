@@ -317,6 +317,10 @@ class EditorViewModel @JvmOverloads constructor(
         val buffer = buffers[path] ?: return
         if (state.readOnly) return
         val language = state.tabs.firstOrNull { it.path == path }?.language ?: EditorLanguage.PLAIN_TEXT
+        if (!EditorFormatter.supportsFormatting(language)) {
+            _uiState.update { it.copy(error = "No safe formatter for ${language.label}.") }
+            return
+        }
         val formatted = EditorFormatter.format(buffer.text, language)
         if (formatted != buffer.text) {
             buffer.replace(0, buffer.text.length, formatted)

@@ -268,6 +268,32 @@ class EditorViewModelTest {
     }
 
     @Test
+    fun formattingIsOneUndoStepAndUnsupportedLanguagesAreRejected() {
+        val code = File(projectRoot, "main.kt")
+        val original = "fun main() {\n\tprintln(\"hi\")   \n}"
+        code.writeText(original)
+        editorViewModel.open("main.kt")
+        await { editorViewModel.uiState.value.activePath == "main.kt" }
+
+        editorViewModel.formatActive()
+        val formatted = "fun main() {\n    println(\"hi\")\n}"
+        assertEquals(formatted, editorViewModel.uiState.value.text)
+        editorViewModel.undo()
+        assertEquals(original, editorViewModel.uiState.value.text)
+        editorViewModel.redo()
+        assertEquals(formatted, editorViewModel.uiState.value.text)
+
+        val markdown = File(projectRoot, "notes.md")
+        val document = "first line  \nsecond line"
+        markdown.writeText(document)
+        editorViewModel.open("notes.md")
+        await { editorViewModel.uiState.value.activePath == "notes.md" }
+        editorViewModel.formatActive()
+        assertEquals(document, editorViewModel.uiState.value.text)
+        assertTrue(editorViewModel.uiState.value.error!!.contains("No safe formatter"))
+    }
+
+    @Test
     fun unicodeEditsUndoRedoKeepSelectionInBounds() {
         val file = File(projectRoot, "unicode.txt")
         file.writeText("")
