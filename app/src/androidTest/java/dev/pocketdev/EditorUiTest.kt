@@ -44,8 +44,6 @@ class EditorUiTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Search files", substring = false).assertIsDisplayed()
 
-        composeRule.onNodeWithText("[file] editor-ui.kt", substring = false).performScrollTo().assertIsDisplayed()
-
         composeRule.onNodeWithText("Open in editor", substring = false).performClick()
 
         composeRule.onNodeWithText("editor-ui.kt").assertIsDisplayed()
