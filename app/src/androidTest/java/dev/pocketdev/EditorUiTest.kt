@@ -51,6 +51,10 @@ class EditorUiTest {
         logState("files screen")
         logCounts("files screen")
 
+        composeRule.onNodeWithTag("files_screen").performScrollToIndex(1)
+        composeRule.waitForIdle()
+        logCounts("after scroll")
+
         composeRule.waitUntil(timeoutMillis = 10_000) {
             val found = composeRule.onAllNodesWithText("Open in editor", substring = false)
                 .fetchSemanticsNodes().isNotEmpty()
@@ -62,7 +66,6 @@ class EditorUiTest {
         val buttonBounds = composeRule.onNodeWithTag("open_in_editor").fetchSemanticsNode().boundsInRoot
         Log.d(TAG, "bounds title=$titleBounds button=$buttonBounds")
         logCounts("before click")
-        composeRule.onNodeWithTag("files_list").performScrollToIndex(0)
         composeRule.onNodeWithTag("open_in_editor").assertIsDisplayed().performClick()
         composeRule.waitForIdle()
         logCounts("after click")

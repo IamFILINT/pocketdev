@@ -3,7 +3,9 @@ package dev.pocketdev.ui.files
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -108,214 +110,216 @@ fun FilesScreen(
     val selectedName = state.projects.firstOrNull { it.id == state.selectedProjectId }?.name
         ?: stringResource(R.string.files_no_project)
 
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .testTag("files_screen"),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(
-            text = stringResource(R.string.files_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = stringResource(R.string.files_root_label, state.rootPath),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Column {
-            Button(onClick = { projectMenuExpanded = true }) {
-                Text(stringResource(R.string.files_project_label, selectedName))
-            }
-            DropdownMenu(
-                expanded = projectMenuExpanded,
-                onDismissRequest = { projectMenuExpanded = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.files_shared_root)) },
-                    onClick = {
-                        onSelectProject(null)
-                        projectMenuExpanded = false
-                    },
+        item(key = "files_header") {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.files_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                 )
-                state.projects.forEach { project ->
-                    DropdownMenuItem(
-                        text = { Text(project.name) },
-                        onClick = {
-                            onSelectProject(project.id)
-                            projectMenuExpanded = false
+                Text(
+                    text = stringResource(R.string.files_root_label, state.rootPath),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Column {
+                    Button(onClick = { projectMenuExpanded = true }) {
+                        Text(stringResource(R.string.files_project_label, selectedName))
+                    }
+                    DropdownMenu(
+                        expanded = projectMenuExpanded,
+                        onDismissRequest = { projectMenuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.files_shared_root)) },
+                            onClick = {
+                                onSelectProject(null)
+                                projectMenuExpanded = false
+                            },
+                        )
+                        state.projects.forEach { project ->
+                            DropdownMenuItem(
+                                text = { Text(project.name) },
+                                onClick = {
+                                    onSelectProject(project.id)
+                                    projectMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = state.showHidden, onCheckedChange = { _ -> onToggleHidden() })
+                    Text(stringResource(R.string.files_hidden))
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onNavigateUp) {
+                        Text(stringResource(R.string.files_up))
+                    }
+                    OutlinedButton(onClick = { showDialog(FileDialog.Create(directory = true)) }) {
+                        Text(stringResource(R.string.files_new_folder))
+                    }
+                    OutlinedButton(onClick = { showDialog(FileDialog.Create(directory = false)) }) {
+                        Text(stringResource(R.string.files_new_file))
+                    }
+                    OutlinedButton(onClick = onImport) {
+                        Text(stringResource(R.string.files_import))
+                    }
+                }
+
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = onQueryChange,
+                    label = { Text(stringResource(R.string.files_search)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+
+                Text(
+                    text = if (state.currentDirectory.isBlank()) {
+                        stringResource(R.string.files_directory_root)
+                    } else {
+                        stringResource(R.string.files_directory_label, state.currentDirectory)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+
+                state.operation?.let { operation ->
+                    val statusText = when (operation.status) {
+                        FilesOperationStatus.RUNNING -> stringResource(R.string.files_operation_running, operation.label)
+                        FilesOperationStatus.SUCCESS -> stringResource(R.string.files_operation_success, operation.label)
+                        FilesOperationStatus.FAILURE -> stringResource(R.string.files_operation_failure, operation.label)
+                        FilesOperationStatus.CANCELLED -> stringResource(R.string.files_operation_cancelled, operation.label)
+                        FilesOperationStatus.PARTIAL_FAILURE -> stringResource(
+                            R.string.files_operation_partial,
+                            operation.label,
+                            operation.completed,
+                            operation.total,
+                        )
+                    }
+                    Text(
+                        text = statusText,
+                        color = if (operation.status == FilesOperationStatus.FAILURE ||
+                            operation.status == FilesOperationStatus.PARTIAL_FAILURE
+                        ) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
                         },
                     )
+                    if (operation.status == FilesOperationStatus.RUNNING) {
+                        if (operation.total > 0) {
+                            LinearProgressIndicator(
+                                progress = { operation.completed.toFloat() / operation.total.toFloat() },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                text = stringResource(R.string.files_operation_progress, operation.completed, operation.total),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        } else {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            Text(
+                                text = stringResource(R.string.files_operation_indeterminate),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                        TextButton(onClick = onCancelOperation) {
+                            Text(stringResource(R.string.files_cancel))
+                        }
+                    }
                 }
-            }
-        }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = state.showHidden, onCheckedChange = { _ -> onToggleHidden() })
-            Text(stringResource(R.string.files_hidden))
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onNavigateUp) {
-                Text(stringResource(R.string.files_up))
-            }
-            OutlinedButton(onClick = { showDialog(FileDialog.Create(directory = true)) }) {
-                Text(stringResource(R.string.files_new_folder))
-            }
-            OutlinedButton(onClick = { showDialog(FileDialog.Create(directory = false)) }) {
-                Text(stringResource(R.string.files_new_file))
-            }
-            OutlinedButton(onClick = onImport) {
-                Text(stringResource(R.string.files_import))
-            }
-        }
-
-        OutlinedTextField(
-            value = state.query,
-            onValueChange = onQueryChange,
-            label = { Text(stringResource(R.string.files_search)) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-
-        Text(
-            text = if (state.currentDirectory.isBlank()) {
-                stringResource(R.string.files_directory_root)
-            } else {
-                stringResource(R.string.files_directory_label, state.currentDirectory)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-        )
-
-        state.operation?.let { operation ->
-            val statusText = when (operation.status) {
-                FilesOperationStatus.RUNNING -> stringResource(R.string.files_operation_running, operation.label)
-                FilesOperationStatus.SUCCESS -> stringResource(R.string.files_operation_success, operation.label)
-                FilesOperationStatus.FAILURE -> stringResource(R.string.files_operation_failure, operation.label)
-                FilesOperationStatus.CANCELLED -> stringResource(R.string.files_operation_cancelled, operation.label)
-                FilesOperationStatus.PARTIAL_FAILURE -> stringResource(
-                    R.string.files_operation_partial,
-                    operation.label,
-                    operation.completed,
-                    operation.total,
-                )
-            }
-            Text(
-                text = statusText,
-                color = if (operation.status == FilesOperationStatus.FAILURE ||
-                    operation.status == FilesOperationStatus.PARTIAL_FAILURE
-                ) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-            )
-            if (operation.status == FilesOperationStatus.RUNNING) {
-                if (operation.total > 0) {
-                    LinearProgressIndicator(
-                        progress = { operation.completed.toFloat() / operation.total.toFloat() },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        text = stringResource(R.string.files_operation_progress, operation.completed, operation.total),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                } else {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text(
-                        text = stringResource(R.string.files_operation_indeterminate),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                state.message?.let {
+                    Text(text = stringResource(R.string.files_message, it), color = MaterialTheme.colorScheme.primary)
+                    TextButton(onClick = onClearFeedback) {
+                        Text(stringResource(R.string.files_dismiss))
+                    }
                 }
-                TextButton(onClick = onCancelOperation) {
-                    Text(stringResource(R.string.files_cancel))
+                state.error?.let {
+                    Text(text = stringResource(R.string.files_error, it), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onClearFeedback) {
+                        Text(stringResource(R.string.files_dismiss))
+                    }
                 }
-            }
-        }
 
-        state.message?.let {
-            Text(text = stringResource(R.string.files_message, it), color = MaterialTheme.colorScheme.primary)
-            TextButton(onClick = onClearFeedback) {
-                Text(stringResource(R.string.files_dismiss))
-            }
-        }
-        state.error?.let {
-            Text(text = stringResource(R.string.files_error, it), color = MaterialTheme.colorScheme.error)
-            TextButton(onClick = onClearFeedback) {
-                Text(stringResource(R.string.files_dismiss))
-            }
-        }
-
-        state.previewPath?.let { path ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = stringResource(R.string.files_preview_title, path),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        text = state.preview ?: stringResource(R.string.files_preview_binary),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                state.previewPath?.let { path ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = stringResource(R.string.files_preview_title, path),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                text = state.preview ?: stringResource(R.string.files_preview_binary),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
                 }
             }
         }
 
         if (state.entries.isEmpty()) {
-            Text(
-                text = stringResource(R.string.files_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            item(key = "files_empty") {
+                Text(
+                    text = stringResource(R.string.files_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .testTag("files_list"),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                items(state.entries, key = { it.relativePath }) { entry ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = if (entry.isDirectory) "[dir] ${entry.name}" else "[file] ${entry.name}",
-                                modifier = Modifier
-                                    .testTag("file_entry_${entry.relativePath}")
-                                    .clickable { onOpen(entry) },
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                text = stringResource(R.string.files_entry_meta, entry.kind.name, entry.sizeBytes),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                if (entry.kind == FileKind.TEXT) {
-                                    TextButton(
-                                        onClick = { onOpenInEditor(entry) },
-                                        modifier = Modifier.testTag("open_in_editor"),
-                                    ) {
-                                        Text(stringResource(R.string.files_open_in_editor))
-                                    }
+            items(state.entries, key = { it.relativePath }) { entry ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = if (entry.isDirectory) "[dir] ${entry.name}" else "[file] ${entry.name}",
+                            modifier = Modifier
+                                .testTag("file_entry_${entry.relativePath}")
+                                .clickable { onOpen(entry) },
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            text = stringResource(R.string.files_entry_meta, entry.kind.name, entry.sizeBytes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (entry.kind == FileKind.TEXT) {
+                                TextButton(
+                                    onClick = { onOpenInEditor(entry) },
+                                    modifier = Modifier.testTag("open_in_editor"),
+                                ) {
+                                    Text(stringResource(R.string.files_open_in_editor))
                                 }
-                                TextButton(onClick = { showDialog(FileDialog.Rename(entry), entry.name) }) {
-                                    Text(stringResource(R.string.files_rename))
-                                }
-                                TextButton(onClick = { showDialog(FileDialog.Copy(entry), "${entry.name}-copy") }) {
-                                    Text(stringResource(R.string.files_copy))
-                                }
-                                TextButton(onClick = { showDialog(FileDialog.Move(entry), entry.name) }) {
-                                    Text(stringResource(R.string.files_move))
-                                }
-                                TextButton(onClick = { onExport(entry) }) {
-                                    Text(stringResource(R.string.files_export))
-                                }
-                                TextButton(onClick = { showDialog(FileDialog.Delete(entry)) }) {
-                                    Text(stringResource(R.string.files_delete))
-                                }
+                            }
+                            TextButton(onClick = { showDialog(FileDialog.Rename(entry), entry.name) }) {
+                                Text(stringResource(R.string.files_rename))
+                            }
+                            TextButton(onClick = { showDialog(FileDialog.Copy(entry), "${entry.name}-copy") }) {
+                                Text(stringResource(R.string.files_copy))
+                            }
+                            TextButton(onClick = { showDialog(FileDialog.Move(entry), entry.name) }) {
+                                Text(stringResource(R.string.files_move))
+                            }
+                            TextButton(onClick = { onExport(entry) }) {
+                                Text(stringResource(R.string.files_export))
+                            }
+                            TextButton(onClick = { showDialog(FileDialog.Delete(entry)) }) {
+                                Text(stringResource(R.string.files_delete))
                             }
                         }
                     }
