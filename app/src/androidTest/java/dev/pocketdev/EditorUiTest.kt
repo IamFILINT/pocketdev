@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import java.io.File
@@ -59,7 +58,7 @@ class EditorUiTest {
         }
         composeRule.onNodeWithText("Open in editor", substring = false).fetchSemanticsNode()
         logCounts("before click")
-        composeRule.onNodeWithTag("open_in_editor").performScrollTo().performClick()
+        composeRule.onNodeWithTag("open_in_editor").assertIsDisplayed().performClick()
         composeRule.waitForIdle()
         logCounts("after click")
 
