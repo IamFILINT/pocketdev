@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import java.io.File
@@ -58,8 +57,11 @@ class EditorUiTest {
             found
         }
         composeRule.onNodeWithText("Open in editor", substring = false).fetchSemanticsNode()
+        val titleBounds = composeRule.onNodeWithText("Project files").fetchSemanticsNode().boundsInRoot
+        val buttonBounds = composeRule.onNodeWithTag("open_in_editor").fetchSemanticsNode().boundsInRoot
+        Log.d(TAG, "bounds title=$titleBounds button=$buttonBounds")
         logCounts("before click")
-        composeRule.onNodeWithTag("open_in_editor").performScrollTo().assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("open_in_editor").assertIsDisplayed().performClick()
         composeRule.waitForIdle()
         logCounts("after click")
 
