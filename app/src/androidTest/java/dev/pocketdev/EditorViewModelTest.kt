@@ -267,6 +267,40 @@ class EditorViewModelTest {
         assertTrue(editorViewModel.uiState.value.error!!.contains("Not found"))
     }
 
+    @Test
+    fun unicodeEditsUndoRedoKeepSelectionInBounds() {
+        val file = File(projectRoot, "unicode.txt")
+        file.writeText("")
+        editorViewModel.open("unicode.txt")
+        await { editorViewModel.uiState.value.activePath == "unicode.txt" }
+
+        val text = "سلام 🌍\u0301a"
+        editorViewModel.onTextChanged(text, text.length..text.length)
+        assertEquals(text, editorViewModel.uiState.value.text)
+        assertTrue(editorViewModel.uiState.value.selection.last <= editorViewModel.uiState.value.text.length)
+
+        editorViewModel.undo()
+        assertTrue(editorViewModel.uiState.value.selection.last <= editorViewModel.uiState.value.text.length)
+        editorViewModel.redo()
+        assertEquals(text, editorViewModel.uiState.value.text)
+        assertTrue(editorViewModel.uiState.value.selection.last <= editorViewModel.uiState.value.text.length)
+    }
+
+    @Test
+    fun replaceAllWithSupplementaryUnicodeKeepsSelectionInBounds() {
+        val file = File(projectRoot, "replace.txt")
+        file.writeText("a b a")
+        editorViewModel.open("replace.txt")
+        await { editorViewModel.uiState.value.activePath == "replace.txt" }
+
+        editorViewModel.setSearchQuery("a")
+        editorViewModel.setReplaceText("🚀")
+        editorViewModel.replaceAll()
+
+        assertEquals("🚀 b 🚀", editorViewModel.uiState.value.text)
+        assertTrue(editorViewModel.uiState.value.selection.last <= editorViewModel.uiState.value.text.length)
+    }
+
     private class SuspendedSaveGateway(
         private val target: File,
     ) : EditorWorkspaceGateway {

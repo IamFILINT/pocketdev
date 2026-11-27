@@ -19,11 +19,16 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -130,6 +135,28 @@ fun EditorScreen(
                 if (line > 0) append('\n')
                 append(line + 1)
             }
+        }
+    }
+    val stateSelection = TextRange(
+        state.selection.first.coerceIn(0, state.text.length),
+        state.selection.last.coerceIn(0, state.text.length),
+    )
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(annotatedString = syntaxText, selection = stateSelection))
+    }
+    LaunchedEffect(syntaxText, stateSelection) {
+        val preserveComposition = textFieldValue.text == state.text && textFieldValue.composition != null
+        val selection = if (preserveComposition) textFieldValue.selection else stateSelection
+        val composition = if (preserveComposition) textFieldValue.composition else null
+        if (textFieldValue.annotatedString != syntaxText ||
+            textFieldValue.selection != selection ||
+            textFieldValue.composition != composition
+        ) {
+            textFieldValue = TextFieldValue(
+                annotatedString = syntaxText,
+                selection = selection,
+                composition = composition,
+            )
         }
     }
 
@@ -323,16 +350,15 @@ fun EditorScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 BasicTextField(
-                    value = TextFieldValue(
-                        annotatedString = syntaxText,
-                        selection = TextRange(state.selection.first, state.selection.last),
-                    ),
+                    value = textFieldValue,
                     onValueChange = { value ->
-                        onTextChanged(value.text, value.selection.start..value.selection.end)
+                        textFieldValue = value
+                        onTextChanged(value.text, value.selection.min..value.selection.max)
                     },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                        .testTag("editor_text_field")
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown || !event.isCtrlPressed) {
                                 return@onPreviewKeyEvent false
@@ -343,7 +369,7 @@ fun EditorScreen(
                                     true
                                 }
                                 Key.Z -> {
-                                    onUndo()
+                                    if (event.isShiftPressed) onRedo() else onUndo()
                                     true
                                 }
                                 Key.Y -> {
