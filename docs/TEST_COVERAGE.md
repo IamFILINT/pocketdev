@@ -1,6 +1,6 @@
 # PocketDev — Test Coverage Matrix
 
-Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main` or the current PR #39 head. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
+Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main` or the current PR head. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
 
 ## Core (`:core`)
 
@@ -32,12 +32,12 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | PathSafety | traversal/NUL/segments | unit | `core/.../workspace/PathSafetyTest.kt` | verify | Verified |
 | WorkspaceFiles | list/create/rename/copy/move/delete/search/preview, symlink escape, recursive progress, cancellation, partial failure | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (run 45353953532) |
 | FileEntry | kind detection and hidden flag | unit | `core/.../workspace/WorkspaceFilesTest.kt` | verify | Verified (PR #37) |
-| TextFileCodec | UTF-8/BOM decode, newline normalization/preservation, binary/NUL rejection, truncation flag | unit | `core/.../editor/TextFileCodecTest.kt` | verify | Pending |
-| EditorBuffer | replace, line map, undo/redo, dirty saved-state, line/column helpers | unit | `core/.../editor/EditorBufferTest.kt` | verify | Pending |
-| TextSearch | find all/next, replace all, ignore-case, whole-word | unit | `core/.../editor/TextSearchTest.kt` | verify | Pending |
-| SyntaxHighlighter | language keywords, comments, strings, numbers, annotations, punctuation | unit | `core/.../editor/SyntaxHighlighterTest.kt` | verify | Pending |
-| EditorFormatter | trailing whitespace, tab expansion for code, newline normalization | unit | `core/.../editor/EditorFormatterTest.kt` | verify | Pending |
-| WorkspaceFiles editor text IO | encoding/newline round-trip, stale-signature guard, binary/large/symlink-safe reads | unit | `core/.../workspace/WorkspaceFilesEditorTest.kt` | verify | Pending |
+| TextFileCodec | UTF-8/BOM decode, newline normalization/preservation, binary/NUL rejection, truncation flag | unit | `core/.../editor/TextFileCodecTest.kt` | verify | Verified (PR #40) |
+| EditorBuffer | replace, line map, undo/redo, dirty saved-state, line/column helpers | unit | `core/.../editor/EditorBufferTest.kt` | verify | Verified (PR #40) |
+| TextSearch | find all/next, replace all, ignore-case, whole-word | unit | `core/.../editor/TextSearchTest.kt` | verify | Verified (PR #40) |
+| SyntaxHighlighter | language keywords, comments, strings, numbers, annotations, punctuation | unit | `core/.../editor/SyntaxHighlighterTest.kt` | verify | Verified (PR #40) |
+| EditorFormatter | trailing whitespace, tab expansion for code, newline normalization | unit | `core/.../editor/EditorFormatterTest.kt` | verify | Verified (PR #40) |
+| WorkspaceFiles editor text IO | encoding/newline round-trip, stale-signature guard, binary/large/symlink-safe reads | unit | `core/.../workspace/WorkspaceFilesEditorTest.kt` | verify | Verified (PR #40) |
 | AnsiBuffer | ANSI SGR, cursor, erase, scrollback, resize, OSC, plain text | unit | `core/.../terminal/AnsiBufferTest.kt` | verify | Verified (PR #38) |
 | ProjectStore | CRUD/registry | unit | `core/.../workspace/ProjectStoreTest.kt` | verify | Verified |
 | ProjectNameValidator | name rules | unit | `core/.../validation/ProjectNameValidatorTest.kt` | verify | Verified |
@@ -88,8 +88,8 @@ Maintained per the mandatory testing policy (section 10). Every row points at a 
 | FilesViewModel async filesystem/SAF | IO-dispatcher operations, progress/cancel state, explicit failure and partial failure | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (runs 45353945512, 45353953646) |
 | FilesViewModel displayed-root stability | external project switch does not retarget active file operations | instrumentation | `app/src/androidTest/.../FilesViewModelTest.kt` | android-emulator | Verified (run 45341647148) |
 | FilesScreen + nav | Files tab renders explorer controls | instrumentation | `app/src/androidTest/.../NavigationTest.kt` | android-emulator | Verified (PR #37) |
-| EditorViewModel | open/save/dirty tabs, undo/redo, format, search/replace, external-change conflict/reload | instrumentation | `app/src/androidTest/.../EditorViewModelTest.kt` | android-emulator | Pending |
-| EditorScreen + nav | Files → editor, syntax editor UI, line/cursor status, editor route | instrumentation | `app/src/androidTest/.../EditorUiTest.kt`, `NavigationTest.kt` | android-emulator | Pending |
+| EditorViewModel | open/save/dirty tabs, undo/redo, format, search/replace, external-change conflict/reload | instrumentation | `app/src/androidTest/.../EditorViewModelTest.kt` | android-emulator | Verified (PR #40) |
+| EditorScreen + nav | Files → editor, syntax editor UI, line/cursor status, editor route | instrumentation | `app/src/androidTest/.../EditorUiTest.kt`, `NavigationTest.kt` | android-emulator | Verified (PR #40) |
 | TerminalSession state | exit decoding, input normalization, listener races, idempotent close, project context | unit | `app/src/test/.../terminal/TerminalSessionTest.kt` | verify | Verified (runs 45336260899, 45341646980) |
 | TerminalViewModel + native PTY | session start, command output, cwd, resize, multi-session, shutdown | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (runs 45336872176, 45347183919) |
 | TerminalViewModel project context | sessions retain launch root; new sessions use selected root | instrumentation (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` | runtime-spike | Verified (run 45347183919) |
