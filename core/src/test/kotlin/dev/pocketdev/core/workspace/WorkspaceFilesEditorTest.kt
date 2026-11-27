@@ -6,6 +6,7 @@ import dev.pocketdev.core.editor.TextEncoding
 import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -169,6 +170,27 @@ class WorkspaceFilesEditorTest {
         val finalText = path.readText()
         assertTrue(finalText == "first-complete-value" || finalText == "second-complete-value")
         assertTrue(root.listFiles()!!.none { it.name.contains(".pocketdev-") })
+    }
+
+    @Test
+    fun `symlinked editor paths are rejected`() = runBlocking {
+        val root = temporaryFolder.newFolder()
+        val outside = temporaryFolder.newFolder("outside")
+        val files = WorkspaceFiles(root)
+        val target = File(outside, "target.txt")
+        target.writeText("outside-original")
+        val link = File(root, "link.txt")
+        Files.createSymbolicLink(link.toPath(), target.toPath())
+
+        assertTrue(files.readTextFile("link.txt") is WorkspaceResult.Failure)
+        val result = files.writeTextFile(
+            relativePath = "link.txt",
+            text = "replacement",
+            encoding = TextEncoding.UTF_8,
+            newlineStyle = NewlineStyle.LF,
+        )
+        assertTrue(result is WorkspaceResult.Failure)
+        assertEquals("outside-original", target.readText())
     }
 
     @Test

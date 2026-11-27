@@ -309,8 +309,9 @@ class WorkspaceFiles(
                         output.fd.sync()
                     }
                     beforeCommit()
-                    require(Files.exists(target.toPath(), LinkOption.NOFOLLOW_LINKS)) {
-                        "File disappeared before commit"
+                    val currentTarget = resolveExisting(relativePath)
+                    require(currentTarget.canonicalFile == target.canonicalFile) {
+                        "Workspace path changed before commit"
                     }
                     if (expectedSignature != null) {
                         require(signatureOf(target) == expectedSignature) {
@@ -341,7 +342,7 @@ class WorkspaceFiles(
 
     private fun resolve(relativeDirectory: String): File {
         if (relativeDirectory.isBlank()) return canonicalRoot
-        return PathSafety.resolveWithin(canonicalRoot, relativeDirectory)
+        return PathSafety.resolveWithinNoFollow(canonicalRoot, relativeDirectory)
             ?: throw IllegalArgumentException("Unsafe path")
     }
 
