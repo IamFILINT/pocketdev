@@ -116,7 +116,11 @@ device execution remains the accepted R1 gap.
 
 ## Milestone 7 — Code editor
 
-- [ ] Real editor component, syntax highlighting, multi-file tabs, external-change handling
+- [x] Real editor component, syntax highlighting, multi-file tabs, external-change handling (PR #40)
+
+**Exit evidence:** PR #40 verify `45964749210`/`45964755939`, `android-emulator`
+`45964749127`/`45964755903`, and `native-runtime` `45964749085`/`45964756085`
+(all green). Physical ARM64 device execution remains the accepted R1 gap.
 
 ## Milestone 8 — Package manager and Git
 
