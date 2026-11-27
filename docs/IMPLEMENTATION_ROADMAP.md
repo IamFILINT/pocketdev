@@ -122,6 +122,22 @@ device execution remains the accepted R1 gap.
 `45964749127`/`45964755903`, and `native-runtime` `45964749085`/`45964756085`
 (all green). Physical ARM64 device execution remains the accepted R1 gap.
 
+## Milestone 7.5 — Editor reliability, data integrity, and recovery
+
+- [ ] Save revision correctness and deterministic save-race regression tests
+- [ ] Stable document identity and workspace-root binding for every editor tab
+- [ ] Safe filesystem commit strategy, concurrent-write handling, and external-change conflicts
+- [ ] Strong content signatures and verified symlink/path-containment policy
+- [ ] Strict text decoding and explicit mixed-newline fidelity policy
+- [ ] Compose IME composition, selection, Persian/Unicode input, and lifecycle tests
+- [ ] Language-aware formatting that preserves syntax-significant whitespace
+- [ ] Unsaved-draft recovery with conflict-safe restoration
+- [ ] Reproducible editor performance baselines and evidence-driven optimization
+- [ ] Required CI coverage and documentation/risk-register reconciliation
+
+**Specification:** [docs/MILESTONE_7_5.md](MILESTONE_7_5.md).  
+**Status:** Planned; M7.5 must be completed before treating the editor foundation as stable for deeper integrations.
+
 ## Milestone 8 — Package manager and Git
 
 - [ ] Package search/install/remove UI; runtime inventory; Git status/diff/commit/branch
