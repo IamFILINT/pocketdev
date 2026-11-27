@@ -1,5 +1,10 @@
 package dev.pocketdev.core.workspace
 
+import dev.pocketdev.core.editor.FileSignature
+import dev.pocketdev.core.editor.NewlineStyle
+import dev.pocketdev.core.editor.TextEncoding
+import dev.pocketdev.core.editor.TextFileCodec
+import dev.pocketdev.core.editor.TextFileSnapshot
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -234,6 +239,56 @@ class WorkspaceFiles(private val root: File) {
             String(bytes, 0, read, StandardCharsets.UTF_8)
         }
 
+    suspend fun readTextFile(
+        relativePath: String,
+        maxBytes: Int = DEFAULT_MAX_TEXT_BYTES,
+    ): WorkspaceResult<TextFileSnapshot> =
+        wrapped {
+            currentCoroutineContext().ensureActive()
+            val source = resolveExisting(relativePath)
+            require(source.isFile) { "Not a file" }
+            require(!Files.isSymbolicLink(source.toPath())) { "Symbolic links cannot be edited" }
+            val size = source.length()
+            val length = minOf(size, maxBytes.coerceAtLeast(1).toLong()).toInt()
+            val bytes = ByteArray(length)
+            var read = 0
+            Files.newInputStream(source.toPath()).use { input ->
+                while (read < length) {
+                    currentCoroutineContext().ensureActive()
+                    val count = input.read(bytes, read, length - read)
+                    if (count < 0) break
+                    read += count
+                }
+            }
+            val payload = if (read == length) bytes else bytes.copyOf(read)
+            TextFileCodec.decode(
+                bytes = payload,
+                sizeBytes = size,
+                lastModifiedEpochMs = source.lastModified(),
+                truncated = size > length,
+            ) ?: throw IOException("Binary file cannot be edited")
+        }
+
+    suspend fun writeTextFile(
+        relativePath: String,
+        text: String,
+        encoding: TextEncoding,
+        newlineStyle: NewlineStyle,
+        expectedSignature: FileSignature? = null,
+    ): WorkspaceResult<FileSignature> =
+        wrapped {
+            currentCoroutineContext().ensureActive()
+            val target = resolveExisting(relativePath)
+            require(target.isFile) { "Not a file" }
+            require(!Files.isSymbolicLink(target.toPath())) { "Symbolic links cannot be edited" }
+            if (expectedSignature != null) {
+                val current = FileSignature(target.length(), target.lastModified())
+                require(current == expectedSignature) { "File changed on disk" }
+            }
+            Files.write(target.toPath(), TextFileCodec.encode(text, encoding, newlineStyle))
+            FileSignature(target.length(), target.lastModified())
+        }
+
     private fun resolve(relativeDirectory: String): File {
         if (relativeDirectory.isBlank()) return canonicalRoot
         return PathSafety.resolveWithin(canonicalRoot, relativeDirectory)
@@ -325,6 +380,7 @@ class WorkspaceFiles(private val root: File) {
     ) : IOException(message)
 
     companion object {
+        const val DEFAULT_MAX_TEXT_BYTES = 1_048_576
         private const val MAX_SEARCH_DEPTH = 12
         private val ENTRY_ORDER = compareByDescending<FileEntry> { it.isDirectory }
             .thenBy { it.name.lowercase() }

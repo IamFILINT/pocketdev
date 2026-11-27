@@ -67,6 +67,8 @@ gated because they download the full bootstrap and prove x86_64 execution only.
 | Runtime env / preload / launcher / launch plan / ABI / redacted agent config | `runtime/.../*Test.kt`, `runtime/.../RuntimeAgentConfigTest.kt` |
 | Server supervision state machine | `runtime/.../OpenCodeServerTest.kt` |
 | ANSI terminal buffer | `core/.../terminal/AnsiBufferTest.kt` |
+| Editor text codec, buffer, search, syntax, formatting | `core/.../editor/TextFileCodecTest.kt`, `EditorBufferTest.kt`, `TextSearchTest.kt`, `SyntaxHighlighterTest.kt`, `EditorFormatterTest.kt` |
+| Editor workspace IO (BOM/newline round-trip, stale signature, binary/large files) | `core/.../workspace/WorkspaceFilesEditorTest.kt` |
 | PTY session state and exit decoding | `app/src/test/.../terminal/TerminalSessionTest.kt` |
 | Project-context binding (agent, terminal, files) | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt`, `FilesViewModelTest.kt`, `TerminalViewModelTest.kt` |
 | Provider/model settings and Keystore API-key status/save/clear | `app/src/androidTest/.../SettingsViewModelTest.kt` |
@@ -75,6 +77,8 @@ gated because they download the full bootstrap and prove x86_64 execution only.
 | Bionic terminal sessions (opt-in) | `app/src/androidTest/.../TerminalViewModelTest.kt` |
 | PTY reliability, exit status, launch failure, stress (opt-in) | `app/src/androidTest/.../PtyReliabilityTest.kt` |
 | Navigation | `app/src/androidTest/.../NavigationTest.kt` |
+| Editor ViewModel (tabs, save/dirty, external-change conflict, search/replace, format) | `app/src/androidTest/.../EditorViewModelTest.kt` |
+| Editor UI and Files → editor integration | `app/src/androidTest/.../EditorUiTest.kt` |
 | Compose navigation / runtime spike (opt-in) | `app/src/androidTest/...` |
 
 ## Running tests

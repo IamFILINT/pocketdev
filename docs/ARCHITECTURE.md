@@ -1,6 +1,6 @@
 # PocketDev — Architecture
 
-> Status: Milestone 4. Domain logic stays in `:core`; `:runtime` holds the
+> Status: Milestone 7 in progress. Domain logic stays in `:core`; `:runtime` holds the
 > Android-only environment, linker-hop process spawn, execution health checks, and
 > OpenCode Bionic provisioning + `serve` supervision. The app shell talks to both
 > through small controller APIs.
@@ -10,7 +10,7 @@
 | Module | Type | Purpose |
 | --- | --- | --- |
 | `:app` | Android application (Compose) | UI shell, navigation, screens, Android-specific wiring |
-| `:core` | Pure Kotlin/JVM library | Domain logic with no Android dependencies: validation, path safety, project registry, state machines, redaction, agent pins/installer, serve-output parsing, JSON reader, OpenCode HTTP API client |
+| `:core` | Pure Kotlin/JVM library | Domain logic with no Android dependencies: validation, path safety, project registry, state machines, redaction, agent pins/installer, serve-output parsing, JSON reader, OpenCode HTTP API client, editor text codec/buffer/search/syntax/formatting |
 | `:runtime` | Android library | Bootstrap wiring (environment, linker-hop spawn, preload, execution health) and the OpenCode agent: provisioning, `serve` supervision, connection state |
 
 Keeping `:core` Android-free means its logic is testable on a plain JVM in CI, fast and
@@ -86,6 +86,27 @@ The server state is authoritative: no client is handed out until the process is
 actually `Listening`. The password never leaves the controller except into the
 in-memory client.
 
+## Current data flow (Milestone 7 — code editor)
+
+```
+FilesScreen
+  └── onOpenInEditor(FileEntry) -> EditorViewModel.open(relativePath)
+        └── WorkspaceFiles.readTextFile / writeTextFile
+              ├── TextFileCodec (UTF-8/BOM, LF/CRLF/CR, binary/NUL rejection)
+              ├── FileSignature (stale-write guard)
+              └── truncated > 1 MiB -> read-only snapshot + UI warning
+
+EditorViewModel
+  ├── tabs: path, language, read-only
+  ├── EditorBuffer: text, line map, undo/redo, dirty state
+  ├── TextSearch / EditorFormatter / SyntaxHighlighter
+  └── external changes: dirty conflict or clean reload
+```
+
+The editor owns only its in-memory buffers and snapshots; `WorkspaceFiles` remains the
+single filesystem authority. Saves pass the last observed `FileSignature`, so an
+external change fails the save instead of being overwritten.
+
 ## Key decisions
 
 1. **Kotlin + Jetpack Compose.** No existing codebase constraint existed (fresh
@@ -117,6 +138,10 @@ in-memory client.
 9. **Pins are data, not code.** `OpenCodePins` and `BootstrapPins` are validated value
    objects in `:core`; bumping an artifact is a reviewed metadata change verified by
    CI, never an implicit `latest` fetch.
+10. **Editor is native Compose + pure JVM core.** No WebView/CDN or heavy desktop
+    editor dependency; editing, syntax, search, history, formatting, encoding, and
+    external-change logic stay testable in `:core`. Files larger than 1 MiB are
+    opened read-only from the first 1 MiB with an explicit warning.
 
 ## Security boundaries
 
