@@ -28,10 +28,10 @@ class EditorInputUiTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private fun setEditorContent(state: EditorUiState, onTextChanged: (String, IntRange) -> Unit) {
+    private fun setEditorContent(stateProvider: () -> EditorUiState, onTextChanged: (String, IntRange) -> Unit) {
         composeRule.setContent {
             EditorScreen(
-                state = state,
+                state = stateProvider(),
                 onOpenTab = {},
                 onCloseTab = {},
                 onTextChanged = onTextChanged,
@@ -96,7 +96,7 @@ class EditorInputUiTest {
     @Test
     fun unicodeInputAndSelectionStayValidInCompose() {
         var state by mutableStateOf(editorState(text = ""))
-        setEditorContent(state) { text, selection ->
+        setEditorContent({ state }) { text, selection ->
             state = state.copy(text = text, selection = selection)
         }
         val field = composeRule.onNodeWithTag("editor_text_field")
@@ -117,7 +117,7 @@ class EditorInputUiTest {
         val fixtureText = performanceFixture(100 * 1024)
         val updateSamples = 8
         var state by mutableStateOf(editorState(text = fixtureText))
-        setEditorContent(state) { text, selection ->
+        setEditorContent({ state }) { text, selection ->
             state = state.copy(text = text, selection = selection)
         }
         composeRule.waitForIdle()
@@ -150,9 +150,6 @@ class EditorInputUiTest {
                     text = current.substring(0, offset) + "x" + current.substring(offset),
                     selection = (offset + 1)..(offset + 1),
                 )
-            }
-            setEditorContent(state) { text, selection ->
-                state = state.copy(text = text, selection = selection)
             }
             composeRule.waitForIdle()
             updateDurationsMs.add((System.nanoTime() - started) / 1_000_000L)
