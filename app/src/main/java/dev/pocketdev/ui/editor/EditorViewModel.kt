@@ -137,7 +137,7 @@ class EditorViewModel @JvmOverloads constructor(
     private val snapshots = mutableMapOf<String, TextFileSnapshot>()
     private val selections = mutableMapOf<String, IntRange>()
     private val documentIds = mutableMapOf<String, EditorDocumentId>()
-    private val draftRecoveries = mutableMapOf<String, DraftRecoveryState>()
+    private val draftRecoveries = mutableMapOf<String, DraftRecoveryState?>()
     private val saveMutexes = mutableMapOf<String, Mutex>()
     private var operationJob: Job? = null
     private var operationGeneration = 0

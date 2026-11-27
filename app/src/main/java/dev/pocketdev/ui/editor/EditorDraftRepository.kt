@@ -84,7 +84,7 @@ class DefaultEditorDraftRepository(
         }
     }
 
-    private fun prune() {
+    private suspend fun prune() {
         val files = directory.listFiles { file -> EditorDraftStore.isDraftFileName(file.name) }
             ?.toList()
             ?.sortedBy { it.lastModified() }
@@ -100,7 +100,7 @@ class DefaultEditorDraftRepository(
         }
     }
 
-    private fun isRedundant(draft: EditorDraft): Boolean {
+    private suspend fun isRedundant(draft: EditorDraft): Boolean {
         val root = runCatching { container.validatedRootPath(draft.documentId.rootPath) }.getOrNull()
             ?: return false
         val project = container.projectStore.load()
