@@ -2,9 +2,21 @@ package dev.pocketdev
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.pocketdev.core.editor.EditorDocumentId
+import dev.pocketdev.core.editor.EditorSaveSnapshot
+import dev.pocketdev.core.editor.FileSignature
+import dev.pocketdev.core.editor.TextFileCodec
+import dev.pocketdev.core.editor.TextFileSnapshot
+import dev.pocketdev.core.workspace.WorkspaceResult
 import dev.pocketdev.ui.editor.EditorViewModel
+import dev.pocketdev.ui.editor.EditorWorkspaceGateway
 import dev.pocketdev.ui.projects.CreateProjectResult
 import dev.pocketdev.ui.projects.ProjectsViewModel
+import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -14,7 +26,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class EditorViewModelTest {
@@ -82,6 +93,48 @@ class EditorViewModelTest {
         awaitIdle()
         assertFalse(editorViewModel.uiState.value.dirty)
         assertEquals(updated, file.readText())
+    }
+
+    @Test
+    fun newerEditStaysDirtyWhenEarlierSaveCompletes() {
+        val file = File(projectRoot, "save-race.txt")
+        file.writeText("one")
+        val gateway = SuspendedSaveGateway(file)
+        editorViewModel = EditorViewModel(app, Dispatchers.IO, Dispatchers.Main, gateway)
+
+        editorViewModel.open("save-race.txt")
+        await { editorViewModel.uiState.value.activePath == "save-race.txt" }
+
+        editorViewModel.onTextChanged("two", 0..3)
+        editorViewModel.save()
+        gateway.awaitWriteStarted()
+        editorViewModel.onTextChanged("three", 0..5)
+        gateway.releaseWrite()
+        awaitIdle()
+
+        assertTrue(editorViewModel.uiState.value.dirty)
+        assertEquals("two", file.readText())
+    }
+
+    @Test
+    fun projectSwitchDoesNotRetargetAnOpenTab() {
+        val boundRoot = projectRoot
+        File(boundRoot, "bound.txt").writeText("one")
+        editorViewModel.open("bound.txt")
+        await { editorViewModel.uiState.value.activePath == "bound.txt" }
+        editorViewModel.onTextChanged("edited", 0..3)
+
+        val created = projectsViewModel.createProject("editor-test-b")
+        assertTrue(created is CreateProjectResult.Created)
+        val second = projectsViewModel.uiState.value.projects.first { it.name == "editor-test-b" }
+        app.container.selectProject(second.id)
+
+        editorViewModel.save()
+        awaitIdle()
+
+        assertNull(editorViewModel.uiState.value.error)
+        assertEquals("edited", File(boundRoot, "bound.txt").readText())
+        assertFalse(File(second.rootPath, "bound.txt").exists())
     }
 
     @Test
@@ -190,5 +243,41 @@ class EditorViewModelTest {
         editorViewModel.open("missing.txt")
         await { editorViewModel.uiState.value.error != null }
         assertTrue(editorViewModel.uiState.value.error!!.contains("Not found"))
+    }
+
+    private class SuspendedSaveGateway(
+        private val target: File,
+    ) : EditorWorkspaceGateway {
+        private val writeStarted = CountDownLatch(1)
+        private val releaseSave = CompletableDeferred<Unit>()
+
+        override suspend fun readTextFile(documentId: EditorDocumentId): WorkspaceResult<TextFileSnapshot> {
+            val bytes = target.readBytes()
+            val snapshot = TextFileCodec.decode(
+                bytes = bytes,
+                sizeBytes = target.length(),
+                lastModifiedEpochMs = target.lastModified(),
+                truncated = false,
+            ) ?: return WorkspaceResult.Failure("Binary file cannot be edited")
+            return WorkspaceResult.Success(snapshot)
+        }
+
+        override suspend fun writeTextFile(request: EditorSaveSnapshot): WorkspaceResult<FileSignature> {
+            writeStarted.countDown()
+            releaseSave.await()
+            target.writeBytes(TextFileCodec.encode(request.text, request.encoding, request.newlineStyle))
+            return WorkspaceResult.Success(FileSignature(target.length(), target.lastModified()))
+        }
+
+        fun awaitWriteStarted() {
+            assertTrue(
+                "Save did not start within 10s: ${target.path}",
+                writeStarted.await(10, TimeUnit.SECONDS),
+            )
+        }
+
+        fun releaseWrite() {
+            releaseSave.complete(Unit)
+        }
     }
 }

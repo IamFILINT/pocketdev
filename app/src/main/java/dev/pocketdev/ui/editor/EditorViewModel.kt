@@ -5,22 +5,21 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
 import dev.pocketdev.core.editor.EditorBuffer
+import dev.pocketdev.core.editor.EditorDocumentId
 import dev.pocketdev.core.editor.EditorFormatter
 import dev.pocketdev.core.editor.EditorLanguage
+import dev.pocketdev.core.editor.EditorSaveSnapshot
 import dev.pocketdev.core.editor.FileSignature
 import dev.pocketdev.core.editor.NewlineStyle
 import dev.pocketdev.core.editor.TextEncoding
 import dev.pocketdev.core.editor.TextFileSnapshot
 import dev.pocketdev.core.editor.TextMatch
 import dev.pocketdev.core.editor.TextSearch
-import dev.pocketdev.core.workspace.WorkspaceFiles
 import dev.pocketdev.core.workspace.WorkspaceResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,6 +80,8 @@ class EditorViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val workspaceGateway: EditorWorkspaceGateway =
+        DefaultEditorWorkspaceGateway((application as PocketDevApplication).container),
 ) : AndroidViewModel(application) {
 
     private val container = (application as PocketDevApplication).container
@@ -182,24 +183,19 @@ class EditorViewModel @JvmOverloads constructor(
             _uiState.update { it.copy(error = "Resolve external changes before saving.") }
             return
         }
-        val text = buffer.text
-        val encoding = state.encoding
-        val newlineStyle = state.newlineStyle
+        val request = EditorSaveSnapshot(
+            documentId = selectedDocumentId(path),
+            text = buffer.text,
+            revision = buffer.revision,
+            encoding = state.encoding,
+            newlineStyle = state.newlineStyle,
+            expectedSignature = snapshots[path]?.signature,
+        )
         runTask("Save $path") {
-            withWorkspace { files ->
-                when (
-                    val result = files.writeTextFile(
-                        relativePath = path,
-                        text = text,
-                        encoding = encoding,
-                        newlineStyle = newlineStyle,
-                        expectedSignature = snapshots[path]?.signature,
-                    )
-                ) {
-                    is WorkspaceResult.Success -> EditorResult.Saved(path, result.value)
-                    is WorkspaceResult.Failure -> EditorResult.Error(result.message)
-                    is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
-                }
+            when (val result = workspaceGateway.writeTextFile(request)) {
+                is WorkspaceResult.Success -> EditorResult.Saved(path, result.value)
+                is WorkspaceResult.Failure -> EditorResult.Error(result.message)
+                is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
             }
         }
     }
@@ -343,7 +339,7 @@ class EditorViewModel @JvmOverloads constructor(
     }
 
     private suspend fun readSnapshot(path: String, forCheck: Boolean = false): EditorResult =
-        when (val result = withWorkspace { files -> files.readTextFile(path) }) {
+        when (val result = workspaceGateway.readTextFile(selectedDocumentId(path))) {
             is WorkspaceResult.Success -> if (forCheck) {
                 EditorResult.Checked(path, result.value)
             } else {
@@ -353,12 +349,14 @@ class EditorViewModel @JvmOverloads constructor(
             is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
         }
 
-    private suspend fun <T> withWorkspace(block: suspend (WorkspaceFiles) -> T): T {
-        currentCoroutineContext().ensureActive()
+    private fun selectedDocumentId(path: String): EditorDocumentId {
         val selected = container.selectedProject.value
-        val context = runCatching { container.projectContext(selected) }
-        val rootPath = context.getOrNull()?.rootPath ?: container.projectsRoot.absolutePath
-        return block(WorkspaceFiles(container.validatedRootPath(rootPath)))
+        val context = runCatching { container.projectContext(selected) }.getOrNull()
+        return EditorDocumentId(
+            workspaceId = context?.projectId ?: EditorDocumentId.SHARED_WORKSPACE_ID,
+            rootPath = context?.rootPath ?: container.projectsRoot.absolutePath,
+            relativePath = path,
+        )
     }
 
     private fun applyResult(result: EditorResult, label: String) {

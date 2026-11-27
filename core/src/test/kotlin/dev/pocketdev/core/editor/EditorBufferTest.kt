@@ -39,6 +39,21 @@ class EditorBufferTest {
     }
 
     @Test
+    fun `older save completion does not clear a newer revision`() {
+        val buffer = EditorBuffer("one")
+
+        buffer.replace(3, 3, "X")
+        val savedRevision = buffer.revision
+        val savedText = buffer.text
+        buffer.replace(4, 4, "Y")
+
+        buffer.markSaved(savedRevision, savedText)
+
+        assertTrue(buffer.dirty)
+        assertEquals("oneXY", buffer.text)
+    }
+
+    @Test
     fun `replaceRange and line helpers operate on editor text`() {
         val buffer = EditorBuffer("first\nsecond")
 
