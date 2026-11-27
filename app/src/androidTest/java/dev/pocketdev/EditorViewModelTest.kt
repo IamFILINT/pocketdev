@@ -3,11 +3,14 @@ package dev.pocketdev
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pocketdev.core.editor.EditorDocumentId
+import dev.pocketdev.core.editor.EditorDraftRead
+import dev.pocketdev.core.editor.EditorDraftStore
 import dev.pocketdev.core.editor.EditorSaveSnapshot
 import dev.pocketdev.core.editor.FileSignature
 import dev.pocketdev.core.editor.TextFileCodec
 import dev.pocketdev.core.editor.TextFileSnapshot
 import dev.pocketdev.core.workspace.WorkspaceResult
+import dev.pocketdev.ui.editor.DefaultEditorDraftRepository
 import dev.pocketdev.ui.editor.EditorViewModel
 import dev.pocketdev.ui.editor.EditorWorkspaceGateway
 import dev.pocketdev.ui.projects.CreateProjectResult
@@ -17,6 +20,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -44,6 +48,8 @@ class EditorViewModelTest {
         projectsViewModel.clearRegistry()
         projectsRoot.deleteRecursively()
         projectsRoot.mkdirs()
+        app.container.paths.drafts.deleteRecursively()
+        app.container.paths.drafts.mkdirs()
         val created = projectsViewModel.createProject("editor-test")
         assertTrue(created is CreateProjectResult.Created)
         val project = projectsViewModel.uiState.value.projects.first { it.name == "editor-test" }
@@ -56,7 +62,15 @@ class EditorViewModelTest {
     fun tearDown() {
         projectsViewModel.clearRegistry()
         projectsRoot.deleteRecursively()
+        app.container.paths.drafts.deleteRecursively()
     }
+
+    private fun documentId(path: String): EditorDocumentId {
+        val project = app.container.selectedProject.value!!
+        return EditorDocumentId(project.id, project.rootPath, path)
+    }
+
+    private fun draftRepository() = DefaultEditorDraftRepository(app.container)
 
     private fun await(timeoutMs: Long = 10_000, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeoutMs
@@ -65,6 +79,21 @@ class EditorViewModelTest {
         }
         assertTrue(
             "Condition was not met within ${timeoutMs}ms: ${editorViewModel.uiState.value}",
+            condition(),
+        )
+    }
+
+    private fun awaitFor(
+        viewModel: EditorViewModel,
+        timeoutMs: Long = 10_000,
+        condition: () -> Boolean,
+    ) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (!condition() && System.currentTimeMillis() < deadline) {
+            Thread.sleep(25)
+        }
+        assertTrue(
+            "Condition was not met within ${timeoutMs}ms: ${viewModel.uiState.value}",
             condition(),
         )
     }
@@ -325,6 +354,129 @@ class EditorViewModelTest {
 
         assertEquals("🚀 b 🚀", editorViewModel.uiState.value.text)
         assertTrue(editorViewModel.uiState.value.selection.last <= editorViewModel.uiState.value.text.length)
+    }
+
+    @Test
+    fun unsavedDraftPersistsAndRecoversAfterRestart() {
+        val file = File(projectRoot, "draft.txt")
+        file.writeText("original")
+        val repository = draftRepository()
+        val id = documentId("draft.txt")
+
+        editorViewModel.open("draft.txt")
+        await { editorViewModel.uiState.value.activePath == "draft.txt" }
+        editorViewModel.onTextChanged("draft body", 0.."draft body".length)
+        awaitFor(editorViewModel) {
+            runBlocking { repository.load(id) } is EditorDraftRead.Usable
+        }
+
+        val recovered = EditorViewModel(app)
+        recovered.open("draft.txt")
+        awaitFor(recovered) {
+            recovered.uiState.value.text == "draft body" &&
+                recovered.uiState.value.draftRecovery?.conflict == false
+        }
+        assertTrue(recovered.uiState.value.dirty)
+
+        recovered.save()
+        awaitFor(recovered) {
+            recovered.uiState.value.busyLabel == null && !recovered.uiState.value.dirty
+        }
+        assertEquals("draft body", file.readText())
+        assertTrue(runBlocking { repository.load(id) } is EditorDraftRead.Missing)
+    }
+
+    @Test
+    fun conflictingDraftBlocksSaveUntilExplicitChoice() {
+        val file = File(projectRoot, "conflict.txt")
+        file.writeText("original")
+        val repository = draftRepository()
+        val id = documentId("conflict.txt")
+
+        editorViewModel.open("conflict.txt")
+        await { editorViewModel.uiState.value.activePath == "conflict.txt" }
+        editorViewModel.onTextChanged("local draft", 0.."local draft".length)
+        awaitFor(editorViewModel) {
+            runBlocking { repository.load(id) } is EditorDraftRead.Usable
+        }
+
+        file.writeText("disk change")
+        file.setLastModified(file.lastModified() + 60_000L)
+        val recovered = EditorViewModel(app)
+        recovered.open("conflict.txt")
+        awaitFor(recovered) {
+            recovered.uiState.value.draftRecovery?.conflict == true &&
+                recovered.uiState.value.text == "disk change"
+        }
+
+        recovered.save()
+        assertTrue(recovered.uiState.value.error!!.contains("Resolve the recovered draft conflict"))
+        assertEquals("disk change", file.readText())
+
+        recovered.restoreDraft()
+        awaitFor(recovered) {
+            recovered.uiState.value.text == "local draft" &&
+                recovered.uiState.value.draftRecovery?.conflict == false
+        }
+        recovered.save()
+        awaitFor(recovered) {
+            recovered.uiState.value.busyLabel == null && !recovered.uiState.value.dirty
+        }
+        assertEquals("local draft", file.readText())
+        assertTrue(runBlocking { repository.load(id) } is EditorDraftRead.Missing)
+    }
+
+    @Test
+    fun keepingDiskFileDeletesConflictingDraft() {
+        val file = File(projectRoot, "keep-disk.txt")
+        file.writeText("original")
+        val repository = draftRepository()
+        val id = documentId("keep-disk.txt")
+
+        editorViewModel.open("keep-disk.txt")
+        await { editorViewModel.uiState.value.activePath == "keep-disk.txt" }
+        editorViewModel.onTextChanged("local draft", 0.."local draft".length)
+        awaitFor(editorViewModel) {
+            runBlocking { repository.load(id) } is EditorDraftRead.Usable
+        }
+
+        file.writeText("disk change")
+        file.setLastModified(file.lastModified() + 60_000L)
+        val recovered = EditorViewModel(app)
+        recovered.open("keep-disk.txt")
+        awaitFor(recovered) { recovered.uiState.value.draftRecovery?.conflict == true }
+
+        recovered.keepDiskDraft()
+        awaitFor(recovered) {
+            recovered.uiState.value.draftRecovery == null &&
+                recovered.uiState.value.text == "disk change"
+        }
+        assertEquals("disk change", file.readText())
+        assertTrue(runBlocking { repository.load(id) } is EditorDraftRead.Missing)
+    }
+
+    @Test
+    fun unreadableDraftIsReportedAndRawBytesAreRetained() {
+        val file = File(projectRoot, "corrupt.txt")
+        file.writeText("original")
+        editorViewModel.open("corrupt.txt")
+        await { editorViewModel.uiState.value.activePath == "corrupt.txt" }
+        editorViewModel.onTextChanged("draft body", 0.."draft body".length)
+        awaitFor(editorViewModel) {
+            runBlocking { draftRepository().load(documentId("corrupt.txt")) } is EditorDraftRead.Usable
+        }
+
+        val draftFile = File(app.container.paths.drafts, EditorDraftStore.fileName(documentId("corrupt.txt")))
+        val raw = "{\"schemaVersion\":99,\"text\":\"keep me\"}"
+        draftFile.writeText(raw)
+
+        val recovered = EditorViewModel(app)
+        recovered.open("corrupt.txt")
+        awaitFor(recovered) {
+            recovered.uiState.value.error?.contains("unreadable") == true
+        }
+        assertEquals("original", recovered.uiState.value.text)
+        assertEquals(raw, draftFile.readText())
     }
 
     private class SuspendedSaveGateway(

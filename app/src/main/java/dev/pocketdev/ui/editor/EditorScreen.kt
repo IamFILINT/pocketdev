@@ -88,6 +88,8 @@ fun EditorRoute(viewModel: EditorViewModel) {
         onReloadDisk = viewModel::reloadFromDisk,
         onKeepLocalChanges = viewModel::keepLocalChanges,
         onDiscardLocalChanges = viewModel::discardChanges,
+        onRestoreDraft = viewModel::restoreDraft,
+        onKeepDiskDraft = viewModel::keepDiskDraft,
         onClearFeedback = viewModel::clearFeedback,
     )
 }
@@ -114,6 +116,8 @@ fun EditorScreen(
     onReloadDisk: () -> Unit,
     onKeepLocalChanges: () -> Unit,
     onDiscardLocalChanges: () -> Unit,
+    onRestoreDraft: () -> Unit,
+    onKeepDiskDraft: () -> Unit,
     onClearFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -272,6 +276,36 @@ fun EditorScreen(
                         }
                         TextButton(onClick = onDiscardLocalChanges) {
                             Text("Discard my changes")
+                        }
+                    }
+                }
+            }
+        }
+
+        state.draftRecovery?.let { recovery ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        if (recovery.conflict) {
+                            "An unsaved draft conflicts with the file on disk."
+                        } else {
+                            "Recovered unsaved changes from this draft."
+                        },
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (recovery.conflict) {
+                            Button(onClick = onRestoreDraft) {
+                                Text("Restore draft")
+                            }
+                            Button(onClick = onKeepDiskDraft) {
+                                Text("Keep disk file")
+                            }
+                        }
+                        TextButton(onClick = onDiscardLocalChanges) {
+                            Text("Discard draft")
                         }
                     }
                 }

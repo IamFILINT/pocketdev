@@ -48,6 +48,8 @@ class EditorInputUiTest {
                 onReloadDisk = {},
                 onKeepLocalChanges = {},
                 onDiscardLocalChanges = {},
+                onRestoreDraft = {},
+                onKeepDiskDraft = {},
                 onClearFeedback = {},
             )
         }

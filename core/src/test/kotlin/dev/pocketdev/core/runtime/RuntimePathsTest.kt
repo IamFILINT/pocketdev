@@ -25,6 +25,8 @@ class RuntimePathsTest {
         val p = paths()
         assertFalse(p.projects.canonicalPath.startsWith(p.prefix.canonicalPath + File.separator))
         assertFalse(p.state.canonicalPath.startsWith(p.prefix.canonicalPath + File.separator))
+        assertFalse(p.drafts.canonicalPath.startsWith(p.prefix.canonicalPath + File.separator))
+        assertFalse(p.drafts.canonicalPath.startsWith(p.projects.canonicalPath + File.separator))
     }
 
     @Test
@@ -32,6 +34,7 @@ class RuntimePathsTest {
         val p = paths()
         assertEquals(File(File(tmp.root, "home"), "projects"), p.projects)
         assertEquals(File(File(tmp.root, "state"), "runtime.json"), p.journal)
+        assertEquals(File(File(tmp.root, "state"), "drafts"), p.drafts)
     }
 
     @Test
@@ -40,6 +43,7 @@ class RuntimePathsTest {
         p.ensureBaseDirectories()
         assertTrue(p.projects.isDirectory)
         assertTrue(p.state.isDirectory)
+        assertTrue(p.drafts.isDirectory)
         assertFalse(p.prefix.exists())
     }
 }

@@ -13,6 +13,28 @@ object Json {
 
     class JsonException(message: String) : RuntimeException(message)
 
+    fun escape(text: String): String = buildString(text.length + 8) {
+        append('"')
+        text.forEach { char ->
+            when (char) {
+                '"' -> append("\\\"")
+                '\\' -> append("\\\\")
+                '\b' -> append("\\b")
+                '\u000C' -> append("\\f")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> if (char < ' ') {
+                    append("\\u")
+                    append(char.code.toString(16).padStart(4, '0'))
+                } else {
+                    append(char)
+                }
+            }
+        }
+        append('"')
+    }
+
     fun parse(text: String): Any? {
         val parser = Parser(text)
         val value = parser.parseValue()

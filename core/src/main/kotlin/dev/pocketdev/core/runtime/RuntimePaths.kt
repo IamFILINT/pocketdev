@@ -23,11 +23,14 @@ class RuntimePaths(val filesDir: File) {
     /** PocketDev registry and runtime journal; never inside [prefix]. */
     val state: File = File(filesDir, "state")
 
+    /** App-private editor drafts; never inside [projects] or [prefix]. */
+    val drafts: File = File(state, "drafts")
+
     val journal: File = File(state, "runtime.json")
     val staging: File = File(filesDir, "usr.staging")
     val backup: File = File(filesDir, "usr.prev")
 
     fun ensureBaseDirectories() {
-        listOf(projects, state).forEach { it.mkdirs() }
+        listOf(projects, state, drafts).forEach { it.mkdirs() }
     }
 }
