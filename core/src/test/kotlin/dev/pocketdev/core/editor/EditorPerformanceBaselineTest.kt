@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 class EditorPerformanceBaselineTest {
-    private enum class Kind(val name: String, val language: EditorLanguage) {
+    private enum class Kind(val label: String, val language: EditorLanguage) {
         KOTLIN("kotlin", EditorLanguage.KOTLIN),
         JSON("json", EditorLanguage.JSON),
         MARKDOWN("markdown", EditorLanguage.MARKDOWN),
@@ -226,7 +226,7 @@ class EditorPerformanceBaselineTest {
     private fun emit(fixture: Fixture, operation: String, stats: Stats, extra: String = "") {
         println(
             "M7_5_BENCH_CORE {" +
-                "\"fixture\":\"${fixture.kind.name}\"," +
+                "\"fixture\":\"${fixture.kind.label}\"," +
                 "\"targetBytes\":${fixture.targetBytes}," +
                 "\"actualBytes\":${fixture.bytes.size}," +
                 "\"language\":\"${fixture.kind.language.name}\"," +

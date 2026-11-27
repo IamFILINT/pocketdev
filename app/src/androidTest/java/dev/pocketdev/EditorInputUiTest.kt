@@ -151,7 +151,9 @@ class EditorInputUiTest {
                     selection = (offset + 1)..(offset + 1),
                 )
             }
-            setEditorContent(state)
+            setEditorContent(state) { text, selection ->
+                state = state.copy(text = text, selection = selection)
+            }
             composeRule.waitForIdle()
             updateDurationsMs.add((System.nanoTime() - started) / 1_000_000L)
         }
