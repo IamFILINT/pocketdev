@@ -58,7 +58,7 @@ class EditorUiTest {
         composeRule.waitUntil(timeoutMillis = 10_000) {
             composeRule.onAllNodesWithText("Line 1, column 1").fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText("editor-ui.kt").fetchSemanticsNode()
+        composeRule.onAllNodesWithText("editor-ui.kt", substring = false).onFirst().fetchSemanticsNode()
         composeRule.onNodeWithText("val greeting = \"hi\"", substring = true).fetchSemanticsNode()
         composeRule.onNodeWithText("Save").fetchSemanticsNode()
         composeRule.onNodeWithText("Line 1, column 1").fetchSemanticsNode()
