@@ -7,6 +7,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
@@ -55,8 +56,9 @@ class EditorUiTest {
             if (found) logCounts("button appeared")
             found
         }
+        composeRule.onNodeWithText("Open in editor", substring = false).fetchSemanticsNode()
         logCounts("before click")
-        composeRule.onNodeWithText("Open in editor", substring = false).performClick()
+        composeRule.onNodeWithTag("open_in_editor").performClick()
         composeRule.waitForIdle()
         logCounts("after click")
 

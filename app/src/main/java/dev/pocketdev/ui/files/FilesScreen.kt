@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -274,14 +275,13 @@ fun FilesScreen(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(state.entries, key = { it.relativePath }) { entry ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpen(entry) },
-                    ) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
                                 text = if (entry.isDirectory) "[dir] ${entry.name}" else "[file] ${entry.name}",
+                                modifier = Modifier
+                                    .testTag("file_entry_${entry.relativePath}")
+                                    .clickable { onOpen(entry) },
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
@@ -291,7 +291,10 @@ fun FilesScreen(
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 if (entry.kind == FileKind.TEXT) {
-                                    TextButton(onClick = { onOpenInEditor(entry) }) {
+                                    TextButton(
+                                        onClick = { onOpenInEditor(entry) },
+                                        modifier = Modifier.testTag("open_in_editor"),
+                                    ) {
                                         Text(stringResource(R.string.files_open_in_editor))
                                     }
                                 }
