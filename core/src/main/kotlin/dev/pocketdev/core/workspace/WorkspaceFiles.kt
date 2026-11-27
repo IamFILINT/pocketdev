@@ -383,6 +383,7 @@ class WorkspaceFiles(private val root: File) {
         const val DEFAULT_MAX_TEXT_BYTES = 1_048_576
         private const val MAX_SEARCH_DEPTH = 12
         private val ENTRY_ORDER = compareByDescending<FileEntry> { it.isDirectory }
+            .thenBy { it.isHidden }
             .thenBy { it.name.lowercase() }
     }
 }

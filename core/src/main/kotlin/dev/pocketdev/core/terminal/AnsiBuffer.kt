@@ -216,6 +216,7 @@ class AnsiBuffer(initialCols: Int = 80, initialRows: Int = 24) {
     }
 
     private fun newline() {
+        cursorCol = 0
         if (cursorRow == rows - 1) {
             scrollback.addLast(lines.removeFirst())
             lines.add(blankLine())

@@ -138,11 +138,12 @@ object Json {
             throw JsonException("unterminated string")
         }
 
-        private fun parseLiteral(literal: String, value: Any?) {
+        private fun parseLiteral(literal: String, value: Any?): Any? {
             if (!text.startsWith(literal, offset)) {
                 throw JsonException("invalid literal at offset $offset")
             }
             offset += literal.length
+            return value
         }
 
         private fun parseNumber(): Any {

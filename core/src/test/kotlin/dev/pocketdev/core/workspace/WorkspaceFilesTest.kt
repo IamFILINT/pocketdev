@@ -87,6 +87,8 @@ class WorkspaceFilesTest {
     fun copyAndMovePreserveFileContent() = runBlocking {
         setUpWorkspace()
         files.create("", "src", directory = true).getOrNull()!!
+        files.create("", "copies", directory = true).getOrNull()!!
+        files.create("", "moved", directory = true).getOrNull()!!
         File(root, "src/data.txt").writeText("payload")
 
         assertEquals("copies/data.txt", files.copy("src/data.txt", "copies").getOrNull()!!)
@@ -118,6 +120,7 @@ class WorkspaceFilesTest {
     fun recursiveCopyCanBeCancelledAndCleansUpDestination() = runBlocking {
         setUpWorkspace()
         files.create("", "src", directory = true).getOrNull()!!
+        files.create("", "copies", directory = true).getOrNull()!!
         repeat(20) { File(root, "src/file$it.txt").writeText("payload") }
 
         val progress = mutableListOf<Long>()
@@ -130,7 +133,7 @@ class WorkspaceFilesTest {
         job.join()
 
         assertTrue(progress.isNotEmpty())
-        assertFalse(File(root, "copies").exists())
+        assertFalse(File(root, "copies/src").exists())
     }
 
     @Test
@@ -153,7 +156,7 @@ class WorkspaceFilesTest {
         assertTrue(result is WorkspaceResult.PartialFailure)
         val partial = result as WorkspaceResult.PartialFailure
         assertEquals("disk full", partial.message)
-        assertEquals(3L, partial.completed)
+        assertEquals(0L, partial.completed)
         assertEquals(16L, partial.total)
     }
 

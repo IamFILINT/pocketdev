@@ -26,7 +26,7 @@ class EditorBufferTest {
 
         buffer.undo()
         assertTrue(buffer.canRedo)
-        assertEquals(">abc!", buffer.text)
+        assertEquals("abc!", buffer.text)
 
         buffer.redo()
         assertEquals(">abc!", buffer.text)

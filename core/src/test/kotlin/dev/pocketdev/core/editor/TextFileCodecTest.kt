@@ -33,11 +33,10 @@ class TextFileCodecTest {
             newlineStyle = NewlineStyle.CRLF,
         )
 
-        assertEquals(
-            byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) +
-                "a\r\nb".toByteArray(StandardCharsets.UTF_8).toList(),
-            bytes.toList(),
-        )
+        val expected = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()).toList() +
+            "a\r\nb".toByteArray(StandardCharsets.UTF_8).toList()
+
+        assertEquals(expected, bytes.toList())
     }
 
     @Test
