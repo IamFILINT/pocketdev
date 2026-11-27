@@ -76,11 +76,14 @@ class EditorViewModelTest {
         return EditorDocumentId(project.id, project.rootPath, path)
     }
 
-    private fun viewModelWith(repository: EditorDraftRepository) = EditorViewModel(
+    private fun viewModelWith(
+        repository: EditorDraftRepository,
+        workspaceGateway: EditorWorkspaceGateway = DefaultEditorWorkspaceGateway(app.container),
+    ) = EditorViewModel(
         application = app,
         ioDispatcher = Dispatchers.IO,
         mainDispatcher = Dispatchers.Main,
-        workspaceGateway = DefaultEditorWorkspaceGateway(app.container),
+        workspaceGateway = workspaceGateway,
         draftRepository = repository,
     )
 
@@ -370,18 +373,18 @@ class EditorViewModelTest {
 
     @Test
     fun unsavedDraftPersistsAndRecoversAfterRestart() {
-        val file = File(projectRoot, "draft.txt")
-        file.writeText("original")
+        val gateway = InMemoryWorkspaceGateway("original")
         val repository = InMemoryDraftRepository()
         val id = documentId("draft.txt")
-        editorViewModel = viewModelWith(repository)
+        editorViewModel = viewModelWith(repository, gateway)
 
         editorViewModel.open("draft.txt")
         await { editorViewModel.uiState.value.activePath == "draft.txt" }
         editorViewModel.onTextChanged("draft body", 0.."draft body".length)
         awaitFor(editorViewModel) { repository.hasDraft(id) }
+        assertEquals("original", gateway.text)
 
-        val recovered = viewModelWith(repository)
+        val recovered = viewModelWith(repository, gateway)
         recovered.open("draft.txt")
         awaitFor(recovered) {
             recovered.uiState.value.text == "draft body" &&
@@ -393,26 +396,25 @@ class EditorViewModelTest {
         awaitFor(recovered) {
             recovered.uiState.value.busyLabel == null && !recovered.uiState.value.dirty
         }
-        assertEquals("draft body", file.readText())
+        assertEquals("draft body", gateway.text)
         awaitFor(recovered) { !repository.hasDraft(id) }
     }
 
     @Test
     fun conflictingDraftBlocksSaveUntilExplicitChoice() {
-        val file = File(projectRoot, "conflict.txt")
-        file.writeText("original")
+        val gateway = InMemoryWorkspaceGateway("original")
         val repository = InMemoryDraftRepository()
         val id = documentId("conflict.txt")
-        editorViewModel = viewModelWith(repository)
+        editorViewModel = viewModelWith(repository, gateway)
 
         editorViewModel.open("conflict.txt")
         await { editorViewModel.uiState.value.activePath == "conflict.txt" }
         editorViewModel.onTextChanged("local draft", 0.."local draft".length)
         awaitFor(editorViewModel) { repository.hasDraft(id) }
+        assertEquals("original", gateway.text)
 
-        file.writeText("disk change")
-        file.setLastModified(file.lastModified() + 60_000L)
-        val recovered = viewModelWith(repository)
+        gateway.overwrite("disk change")
+        val recovered = viewModelWith(repository, gateway)
         recovered.open("conflict.txt")
         awaitFor(recovered) {
             recovered.uiState.value.draftRecovery?.conflict == true &&
@@ -421,7 +423,7 @@ class EditorViewModelTest {
 
         recovered.save()
         assertTrue(recovered.uiState.value.error!!.contains("Resolve the recovered draft conflict"))
-        assertEquals("disk change", file.readText())
+        assertEquals("disk change", gateway.text)
 
         recovered.restoreDraft()
         awaitFor(recovered) {
@@ -432,26 +434,25 @@ class EditorViewModelTest {
         awaitFor(recovered) {
             recovered.uiState.value.busyLabel == null && !recovered.uiState.value.dirty
         }
-        assertEquals("local draft", file.readText())
+        assertEquals("local draft", gateway.text)
         awaitFor(recovered) { !repository.hasDraft(id) }
     }
 
     @Test
     fun keepingDiskFileDeletesConflictingDraft() {
-        val file = File(projectRoot, "keep-disk.txt")
-        file.writeText("original")
+        val gateway = InMemoryWorkspaceGateway("original")
         val repository = InMemoryDraftRepository()
         val id = documentId("keep-disk.txt")
-        editorViewModel = viewModelWith(repository)
+        editorViewModel = viewModelWith(repository, gateway)
 
         editorViewModel.open("keep-disk.txt")
         await { editorViewModel.uiState.value.activePath == "keep-disk.txt" }
         editorViewModel.onTextChanged("local draft", 0.."local draft".length)
         awaitFor(editorViewModel) { repository.hasDraft(id) }
+        assertEquals("original", gateway.text)
 
-        file.writeText("disk change")
-        file.setLastModified(file.lastModified() + 60_000L)
-        val recovered = viewModelWith(repository)
+        gateway.overwrite("disk change")
+        val recovered = viewModelWith(repository, gateway)
         recovered.open("keep-disk.txt")
         awaitFor(recovered) { recovered.uiState.value.draftRecovery?.conflict == true }
 
@@ -460,33 +461,79 @@ class EditorViewModelTest {
             recovered.uiState.value.draftRecovery == null &&
                 recovered.uiState.value.text == "disk change"
         }
-        assertEquals("disk change", file.readText())
+        assertEquals("disk change", gateway.text)
         awaitFor(recovered) { !repository.hasDraft(id) }
     }
 
     @Test
     fun unreadableDraftIsReportedAndRawBytesAreRetained() {
-        val file = File(projectRoot, "corrupt.txt")
-        file.writeText("original")
+        val gateway = InMemoryWorkspaceGateway("original")
         val repository = InMemoryDraftRepository()
         val id = documentId("corrupt.txt")
-        editorViewModel = viewModelWith(repository)
+        editorViewModel = viewModelWith(repository, gateway)
 
         editorViewModel.open("corrupt.txt")
         await { editorViewModel.uiState.value.activePath == "corrupt.txt" }
         editorViewModel.onTextChanged("draft body", 0.."draft body".length)
         awaitFor(editorViewModel) { repository.hasDraft(id) }
+        assertEquals("original", gateway.text)
 
         val raw = "{\"schemaVersion\":99,\"text\":\"keep me\"}"
         repository.putRaw(id, raw)
 
-        val recovered = viewModelWith(repository)
+        val recovered = viewModelWith(repository, gateway)
         recovered.open("corrupt.txt")
         awaitFor(recovered) {
             recovered.uiState.value.error?.contains("unreadable") == true
         }
         assertEquals("original", recovered.uiState.value.text)
         assertEquals(raw, repository.raw(id))
+    }
+
+    private class InMemoryWorkspaceGateway(
+        initialText: String,
+    ) : EditorWorkspaceGateway {
+        @Volatile
+        var text: String = initialText
+            private set
+
+        override suspend fun readTextFile(documentId: EditorDocumentId): WorkspaceResult<TextFileSnapshot> =
+            WorkspaceResult.Success(snapshot())
+
+        override suspend fun writeTextFile(request: EditorSaveSnapshot): WorkspaceResult<FileSignature> {
+            text = request.text
+            return WorkspaceResult.Success(snapshot().signature)
+        }
+
+        fun overwrite(value: String) {
+            text = value
+        }
+
+        private fun snapshot(): TextFileSnapshot {
+            val current = text
+            val styles = Regex("\r\n|\n|\r").findAll(current).map { match ->
+                when (match.value) {
+                    "\r\n" -> NewlineStyle.CRLF
+                    "\r" -> NewlineStyle.CR
+                    else -> NewlineStyle.LF
+                }
+            }.toList()
+            val bytes = TextFileCodec.encode(
+                text = current,
+                encoding = TextEncoding.UTF_8,
+                newlineStyle = NewlineStyle.LF,
+                newlineStyles = styles,
+            )
+            return TextFileSnapshot(
+                text = current,
+                encoding = TextEncoding.UTF_8,
+                newlineStyle = NewlineStyle.LF,
+                newlineStyles = styles,
+                signature = FileSignature.fromBytes(bytes, 1L),
+                truncated = false,
+                sizeBytes = bytes.size.toLong(),
+            )
+        }
     }
 
     private class InMemoryDraftRepository : EditorDraftRepository {
