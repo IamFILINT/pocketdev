@@ -57,6 +57,28 @@ class WorkspaceFilesEditorTest {
     }
 
     @Test
+    fun `mixed newline file round trips byte for byte`() = runBlocking {
+        val root = temporaryFolder.newFolder()
+        val files = WorkspaceFiles(root)
+        val original = "a\r\nb\rc\nd".toByteArray(StandardCharsets.UTF_8)
+        val file = File(root, "mixed.txt")
+        file.writeBytes(original)
+        val snapshot = files.readTextFile("mixed.txt").getOrNull()!!
+
+        val result = files.writeTextFile(
+            relativePath = "mixed.txt",
+            text = snapshot.text,
+            encoding = snapshot.encoding,
+            newlineStyle = snapshot.newlineStyle,
+            newlineStyles = snapshot.newlineStyles,
+            expectedSignature = snapshot.signature,
+        )
+
+        assertTrue(result is WorkspaceResult.Success)
+        assertTrue(original.contentEquals(file.readBytes()))
+    }
+
+    @Test
     fun `stale signature prevents overwriting externally changed files`() = runBlocking {
         val root = temporaryFolder.newFolder()
         val files = WorkspaceFiles(root)

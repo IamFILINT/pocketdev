@@ -46,10 +46,6 @@ object PathSafety {
         }
     }
 
-    /**
-     * Resolves [relative] inside [root] while rejecting symbolic links in every
-     * existing path component, then verifies canonical containment.
-     */
     fun resolveWithinNoFollow(root: File, relative: String): File? {
         if (!isSafeRelativePath(relative)) return null
         val rootCanonical = root.canonicalFile

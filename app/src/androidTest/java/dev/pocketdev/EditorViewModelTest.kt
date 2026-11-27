@@ -287,7 +287,12 @@ class EditorViewModelTest {
         override suspend fun writeTextFile(request: EditorSaveSnapshot): WorkspaceResult<FileSignature> {
             writeStarted.countDown()
             releaseSave.await()
-            val bytes = TextFileCodec.encode(request.text, request.encoding, request.newlineStyle)
+            val bytes = TextFileCodec.encode(
+                text = request.text,
+                encoding = request.encoding,
+                newlineStyle = request.newlineStyle,
+                newlineStyles = request.newlineStyles,
+            )
             target.writeBytes(bytes)
             return WorkspaceResult.Success(FileSignature.fromBytes(bytes, target.lastModified()))
         }

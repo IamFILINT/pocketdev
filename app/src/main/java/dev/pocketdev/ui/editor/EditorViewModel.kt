@@ -220,6 +220,7 @@ class EditorViewModel @JvmOverloads constructor(
             revision = buffer.revision,
             encoding = state.encoding,
             newlineStyle = state.newlineStyle,
+            newlineStyles = snapshots[path]?.newlineStyles ?: emptyList(),
             expectedSignature = snapshots[path]?.signature,
         )
         enqueueSave(path, documentId, request)

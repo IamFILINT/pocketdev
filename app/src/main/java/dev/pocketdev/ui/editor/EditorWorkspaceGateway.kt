@@ -32,6 +32,7 @@ class DefaultEditorWorkspaceGateway(
                 text = request.text,
                 encoding = request.encoding,
                 newlineStyle = request.newlineStyle,
+                newlineStyles = request.newlineStyles,
                 expectedSignature = request.expectedSignature,
             )
         }

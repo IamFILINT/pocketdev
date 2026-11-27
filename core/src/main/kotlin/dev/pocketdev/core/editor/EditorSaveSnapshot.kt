@@ -6,5 +6,6 @@ data class EditorSaveSnapshot(
     val revision: Long,
     val encoding: TextEncoding,
     val newlineStyle: NewlineStyle,
+    val newlineStyles: List<NewlineStyle>,
     val expectedSignature: FileSignature?,
 )

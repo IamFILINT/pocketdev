@@ -284,6 +284,7 @@ class WorkspaceFiles(
         text: String,
         encoding: TextEncoding,
         newlineStyle: NewlineStyle,
+        newlineStyles: List<NewlineStyle> = emptyList(),
         expectedSignature: FileSignature? = null,
     ): WorkspaceResult<FileSignature> {
         val lockKey = "${canonicalRoot.path}\u0000${normalize(relativePath)}"
@@ -297,7 +298,7 @@ class WorkspaceFiles(
                 if (expectedSignature != null) {
                     require(signatureOf(target) == expectedSignature) { "File changed on disk" }
                 }
-                val bytes = TextFileCodec.encode(text, encoding, newlineStyle)
+                val bytes = TextFileCodec.encode(text, encoding, newlineStyle, newlineStyles)
                 val staging = File(
                     target.parentFile,
                     ".${target.name}.pocketdev-${UUID.randomUUID()}.tmp",

@@ -40,6 +40,7 @@ data class TextFileSnapshot(
     val text: String,
     val encoding: TextEncoding,
     val newlineStyle: NewlineStyle,
+    val newlineStyles: List<NewlineStyle>,
     val signature: FileSignature,
     val truncated: Boolean,
     val sizeBytes: Long,
