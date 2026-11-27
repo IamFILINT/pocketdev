@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.core.app.ApplicationProvider
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import java.io.File
@@ -61,6 +62,7 @@ class EditorUiTest {
         val buttonBounds = composeRule.onNodeWithTag("open_in_editor").fetchSemanticsNode().boundsInRoot
         Log.d(TAG, "bounds title=$titleBounds button=$buttonBounds")
         logCounts("before click")
+        composeRule.onNodeWithTag("files_list").performScrollToIndex(0)
         composeRule.onNodeWithTag("open_in_editor").assertIsDisplayed().performClick()
         composeRule.waitForIdle()
         logCounts("after click")

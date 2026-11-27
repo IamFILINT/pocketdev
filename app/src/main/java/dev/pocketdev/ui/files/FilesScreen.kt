@@ -273,7 +273,8 @@ fun FilesScreen(
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .testTag("files_list"),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(state.entries, key = { it.relativePath }) { entry ->
