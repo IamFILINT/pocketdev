@@ -1,5 +1,7 @@
 package dev.pocketdev
 
+import android.os.Build
+import android.view.Choreographer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,6 +22,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.util.Locale
 
 class EditorInputUiTest {
     @get:Rule
@@ -108,4 +111,102 @@ class EditorInputUiTest {
             assertTrue(state.selection.last <= state.text.length)
         }
     }
+
+    @Test
+    fun recompositionAndFrameBaselinesAreInstrumented() {
+        val fixtureText = performanceFixture(100 * 1024)
+        val updateSamples = 8
+        var state by mutableStateOf(editorState(text = fixtureText))
+        setEditorContent(state) { text, selection ->
+            state = state.copy(text = text, selection = selection)
+        }
+        composeRule.waitForIdle()
+
+        val frameIntervalsMs = ArrayList<Long>()
+        composeRule.runOnIdle {
+            val choreographer = Choreographer.getInstance()
+            var previousFrameNanos = -1L
+            var frameCount = 0
+            val callback = object : Choreographer.FrameCallback {
+                override fun doFrame(frameTimeNanos: Long) {
+                    if (previousFrameNanos >= 0L) {
+                        frameIntervalsMs.add((frameTimeNanos - previousFrameNanos) / 1_000_000L)
+                    }
+                    previousFrameNanos = frameTimeNanos
+                    frameCount += 1
+                    if (frameCount <= 40) choreographer.postFrameCallback(this)
+                }
+            }
+            choreographer.postFrameCallback(callback)
+        }
+
+        val updateDurationsMs = ArrayList<Long>()
+        repeat(updateSamples) {
+            val started = System.nanoTime()
+            composeRule.runOnIdle {
+                val current = state.text
+                val offset = current.length / 2
+                state = state.copy(
+                    text = current.substring(0, offset) + "x" + current.substring(offset),
+                    selection = (offset + 1)..(offset + 1),
+                )
+            }
+            setEditorContent(state)
+            composeRule.waitForIdle()
+            updateDurationsMs.add((System.nanoTime() - started) / 1_000_000L)
+        }
+        Thread.sleep(250)
+
+        var frameSnapshot = emptyList<Long>()
+        composeRule.runOnIdle { frameSnapshot = frameIntervalsMs.toList() }
+        composeRule.runOnIdle {
+            assertEquals(fixtureText.length + updateSamples, state.text.length)
+            assertTrue(state.selection.last <= state.text.length)
+        }
+
+        val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"
+        println(
+            "M7_5_BENCH_ANDROID {" +
+                "\"runner\":\"android-instrumentation\"," +
+                "\"api\":${Build.VERSION.SDK_INT}," +
+                "\"abi\":\"$abi\"," +
+                "\"fixtureBytes\":${fixtureText.toByteArray().size}," +
+                "\"samples\":$updateSamples," +
+                "\"warmups\":1," +
+                "\"recomposeP50Ms\":${fmtMs(percentileMs(updateDurationsMs, 0.50))}," +
+                "\"recomposeP95Ms\":${fmtMs(percentileMs(updateDurationsMs, 0.95))}," +
+                "\"frameSamples\":${frameSnapshot.size}," +
+                "\"frameP50Ms\":${fmtMs(percentileMs(frameSnapshot, 0.50))}," +
+                "\"frameP95Ms\":${fmtMs(percentileMs(frameSnapshot, 0.95))}" +
+                "}",
+        )
+    }
+
+    private fun performanceFixture(targetBytes: Int): String {
+        val builder = StringBuilder(targetBytes)
+        var byteCount = 0
+        var index = 0
+        while (byteCount < targetBytes) {
+            val chunk = if (index % 8 == 0) {
+                "long line 🚀 ${"x".repeat(256)}\n"
+            } else {
+                "line $index val café = \"🚀 text\"\n"
+            }
+            builder.append(chunk)
+            byteCount += chunk.toByteArray().size
+            index++
+        }
+        return builder.toString()
+    }
+
+    private fun percentileMs(values: List<Long>, percentile: Double): Double {
+        if (values.isEmpty()) return 0.0
+        val sorted = values.sorted()
+        val rank = (percentile * (sorted.size - 1)).coerceIn(0.0, (sorted.size - 1).toDouble())
+        val lower = rank.toInt()
+        val upper = minOf(lower + 1, sorted.lastIndex)
+        return sorted[lower] + (sorted[upper] - sorted[lower]) * (rank - lower)
+    }
+
+    private fun fmtMs(value: Double): String = String.format(Locale.US, "%.3f", value)
 }
