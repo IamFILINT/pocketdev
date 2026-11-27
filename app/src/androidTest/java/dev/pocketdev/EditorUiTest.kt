@@ -44,6 +44,9 @@ class EditorUiTest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Search files", substring = false).assertIsDisplayed()
 
+        composeRule.onNodeWithText("Show hidden files").performClick()
+        composeRule.waitForIdle()
+
         composeRule.onNodeWithText("Open in editor", substring = false).performClick()
 
         composeRule.onNodeWithText("editor-ui.kt").fetchSemanticsNode()
