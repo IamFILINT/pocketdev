@@ -85,8 +85,11 @@ object EditorDraftStore {
         }
         val document = requireObject(root, "documentId")
         val signature = requireObject(root, "baselineSignature")
-        val newlineStyles = (requireArray(root, "newlineStyles")).map { value ->
-            enumValue<NewlineStyle>("newlineStyles", requireString(value, "newlineStyle"))
+        val newlineStyles = requireArray(root, "newlineStyles").map { value ->
+            enumValue<NewlineStyle>(
+                "newlineStyles",
+                value.asString() ?: throw IllegalArgumentException("Invalid newlineStyles value"),
+            )
         }
         return EditorDraft(
             schemaVersion = schemaVersion,
@@ -136,10 +139,6 @@ object EditorDraftStore {
 
     private fun requireString(root: Map<String, Any?>, key: String): String =
         root[key].asString() ?: throw IllegalArgumentException("Missing or invalid $key")
-
-    private fun requireString(value: Any?, key: String): String =
-        value.asObject()?.get(key).asString()
-            ?: throw IllegalArgumentException("Missing or invalid $key")
 
     private fun requireLong(root: Map<String, Any?>, key: String): Long =
         root[key].asLong() ?: throw IllegalArgumentException("Missing or invalid $key")

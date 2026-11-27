@@ -3,19 +3,25 @@ package dev.pocketdev
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pocketdev.core.editor.EditorDocumentId
+import dev.pocketdev.core.editor.EditorDraft
 import dev.pocketdev.core.editor.EditorDraftRead
 import dev.pocketdev.core.editor.EditorDraftStore
 import dev.pocketdev.core.editor.EditorSaveSnapshot
 import dev.pocketdev.core.editor.FileSignature
+import dev.pocketdev.core.editor.NewlineStyle
 import dev.pocketdev.core.editor.TextFileCodec
+import dev.pocketdev.core.editor.TextEncoding
 import dev.pocketdev.core.editor.TextFileSnapshot
 import dev.pocketdev.core.workspace.WorkspaceResult
 import dev.pocketdev.ui.editor.DefaultEditorDraftRepository
+import dev.pocketdev.ui.editor.DefaultEditorWorkspaceGateway
+import dev.pocketdev.ui.editor.EditorDraftRepository
 import dev.pocketdev.ui.editor.EditorViewModel
 import dev.pocketdev.ui.editor.EditorWorkspaceGateway
 import dev.pocketdev.ui.projects.CreateProjectResult
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
@@ -70,7 +76,13 @@ class EditorViewModelTest {
         return EditorDocumentId(project.id, project.rootPath, path)
     }
 
-    private fun draftRepository() = DefaultEditorDraftRepository(app.container)
+    private fun viewModelWith(repository: EditorDraftRepository) = EditorViewModel(
+        application = app,
+        ioDispatcher = Dispatchers.IO,
+        mainDispatcher = Dispatchers.Main,
+        workspaceGateway = DefaultEditorWorkspaceGateway(app.container),
+        draftRepository = repository,
+    )
 
     private fun await(timeoutMs: Long = 10_000, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeoutMs
@@ -360,17 +372,16 @@ class EditorViewModelTest {
     fun unsavedDraftPersistsAndRecoversAfterRestart() {
         val file = File(projectRoot, "draft.txt")
         file.writeText("original")
-        val repository = draftRepository()
+        val repository = InMemoryDraftRepository()
         val id = documentId("draft.txt")
+        editorViewModel = viewModelWith(repository)
 
         editorViewModel.open("draft.txt")
         await { editorViewModel.uiState.value.activePath == "draft.txt" }
         editorViewModel.onTextChanged("draft body", 0.."draft body".length)
-        awaitFor(editorViewModel) {
-            runBlocking { repository.load(id) } is EditorDraftRead.Usable
-        }
+        awaitFor(editorViewModel) { repository.hasDraft(id) }
 
-        val recovered = EditorViewModel(app)
+        val recovered = viewModelWith(repository)
         recovered.open("draft.txt")
         awaitFor(recovered) {
             recovered.uiState.value.text == "draft body" &&
@@ -383,26 +394,25 @@ class EditorViewModelTest {
             recovered.uiState.value.busyLabel == null && !recovered.uiState.value.dirty
         }
         assertEquals("draft body", file.readText())
-        assertTrue(runBlocking { repository.load(id) } is EditorDraftRead.Missing)
+        awaitFor(recovered) { !repository.hasDraft(id) }
     }
 
     @Test
     fun conflictingDraftBlocksSaveUntilExplicitChoice() {
         val file = File(projectRoot, "conflict.txt")
         file.writeText("original")
-        val repository = draftRepository()
+        val repository = InMemoryDraftRepository()
         val id = documentId("conflict.txt")
+        editorViewModel = viewModelWith(repository)
 
         editorViewModel.open("conflict.txt")
         await { editorViewModel.uiState.value.activePath == "conflict.txt" }
         editorViewModel.onTextChanged("local draft", 0.."local draft".length)
-        awaitFor(editorViewModel) {
-            runBlocking { repository.load(id) } is EditorDraftRead.Usable
-        }
+        awaitFor(editorViewModel) { repository.hasDraft(id) }
 
         file.writeText("disk change")
         file.setLastModified(file.lastModified() + 60_000L)
-        val recovered = EditorViewModel(app)
+        val recovered = viewModelWith(repository)
         recovered.open("conflict.txt")
         awaitFor(recovered) {
             recovered.uiState.value.draftRecovery?.conflict == true &&
@@ -423,26 +433,25 @@ class EditorViewModelTest {
             recovered.uiState.value.busyLabel == null && !recovered.uiState.value.dirty
         }
         assertEquals("local draft", file.readText())
-        assertTrue(runBlocking { repository.load(id) } is EditorDraftRead.Missing)
+        awaitFor(recovered) { !repository.hasDraft(id) }
     }
 
     @Test
     fun keepingDiskFileDeletesConflictingDraft() {
         val file = File(projectRoot, "keep-disk.txt")
         file.writeText("original")
-        val repository = draftRepository()
+        val repository = InMemoryDraftRepository()
         val id = documentId("keep-disk.txt")
+        editorViewModel = viewModelWith(repository)
 
         editorViewModel.open("keep-disk.txt")
         await { editorViewModel.uiState.value.activePath == "keep-disk.txt" }
         editorViewModel.onTextChanged("local draft", 0.."local draft".length)
-        awaitFor(editorViewModel) {
-            runBlocking { repository.load(id) } is EditorDraftRead.Usable
-        }
+        awaitFor(editorViewModel) { repository.hasDraft(id) }
 
         file.writeText("disk change")
         file.setLastModified(file.lastModified() + 60_000L)
-        val recovered = EditorViewModel(app)
+        val recovered = viewModelWith(repository)
         recovered.open("keep-disk.txt")
         awaitFor(recovered) { recovered.uiState.value.draftRecovery?.conflict == true }
 
@@ -452,31 +461,59 @@ class EditorViewModelTest {
                 recovered.uiState.value.text == "disk change"
         }
         assertEquals("disk change", file.readText())
-        assertTrue(runBlocking { repository.load(id) } is EditorDraftRead.Missing)
+        awaitFor(recovered) { !repository.hasDraft(id) }
     }
 
     @Test
     fun unreadableDraftIsReportedAndRawBytesAreRetained() {
         val file = File(projectRoot, "corrupt.txt")
         file.writeText("original")
+        val repository = InMemoryDraftRepository()
+        val id = documentId("corrupt.txt")
+        editorViewModel = viewModelWith(repository)
+
         editorViewModel.open("corrupt.txt")
         await { editorViewModel.uiState.value.activePath == "corrupt.txt" }
         editorViewModel.onTextChanged("draft body", 0.."draft body".length)
-        awaitFor(editorViewModel) {
-            runBlocking { draftRepository().load(documentId("corrupt.txt")) } is EditorDraftRead.Usable
-        }
+        awaitFor(editorViewModel) { repository.hasDraft(id) }
 
-        val draftFile = File(app.container.paths.drafts, EditorDraftStore.fileName(documentId("corrupt.txt")))
         val raw = "{\"schemaVersion\":99,\"text\":\"keep me\"}"
-        draftFile.writeText(raw)
+        repository.putRaw(id, raw)
 
-        val recovered = EditorViewModel(app)
+        val recovered = viewModelWith(repository)
         recovered.open("corrupt.txt")
         awaitFor(recovered) {
             recovered.uiState.value.error?.contains("unreadable") == true
         }
         assertEquals("original", recovered.uiState.value.text)
-        assertEquals(raw, draftFile.readText())
+        assertEquals(raw, repository.raw(id))
+    }
+
+    private class InMemoryDraftRepository : EditorDraftRepository {
+        private val drafts = ConcurrentHashMap<String, EditorDraft>()
+        private val raw = ConcurrentHashMap<String, String>()
+
+        override suspend fun save(draft: EditorDraft) {
+            drafts[draft.documentId.key] = draft
+            raw[draft.documentId.key] = EditorDraftStore.serialize(draft)
+        }
+
+        override suspend fun load(documentId: EditorDocumentId): EditorDraftRead =
+            raw[documentId.key]?.let(EditorDraftStore::read) ?: EditorDraftRead.Missing
+
+        override suspend fun delete(documentId: EditorDocumentId) {
+            drafts.remove(documentId.key)
+            raw.remove(documentId.key)
+        }
+
+        fun hasDraft(documentId: EditorDocumentId) = drafts.containsKey(documentId.key)
+
+        fun putRaw(documentId: EditorDocumentId, text: String) {
+            drafts.remove(documentId.key)
+            raw[documentId.key] = text
+        }
+
+        fun raw(documentId: EditorDocumentId) = raw[documentId.key]
     }
 
     private class SuspendedSaveGateway(
@@ -518,6 +555,67 @@ class EditorViewModelTest {
 
         fun releaseWrite() {
             releaseSave.complete(Unit)
+        }
+    }
+}
+
+@RunWith(AndroidJUnit4::class)
+class EditorDraftRepositoryTest {
+    private lateinit var app: PocketDevApplication
+    private lateinit var projectsRoot: File
+
+    @Before
+    fun setUp() {
+        app = ApplicationProvider.getApplicationContext()
+        projectsRoot = app.container.projectsRoot
+        ProjectsViewModel(app).clearRegistry()
+        projectsRoot.deleteRecursively()
+        projectsRoot.mkdirs()
+        app.container.paths.drafts.deleteRecursively()
+        app.container.paths.drafts.mkdirs()
+    }
+
+    @After
+    fun tearDown() {
+        projectsRoot.deleteRecursively()
+        app.container.paths.drafts.deleteRecursively()
+    }
+
+    @Test
+    fun storesDraftsOnlyInAppPrivateDirectoryAndRetainsUnreadableRawBytes() {
+        val id = EditorDocumentId("workspace", "/pocketdev/projects", "nested/draft.txt")
+        val repository = DefaultEditorDraftRepository(app.container)
+        val draft = EditorDraft(
+            schemaVersion = 1,
+            documentId = id,
+            text = "line one\nline two\r\n",
+            bufferRevision = 3L,
+            persistedRevision = 1L,
+            baselineSignature = FileSignature(20L, 123L, "abc123"),
+            encoding = TextEncoding.UTF_8,
+            newlineStyle = NewlineStyle.LF,
+            newlineStyles = listOf(NewlineStyle.LF, NewlineStyle.CRLF),
+            updatedAtEpochMs = 456L,
+        )
+        val draftFile = File(app.container.paths.drafts, EditorDraftStore.fileName(id))
+        val raw = "{\"schemaVersion\":99,\"text\":\"keep me\"}"
+
+        runBlocking {
+            repository.save(draft)
+            val loaded = repository.load(id)
+            assertTrue(loaded is EditorDraftRead.Usable)
+            loaded as EditorDraftRead.Usable
+            assertEquals(draft.text, loaded.draft.text)
+            assertTrue(draftFile.exists())
+
+            draftFile.writeText(raw)
+            val unreadable = repository.load(id)
+            assertTrue(unreadable is EditorDraftRead.Unreadable)
+            assertEquals(raw, draftFile.readText())
+
+            repository.delete(id)
+            assertTrue(repository.load(id) is EditorDraftRead.Missing)
+            assertFalse(draftFile.exists())
         }
     }
 }

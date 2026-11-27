@@ -598,6 +598,7 @@ class EditorViewModel @JvmOverloads constructor(
                 )
             }
             publishActive()
+            _uiState.update { it.copy(draftRecovery = recovery) }
             return
         }
         if (draft.text == snapshot.text) {
@@ -623,6 +624,7 @@ class EditorViewModel @JvmOverloads constructor(
             it.copy(draftRecovery = recovery, message = "Recovered unsaved changes from ${draft.updatedAtEpochMs}.")
         }
         publishActive()
+        _uiState.update { it.copy(draftRecovery = recovery) }
     }
 
     private fun sameBaseline(left: FileSignature, right: FileSignature): Boolean =
@@ -650,6 +652,7 @@ class EditorViewModel @JvmOverloads constructor(
             )
         }
         publishActive()
+        _uiState.update { it.copy(draftRecovery = draftRecoveries[path]) }
     }
 
     private fun applySaved(
