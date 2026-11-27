@@ -62,7 +62,9 @@ class EditorBuffer(initialText: String) {
     }
 
     fun markSaved(savedRevision: Long, savedText: String) {
-        markSaved()
+        if (savedRevision == currentRevision) {
+            savedValue = savedText
+        }
     }
 
     fun replaceAllText(replacement: String): Boolean = replace(0, value.length, replacement)

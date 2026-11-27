@@ -8,6 +8,7 @@ import dev.pocketdev.core.editor.TextFileSnapshot
 import dev.pocketdev.core.workspace.WorkspaceFiles
 import dev.pocketdev.core.workspace.WorkspaceResult
 import java.io.File
+import kotlinx.coroutines.CancellationException
 
 interface EditorWorkspaceGateway {
     suspend fun readTextFile(documentId: EditorDocumentId): WorkspaceResult<TextFileSnapshot>

@@ -69,10 +69,32 @@ data class EditorUiState(
 )
 
 private sealed interface EditorResult {
-    data class Loaded(val path: String, val snapshot: TextFileSnapshot) : EditorResult
-    data class Saved(val path: String, val signature: FileSignature) : EditorResult
-    data class Reloaded(val path: String, val snapshot: TextFileSnapshot) : EditorResult
-    data class Checked(val path: String, val snapshot: TextFileSnapshot) : EditorResult
+    data class Loaded(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val snapshot: TextFileSnapshot,
+    ) : EditorResult
+
+    data class Saved(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val revision: Long,
+        val savedText: String,
+        val signature: FileSignature,
+    ) : EditorResult
+
+    data class Reloaded(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val snapshot: TextFileSnapshot,
+    ) : EditorResult
+
+    data class Checked(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val snapshot: TextFileSnapshot,
+    ) : EditorResult
+
     data class Error(val message: String) : EditorResult
 }
 
@@ -91,8 +113,11 @@ class EditorViewModel @JvmOverloads constructor(
     private val buffers = mutableMapOf<String, EditorBuffer>()
     private val snapshots = mutableMapOf<String, TextFileSnapshot>()
     private val selections = mutableMapOf<String, IntRange>()
+    private val documentIds = mutableMapOf<String, EditorDocumentId>()
+    private val saveMutexes = mutableMapOf<String, Mutex>()
     private var operationJob: Job? = null
     private var operationGeneration = 0
+    private var activeSaveCount = 0
 
     fun open(relativePath: String) {
         if (relativePath.isBlank()) return
@@ -183,19 +208,65 @@ class EditorViewModel @JvmOverloads constructor(
             _uiState.update { it.copy(error = "Resolve external changes before saving.") }
             return
         }
+        val documentId = documentIds[path] ?: currentDocumentId(path).also { documentIds[path] = it }
         val request = EditorSaveSnapshot(
-            documentId = selectedDocumentId(path),
+            documentId = documentId,
             text = buffer.text,
             revision = buffer.revision,
             encoding = state.encoding,
             newlineStyle = state.newlineStyle,
             expectedSignature = snapshots[path]?.signature,
         )
-        runTask("Save $path") {
-            when (val result = workspaceGateway.writeTextFile(request)) {
-                is WorkspaceResult.Success -> EditorResult.Saved(path, result.value)
-                is WorkspaceResult.Failure -> EditorResult.Error(result.message)
-                is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
+        enqueueSave(path, documentId, request)
+    }
+
+    private fun enqueueSave(
+        path: String,
+        documentId: EditorDocumentId,
+        request: EditorSaveSnapshot,
+    ) {
+        val mutex = saveMutexes.getOrPut(documentId.key) { Mutex() }
+        val label = "Save $path"
+        activeSaveCount += 1
+        _uiState.update { it.copy(busyLabel = label, message = null, error = null) }
+        viewModelScope.launch(mainDispatcher) {
+            try {
+                val result = mutex.withLock {
+                    withContext(ioDispatcher) {
+                        when (val result = workspaceGateway.writeTextFile(request)) {
+                            is WorkspaceResult.Success -> EditorResult.Saved(
+                                path = path,
+                                documentId = documentId,
+                                revision = request.revision,
+                                savedText = request.text,
+                                signature = result.value,
+                            )
+                            is WorkspaceResult.Failure -> EditorResult.Error(result.message)
+                            is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
+                        }
+                    }
+                }
+                if (documentIds[path] == documentId && buffers.containsKey(path)) {
+                    applyResult(result, label)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (documentIds[path] == documentId) {
+                    _uiState.update {
+                        it.copy(
+                            error = error.message ?: "Editor operation failed",
+                            busyLabel = null,
+                        )
+                    }
+                }
+            } finally {
+                activeSaveCount -= 1
+                if (activeSaveCount == 0) {
+                    _uiState.update {
+                        if (it.busyLabel == label) it.copy(busyLabel = null) else it
+                    }
+                }
             }
         }
     }
@@ -362,17 +433,28 @@ class EditorViewModel @JvmOverloads constructor(
     private fun applyResult(result: EditorResult, label: String) {
         when (result) {
             is EditorResult.Error -> _uiState.update { it.copy(error = result.message) }
-            is EditorResult.Loaded -> applyLoaded(result.path, result.snapshot)
-            is EditorResult.Saved -> applySaved(result.path, result.signature)
-            is EditorResult.Reloaded -> applyReloaded(result.path, result.snapshot)
-            is EditorResult.Checked -> applyChecked(result.path, result.snapshot)
+            is EditorResult.Loaded -> applyLoaded(result.path, result.documentId, result.snapshot)
+            is EditorResult.Saved -> applySaved(
+                path = result.path,
+                documentId = result.documentId,
+                revision = result.revision,
+                savedText = result.savedText,
+                signature = result.signature,
+            )
+            is EditorResult.Reloaded -> applyReloaded(result.path, result.documentId, result.snapshot)
+            is EditorResult.Checked -> applyChecked(result.path, result.documentId, result.snapshot)
         }
         if (result !is EditorResult.Error) {
             _uiState.update { it.copy(message = "$label complete") }
         }
     }
 
-    private fun applyLoaded(path: String, snapshot: TextFileSnapshot) {
+    private fun applyLoaded(
+        path: String,
+        documentId: EditorDocumentId,
+        snapshot: TextFileSnapshot,
+    ) {
+        if (documentIds[path] != documentId) return
         val tab = EditorTabState(
             path = path,
             name = path.substringAfterLast('/').ifBlank { path },
