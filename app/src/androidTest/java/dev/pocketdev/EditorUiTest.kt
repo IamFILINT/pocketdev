@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ApplicationProvider
 import dev.pocketdev.ui.projects.ProjectsViewModel
 import java.io.File
@@ -42,6 +44,8 @@ class EditorUiTest {
         composeRule.onNode(hasText("Files") and isSelectable()).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Search files", substring = false).assertIsDisplayed()
+        composeRule.onRoot().performTouchInput { swipeUp() }
+        composeRule.waitForIdle()
 
         composeRule.waitUntil(timeoutMillis = 10_000) {
             composeRule.onAllNodesWithText("Open in editor").fetchSemanticsNodes().isNotEmpty()
