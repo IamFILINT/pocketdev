@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 data class EditorTabState(
@@ -126,7 +128,9 @@ class EditorViewModel @JvmOverloads constructor(
             checkExternalChanges()
             return
         }
-        runTask("Open $relativePath") { readSnapshot(relativePath) }
+        val documentId = currentDocumentId(relativePath)
+        documentIds[relativePath] = documentId
+        runTask("Open $relativePath") { readSnapshot(relativePath, documentId) }
     }
 
     fun activateTab(path: String) {
@@ -155,6 +159,7 @@ class EditorViewModel @JvmOverloads constructor(
         buffers.remove(path)
         snapshots.remove(path)
         selections.remove(path)
+        documentIds.remove(path)
         val tabs = _uiState.value.tabs.filterNot { it.path == path }
         val nextPath = tabs.lastOrNull()?.path
         _uiState.update {
@@ -273,14 +278,16 @@ class EditorViewModel @JvmOverloads constructor(
 
     fun checkExternalChanges() {
         val path = _uiState.value.activePath ?: return
-        runTask("Check changes") { readSnapshot(path, forCheck = true) }
+        val documentId = boundDocumentId(path)
+        runTask("Check changes") { readSnapshot(path, documentId, forCheck = true) }
     }
 
     fun discardChanges() = reloadFromDisk()
 
     fun reloadFromDisk() {
         val path = _uiState.value.activePath ?: return
-        runTask("Reload $path") { readSnapshot(path) }
+        val documentId = boundDocumentId(path)
+        runTask("Reload $path") { readSnapshot(path, documentId) }
     }
 
     fun keepLocalChanges() {
@@ -409,18 +416,25 @@ class EditorViewModel @JvmOverloads constructor(
         operationJob = job
     }
 
-    private suspend fun readSnapshot(path: String, forCheck: Boolean = false): EditorResult =
-        when (val result = workspaceGateway.readTextFile(selectedDocumentId(path))) {
+    private suspend fun readSnapshot(
+        path: String,
+        documentId: EditorDocumentId,
+        forCheck: Boolean = false,
+    ): EditorResult =
+        when (val result = workspaceGateway.readTextFile(documentId)) {
             is WorkspaceResult.Success -> if (forCheck) {
-                EditorResult.Checked(path, result.value)
+                EditorResult.Checked(path, documentId, result.value)
             } else {
-                EditorResult.Loaded(path, result.value)
+                EditorResult.Loaded(path, documentId, result.value)
             }
             is WorkspaceResult.Failure -> EditorResult.Error(result.message)
             is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
         }
 
-    private fun selectedDocumentId(path: String): EditorDocumentId {
+    private fun boundDocumentId(path: String): EditorDocumentId =
+        documentIds[path] ?: currentDocumentId(path).also { documentIds[path] = it }
+
+    private fun currentDocumentId(path: String): EditorDocumentId {
         val selected = container.selectedProject.value
         val context = runCatching { container.projectContext(selected) }.getOrNull()
         return EditorDocumentId(
@@ -475,19 +489,31 @@ class EditorViewModel @JvmOverloads constructor(
         publishActive()
     }
 
-    private fun applySaved(path: String, signature: FileSignature) {
+    private fun applySaved(
+        path: String,
+        documentId: EditorDocumentId,
+        revision: Long,
+        savedText: String,
+        signature: FileSignature,
+    ) {
+        if (documentIds[path] != documentId) return
         val buffer = buffers[path] ?: return
-        buffer.markSaved()
+        buffer.markSaved(revision, savedText)
         val snapshot = snapshots[path] ?: return
         snapshots[path] = snapshot.copy(
             signature = signature,
             sizeBytes = signature.sizeBytes,
-            text = buffer.text,
+            text = savedText,
         )
         publishActive()
     }
 
-    private fun applyReloaded(path: String, snapshot: TextFileSnapshot) {
+    private fun applyReloaded(
+        path: String,
+        documentId: EditorDocumentId,
+        snapshot: TextFileSnapshot,
+    ) {
+        if (documentIds[path] != documentId) return
         buffers[path] = EditorBuffer(snapshot.text)
         snapshots[path] = snapshot
         selections[path] = 0..0
@@ -495,7 +521,12 @@ class EditorViewModel @JvmOverloads constructor(
         publishActive()
     }
 
-    private fun applyChecked(path: String, snapshot: TextFileSnapshot) {
+    private fun applyChecked(
+        path: String,
+        documentId: EditorDocumentId,
+        snapshot: TextFileSnapshot,
+    ) {
+        if (documentIds[path] != documentId) return
         val current = snapshots[path]
         if (current?.signature == snapshot.signature) return
         val buffer = buffers[path]
