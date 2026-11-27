@@ -35,6 +35,7 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
@@ -46,6 +47,20 @@ import dev.pocketdev.core.editor.SyntaxHighlighter
 import dev.pocketdev.core.editor.SyntaxTokenType
 
 private const val MAX_HIGHLIGHT_CHARS = 250_000
+
+internal fun preserveEditorTextFieldValue(
+    current: TextFieldValue,
+    syntaxText: AnnotatedString,
+    stateText: String,
+    stateSelection: TextRange,
+): TextFieldValue {
+    val preserveComposition = current.text == stateText && current.composition != null
+    return TextFieldValue(
+        annotatedString = syntaxText,
+        selection = if (preserveComposition) current.selection else stateSelection,
+        composition = if (preserveComposition) current.composition else null,
+    )
+}
 
 @Composable
 fun EditorRoute(viewModel: EditorViewModel) {
@@ -145,19 +160,13 @@ fun EditorScreen(
         mutableStateOf(TextFieldValue(annotatedString = syntaxText, selection = stateSelection))
     }
     LaunchedEffect(syntaxText, stateSelection) {
-        val preserveComposition = textFieldValue.text == state.text && textFieldValue.composition != null
-        val selection = if (preserveComposition) textFieldValue.selection else stateSelection
-        val composition = if (preserveComposition) textFieldValue.composition else null
-        if (textFieldValue.annotatedString != syntaxText ||
-            textFieldValue.selection != selection ||
-            textFieldValue.composition != composition
-        ) {
-            textFieldValue = TextFieldValue(
-                annotatedString = syntaxText,
-                selection = selection,
-                composition = composition,
-            )
-        }
+        val next = preserveEditorTextFieldValue(
+            current = textFieldValue,
+            syntaxText = syntaxText,
+            stateText = state.text,
+            stateSelection = stateSelection,
+        )
+        if (textFieldValue != next) textFieldValue = next
     }
 
     Column(
