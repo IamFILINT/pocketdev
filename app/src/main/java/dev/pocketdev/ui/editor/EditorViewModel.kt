@@ -1,7 +1,6 @@
 package dev.pocketdev.ui.editor
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
@@ -95,7 +94,6 @@ class EditorViewModel @JvmOverloads constructor(
     private var operationGeneration = 0
 
     fun open(relativePath: String) {
-        Log.d(TAG, "open($relativePath) existing=${buffers.containsKey(relativePath)}")
         if (relativePath.isBlank()) return
         if (buffers.containsKey(relativePath)) {
             activateTab(relativePath)
@@ -319,20 +317,16 @@ class EditorViewModel @JvmOverloads constructor(
     }
 
     private fun runTask(label: String, block: suspend () -> EditorResult) {
-        Log.d(TAG, "runTask($label) start")
         operationJob?.cancel()
         val token = ++operationGeneration
         _uiState.update { it.copy(busyLabel = label, message = null, error = null) }
         val job = viewModelScope.launch(mainDispatcher) {
-            Log.d(TAG, "runTask($label) launched")
             try {
                 val result = withContext(ioDispatcher) { block() }
-                Log.d(TAG, "runTask($label) result=${result.javaClass.simpleName}")
                 if (token == operationGeneration) applyResult(result, label)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                Log.e(TAG, "runTask($label) failed", error)
                 if (token == operationGeneration) {
                     _uiState.update {
                         it.copy(
@@ -348,11 +342,8 @@ class EditorViewModel @JvmOverloads constructor(
         operationJob = job
     }
 
-    private suspend fun readSnapshot(path: String, forCheck: Boolean = false): EditorResult {
-        Log.d(TAG, "readSnapshot($path) start")
-        val result = withWorkspace { files -> files.readTextFile(path) }
-        Log.d(TAG, "readSnapshot($path) workspace result=${result.javaClass.simpleName}")
-        return when (result) {
+    private suspend fun readSnapshot(path: String, forCheck: Boolean = false): EditorResult =
+        when (val result = withWorkspace { files -> files.readTextFile(path) }) {
             is WorkspaceResult.Success -> if (forCheck) {
                 EditorResult.Checked(path, result.value)
             } else {
@@ -361,17 +352,13 @@ class EditorViewModel @JvmOverloads constructor(
             is WorkspaceResult.Failure -> EditorResult.Error(result.message)
             is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
         }
-    }
 
     private suspend fun <T> withWorkspace(block: suspend (WorkspaceFiles) -> T): T {
         currentCoroutineContext().ensureActive()
         val selected = container.selectedProject.value
         val context = runCatching { container.projectContext(selected) }
         val rootPath = context.getOrNull()?.rootPath ?: container.projectsRoot.absolutePath
-        Log.d(TAG, "withWorkspace selected=${selected?.id} context=$context rootPath=$rootPath")
-        val root = container.validatedRootPath(rootPath)
-        Log.d(TAG, "withWorkspace root=$root")
-        return block(WorkspaceFiles(root))
+        return block(WorkspaceFiles(container.validatedRootPath(rootPath)))
     }
 
     private fun applyResult(result: EditorResult, label: String) {
@@ -496,9 +483,5 @@ class EditorViewModel @JvmOverloads constructor(
     override fun onCleared() {
         operationJob?.cancel()
         super.onCleared()
-    }
-
-    private companion object {
-        const val TAG = "EDITOR_VM_DIAG"
     }
 }

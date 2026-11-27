@@ -47,4 +47,13 @@ class EditorBufferTest {
         assertEquals("second", buffer.lineText(1))
         assertEquals(2 to 1, buffer.lineAndColumn(5))
     }
+
+    @Test
+    fun `line and column are one based at the start of a file`() {
+        val buffer = EditorBuffer("val greeting = \"hi\"\n")
+
+        assertEquals(1 to 1, buffer.lineAndColumn(0))
+        assertEquals(1 to 20, buffer.lineAndColumn(19))
+        assertEquals(2 to 1, buffer.lineAndColumn(20))
+    }
 }
