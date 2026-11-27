@@ -20,7 +20,7 @@ object TextFileCodec {
             text = normalizeNewlines(raw),
             encoding = if (hasBom) TextEncoding.UTF_8_BOM else TextEncoding.UTF_8,
             newlineStyle = detectNewlineStyle(raw),
-            signature = FileSignature(sizeBytes, lastModifiedEpochMs),
+            signature = FileSignature.fromBytes(bytes, lastModifiedEpochMs, sizeBytes),
             truncated = truncated,
             sizeBytes = sizeBytes,
         )

@@ -14,7 +14,27 @@ enum class NewlineStyle(val value: String) {
 data class FileSignature(
     val sizeBytes: Long,
     val lastModifiedEpochMs: Long,
-)
+    val contentSha256: String,
+) {
+    companion object {
+        fun fromBytes(
+            bytes: ByteArray,
+            lastModifiedEpochMs: Long,
+            sizeBytes: Long = bytes.size.toLong(),
+        ): FileSignature {
+            val digest = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+            val hex = "0123456789abcdef"
+            val hash = buildString(digest.size * 2) {
+                digest.forEach { byte ->
+                    val value = byte.toInt() and 0xff
+                    append(hex[value ushr 4])
+                    append(hex[value and 0x0f])
+                }
+            }
+            return FileSignature(sizeBytes, lastModifiedEpochMs, hash)
+        }
+    }
+}
 
 data class TextFileSnapshot(
     val text: String,

@@ -21,7 +21,7 @@ class TextFileCodecTest {
         assertEquals("one\ntwo", snapshot.text)
         assertEquals(TextEncoding.UTF_8_BOM, snapshot.encoding)
         assertEquals(NewlineStyle.CRLF, snapshot.newlineStyle)
-        assertEquals(FileSignature(bytes.size.toLong(), 7L), snapshot.signature)
+        assertEquals(FileSignature.fromBytes(bytes, 7L), snapshot.signature)
         assertFalse(snapshot.truncated)
     }
 

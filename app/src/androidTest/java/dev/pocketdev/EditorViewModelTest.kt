@@ -164,6 +164,28 @@ class EditorViewModelTest {
     }
 
     @Test
+    fun sameSizeExternalReplacementIsPresentedAsConflict() {
+        val file = File(projectRoot, "same-size.txt")
+        file.writeText("aaaa")
+        val originalModified = file.lastModified()
+
+        editorViewModel.open("same-size.txt")
+        await { editorViewModel.uiState.value.activePath == "same-size.txt" }
+        editorViewModel.onTextChanged("aXaa", 0..4)
+        assertTrue(editorViewModel.uiState.value.dirty)
+
+        file.writeText("bbbb")
+        file.setLastModified(originalModified)
+        editorViewModel.checkExternalChanges()
+        await { editorViewModel.uiState.value.externalChange != null }
+
+        val conflict = editorViewModel.uiState.value.externalChange
+        assertNotNull(conflict)
+        assertTrue(conflict!!.dirty)
+        assertEquals("bbbb", file.readText())
+    }
+
+    @Test
     fun cleanExternalChangeReloadsAutomatically() {
         val file = File(projectRoot, "shared.txt")
         file.writeText("first version")
@@ -265,8 +287,9 @@ class EditorViewModelTest {
         override suspend fun writeTextFile(request: EditorSaveSnapshot): WorkspaceResult<FileSignature> {
             writeStarted.countDown()
             releaseSave.await()
-            target.writeBytes(TextFileCodec.encode(request.text, request.encoding, request.newlineStyle))
-            return WorkspaceResult.Success(FileSignature(target.length(), target.lastModified()))
+            val bytes = TextFileCodec.encode(request.text, request.encoding, request.newlineStyle)
+            target.writeBytes(bytes)
+            return WorkspaceResult.Success(FileSignature.fromBytes(bytes, target.lastModified()))
         }
 
         fun awaitWriteStarted() {
