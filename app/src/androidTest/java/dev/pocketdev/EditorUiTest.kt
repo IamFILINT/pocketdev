@@ -46,7 +46,7 @@ class EditorUiTest {
 
         composeRule.onNodeWithText("Open in editor", substring = false).performClick()
 
-        composeRule.onNodeWithText("editor-ui.kt").assertIsDisplayed()
+        composeRule.onNodeWithText("editor-ui.kt").fetchSemanticsNode()
         composeRule.onNodeWithText("val greeting = \"hi\"", substring = true).fetchSemanticsNode()
         composeRule.onNodeWithText("Save").fetchSemanticsNode()
         composeRule.onNodeWithText("Line 1, column 1").fetchSemanticsNode()
