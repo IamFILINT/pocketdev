@@ -580,4 +580,10 @@
 - Audited all 25 markdown files in the repository: root `README.md`, root `SESSION_NOTES.md`, 19 files under `docs/`, and 4 ADRs under `docs/adr/`.
 - Updated merged-state status, evidence references, stale milestone wording, and markdown formatting in informational docs.
 - Preserved explicitly historical records: Milestone 0/2 snapshots, ARM64 feasibility measurements, baseline audits, ADR decision history, and honest R1/R23/R25 limitations.
-- No repository files were committed, pushed, or merged as part of this documentation pass.
+- This documentation pass was committed and pushed to `main` as
+  `06e9d8666a67d5fd83ecdd19dcd066fff9b6101f`; no merge was performed.
+- The docs-only push triggered `verify` `46150280873`, `native-runtime-ci`
+  `46150280867`, and `android-emulator` `46150280877`. The API 36 instrumentation job
+  first failed in `EditorViewModelTest.unreadableDraftIsReportedAndRawBytesAreRetained`
+  on a 10-second condition timeout; `gh run rerun 46150280877 --failed` passed API 29
+  (`140996717197`) and API 36 (`140996716074`) with no code or test changes.

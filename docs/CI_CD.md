@@ -110,6 +110,12 @@ and project switching. This is x86_64 evidence only and does not close ARM64 ris
   2026-11-28.
 - Post-merge `main` verification: `verify` `46107316324`, `native-runtime-ci`
   `46107316335`, and `android-emulator` `46107316349` (API 29 and API 36) — all green.
+- Later docs-only commit `06e9d8666a67d5fd83ecdd19dcd066fff9b6101f` verification:
+  `verify` `46150280873` and `native-runtime-ci` `46150280867` passed.
+  `android-emulator` `46150280877` first failed on API 36 in
+  `EditorViewModelTest.unreadableDraftIsReportedAndRawBytesAreRetained` (10-second
+  condition timeout); `gh run rerun 46150280877 --failed` passed API 29
+  (`140996717197`) and API 36 (`140996716074`) with no code or test changes.
 - Branch-protection status is unchanged from the dated baseline below; CI evidence is
   recorded here, but merge enforcement is not claimed.
 

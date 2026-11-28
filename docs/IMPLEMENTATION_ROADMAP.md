@@ -145,6 +145,10 @@ remains deliberately deferred until a measured bottleneck justifies it
 API 36). Pre-merge documentation reconciliation commit
 `911d91219b3aa20bf429ffda386c5f3a1c7a7e02` passed `verify` `46105361342`,
 `android-emulator` `46105361335`, and `native-runtime-ci` `46105361328`.
+Post-documentation-push checks on `06e9d8666a67d5fd83ecdd19dcd066fff9b6101f` also
+completed successfully after rerunning the failed API 36 job: `verify` `46150280873`,
+`native-runtime-ci` `46150280867`, and `android-emulator` `46150280877` (API 29 job
+`140996717197`, API 36 rerun job `140996716074`).
 
 ## Milestone 8 — Package manager and Git
 
