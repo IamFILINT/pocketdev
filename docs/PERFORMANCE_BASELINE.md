@@ -1,6 +1,6 @@
 # PocketDev — Editor Performance Baseline
 
-> M7.5 Phase 10 baseline evidence. These numbers establish a reproducible starting point; they are not performance thresholds and do not justify an optimization by themselves.
+> M7.5 Phase 10 baseline evidence. These numbers establish a reproducible starting point; they are not performance thresholds and do not justify an optimization by themselves. The branch evidence below was preserved when PR #41 merged into `main` at `2424a4c1bc5e30d7837fe5fb8fdab07d7251a148`; post-merge verification remained green.
 
 ## Evidence
 

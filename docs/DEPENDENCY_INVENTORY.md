@@ -2,7 +2,16 @@
 
 > Generated/maintained manually from `gradle/libs.versions.toml`. Update when pins change.
 
-## In-house components (no third-party dependency)\n\n- `dev.pocketdev.core.json.Json` — dependency-free JSON reader (object/array,\n  escapes, Unicode, number/boolean/null). Used by `OpenCodeApiClient` and later\n  SSE parsing.\n- `dev.pocketdev.core.agent.OpenCodeApiClient` — `HttpURLConnection` + HTTP Basic\n  auth; no HTTP client library.\n- `dev.pocketdev.core.agent.OpenCodeServeOutputParser` — readiness-line parser.\n- `dev.pocketdev.runtime.OpenCodeServer` — process supervision state machine.\n\n## Build toolchain
+## In-house components (no third-party dependency)
+
+- `dev.pocketdev.core.json.Json` — dependency-free JSON reader (object/array,
+  escapes, Unicode, number/boolean/null). Used by `OpenCodeApiClient` and SSE parsing.
+- `dev.pocketdev.core.agent.OpenCodeApiClient` — `HttpURLConnection` + HTTP Basic
+  auth; no HTTP client library.
+- `dev.pocketdev.core.agent.OpenCodeServeOutputParser` — readiness-line parser.
+- `dev.pocketdev.runtime.OpenCodeServer` — process supervision state machine.
+
+## Build toolchain
 
 | Component | Version | Notes |
 | --- | --- | --- |
@@ -64,9 +73,10 @@
 - `terminal-emulator` / `terminal-view` — approved for reuse (ADR-0001) but not
   copied; PocketDev uses its own JNI PTY and Compose/Kotlin ANSI renderer.
 
-## Not yet included (planned)
+## Optional components (not linked)
 
 - Bun Termux / AndroidTUI / OpenTUI source components — currently consumed only
   through the upstream OpenCode Bionic binary; link directly only if a fork is
   needed (ADR-0003).
-- A real code editor component (Milestone 7)
+- The code editor is implemented in-house (Milestones 7 and 7.5); no third-party
+  editor dependency was added.

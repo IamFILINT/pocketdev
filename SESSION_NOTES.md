@@ -565,3 +565,19 @@
   editor tests; instrumentation tests for `EditorViewModel`, `EditorUiTest`, and
   `NavigationTest.dashboardToEditor`. No tests were skipped or weakened.
 - CI evidence is pending for this branch; no local Gradle build or test was run.
+
+## Session 20 — 2026-11-27 to 2026-11-28
+
+### M7/M7.5 closeout
+- PR #40 merged at `9809ce3e02bf8badf907f82cee248eec8e84e0fb` on 2026-11-27; the code editor, syntax highlighting, tabs, search/replace, undo/redo, and external-change recovery are on `main`.
+- PR #41 merged at `2424a4c1bc5e30d7837fe5fb8fdab07d7251a148` on 2026-11-28; M7.5 revision-safe saves, stable document identity, safe writes, strict decoding, draft recovery, IME/selection coverage, formatting fidelity, and performance baselines are on `main`.
+- Final PR checks were clean and mergeable; post-merge `main` runs passed: `verify` `46107316324`, `native-runtime-ci` `46107316335`, and `android-emulator` `46107316349` (API 29 and API 36).
+- Local `main` was fetched and fast-forwarded from `073a09d` to `2424a4c`; working tree was clean. No merge was performed without explicit user approval.
+
+## Session 21 — 2026-11-28
+
+### Documentation professionalization pass
+- Audited all 25 markdown files in the repository: root `README.md`, root `SESSION_NOTES.md`, 19 files under `docs/`, and 4 ADRs under `docs/adr/`.
+- Updated merged-state status, evidence references, stale milestone wording, and markdown formatting in informational docs.
+- Preserved explicitly historical records: Milestone 0/2 snapshots, ARM64 feasibility measurements, baseline audits, ADR decision history, and honest R1/R23/R25 limitations.
+- No repository files were committed, pushed, or merged as part of this documentation pass.

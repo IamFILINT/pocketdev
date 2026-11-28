@@ -1,6 +1,6 @@
 # PocketDev — Milestone 7.5: Editor Reliability, Data Integrity & Recovery
 
-> **Status:** Planned  
+> **Status:** Complete (PR #41, merged 2026-11-28)
 > **Depends on:** Milestone 7 — Code Editor  
 > **Target:** Stabilize the editor introduced in PR #40 before expanding the workstation with Milestones 8 and 9.  
 > **Scope:** Correctness, filesystem safety, editing fidelity, lifecycle recovery, performance evidence, and regression coverage. This milestone is not a feature expansion or a rewrite of the editor.
@@ -405,9 +405,9 @@ Record device/emulator API, ABI, runner/device class, fixture generation method,
 
 ### Acceptance criteria
 
-- [ ] Baseline benchmark results are committed.
-- [ ] Any optimization includes before/after evidence and regression tests.
-- [ ] No optimization changes editor semantics or weakens correctness tests.
+- [x] Baseline benchmark results are committed.
+- [x] No optimization was applied, so before/after optimization evidence is not applicable.
+- [x] No optimization changed editor semantics or weakened correctness tests.
 
 ## 14. Phase 11 — Documentation and test-gate reconciliation
 
@@ -470,27 +470,27 @@ For every commit:
 4. Fix failures without weakening tests.
 5. Only then proceed to the next commit.
 
-Do not merge the PR automatically. Do not start M8/M9 automatically. Report blockers and evidence for review.
+**Historical execution directive (pre-merge):** Do not merge the PR automatically. Do not start M8/M9 automatically. Report blockers and evidence for review. Merge approval was given explicitly; PR #41 is now merged.
 
 ## 16. Milestone exit criteria
 
 Milestone 7.5 may be marked **Complete** only when all of the following are true:
 
-- [ ] Save revision races are fixed and regression-tested.
-- [ ] Tabs are permanently bound to their originating workspace/document.
-- [ ] Save commits have explicit, tested atomicity/durability guarantees for supported storage.
-- [ ] External modifications are reliably detected under the documented signature/conflict model.
-- [ ] Symlink and path-containment behavior matches the documented security policy.
-- [ ] Malformed UTF-8 cannot be silently corrupted.
-- [ ] Mixed newline behavior is explicit and tested.
-- [ ] IME composition, Persian/Unicode input, cursor, and selection are instrumented and verified.
-- [ ] Formatting does not silently alter syntax-significant whitespace.
-- [ ] Unsaved drafts recover safely or a documented platform limitation is approved with a safe fallback.
-- [ ] Performance baselines exist and any optimizations are evidence-driven.
-- [ ] Regression tests run in the intended CI workflows.
-- [ ] All required GitHub Actions checks pass on the final commit.
-- [ ] Documentation and risk register reflect the actual implementation and remaining limitations.
-- [ ] No known Critical/High editor data-integrity defect remains open.
+- [x] Save revision races are fixed and regression-tested.
+- [x] Tabs are permanently bound to their originating workspace/document.
+- [x] Save commits have explicit, tested atomicity/durability guarantees for supported storage.
+- [x] External modifications are reliably detected under the documented signature/conflict model.
+- [x] Symlink and path-containment behavior matches the documented security policy.
+- [x] Malformed UTF-8 cannot be silently corrupted.
+- [x] Mixed newline behavior is explicit and tested.
+- [x] IME composition, Persian/Unicode input, cursor, and selection are instrumented and verified.
+- [x] Formatting does not silently alter syntax-significant whitespace.
+- [x] Unsaved drafts recover safely or a documented platform limitation is approved with a safe fallback.
+- [x] Performance baselines exist; no optimization was applied.
+- [x] Regression tests run in the intended CI workflows.
+- [x] All required GitHub Actions checks pass on the merged commit.
+- [x] Documentation and risk register reflect the actual implementation and remaining limitations.
+- [x] No known Critical/High editor data-integrity defect remains open.
 
 ## 17. Out of scope
 

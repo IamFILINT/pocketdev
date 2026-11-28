@@ -102,6 +102,17 @@ project-context binding, run `45347183919` on `dbd9ce9` passed the same 5 tests 
 0 failures/errors/skips (`time="8.461"`), including context-bound terminal sessions
 and project switching. This is x86_64 evidence only and does not close ARM64 risk R1.
 
+### M7/M7.5 final merge evidence
+
+- Milestone 7: PR #40 merged at `9809ce3e02bf8badf907f82cee248eec8e84e0fb` on
+  2026-11-27.
+- Milestone 7.5: PR #41 merged at `2424a4c1bc5e30d7837fe5fb8fdab07d7251a148` on
+  2026-11-28.
+- Post-merge `main` verification: `verify` `46107316324`, `native-runtime-ci`
+  `46107316335`, and `android-emulator` `46107316349` (API 29 and API 36) — all green.
+- Branch-protection status is unchanged from the dated baseline below; CI evidence is
+  recorded here, but merge enforcement is not claimed.
+
 ### Planned (later milestones)
 
 - `release.yml` — signed APK + GitHub Release, gated on approved tags/dispatch.

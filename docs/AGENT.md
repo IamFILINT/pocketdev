@@ -3,7 +3,7 @@
 > **Document type:** Product specification, architecture brief, implementation contract, and autonomous coding-agent instructions  
 > **Version:** 1.1  
 > **Prepared:** 2026-11-20  
-> **Target agent:** OpenCode Bionic running inside Termux on an Android phone  
+> **Target agent:** OpenCode Bionic running on a PocketDev-owned Termux-derived Bionic userspace on an Android phone
 > **Primary repository:** The existing PocketDev Git repository (discover its actual remote; do not invent one)
 
 ---

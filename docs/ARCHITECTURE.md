@@ -1,6 +1,6 @@
 # PocketDev — Architecture
 
-> Status: Milestone 7.5 editor reliability work complete. Domain logic stays in
+> Status: Milestone 7.5 (editor reliability) complete. Domain logic stays in
 > `:core`; `:runtime` holds the Android-only environment, linker-hop process spawn,
 > execution health checks, and OpenCode Bionic provisioning + `serve` supervision.
 > The app shell talks to both through small controller APIs.
@@ -18,18 +18,16 @@ without an emulator. The agent is a special case: its **binary** is Android-only
 everything that can be pure — pin metadata, installer, output parsing, HTTP client — is
 in `:core` and unit-tested.
 
-Planned modules (later milestones):
+Module split status (later milestones):
 
-| Module | Purpose |
-| --- | --- |
-| `:terminal` | PTY host and terminal session management |
-| `:ai` | Event-stream mapping and provider/permission UI (the process controller and API client currently live in `:runtime`/`:core`) |
-| `:workspace` | File explorer operations, editor file synchronization, Git |
+| Module | Current implementation | Deferred work |
+| --- | --- | --- |
+| `:terminal` | JNI/native PTY host under `app/src/main/cpp` plus Kotlin session management in `:app` | Dedicated module extraction |
+| `:ai` | Process controller in `:runtime`; API client, parser, pins, and installer in `:core`; SSE/permission UI in `:app` (Milestone 5) | Dedicated module extraction |
+| `:workspace` | File explorer and editor file synchronization in `:core`/`:app` (Milestones 6–7.5) | Git and dedicated module extraction |
 
-The PTY host is currently implemented in the app (JNI/native under
-`app/src/main/cpp` plus Kotlin session management under
-`app/src/main/java/dev/pocketdev/terminal`) instead of a separate `:terminal`
-module; the module split remains deferred. `TerminalViewModel` now requires
+As of M7.5, the PTY host is implemented in the app instead of a separate
+`:terminal` module; the module split is deferred. `TerminalViewModel` requires
 `RuntimeState.Ready`, asks `RuntimeController` for a `RuntimeLaunchPlan`, and passes
 its executable, argv, environment, and working directory to `PtyNative`; the native
 child `execve()`s `/system/bin/linker64` → `$PREFIX/bin/bash -i`.
@@ -50,7 +48,7 @@ uses a poll-based reader that observes close requests, and makes `close()` idemp
 - Every subsystem shares one project identity and one on-disk root
   (`Project` in `:core`).
 
-## Current data flow (Milestone 1)
+## Data flow (Milestone 1 — historical)
 
 ```
 MainActivity
@@ -65,7 +63,7 @@ MainActivity
 `files/usr`, projects at `files/home/projects`, registry at
 `files/state/projects.tsv`, and the theme preference.
 
-## Current data flow (Milestone 4 — agent)
+## Data flow (Milestone 4 — agent)
 
 ```
 DashboardViewModel
@@ -86,7 +84,7 @@ The server state is authoritative: no client is handed out until the process is
 actually `Listening`. The password never leaves the controller except into the
 in-memory client.
 
-## Current data flow (Milestone 7.5 — code editor)
+## Data flow (Milestone 7.5 — code editor)
 
 ```
 FilesScreen

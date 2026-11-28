@@ -136,14 +136,15 @@ device execution remains the accepted R1 gap.
 - [x] Required CI coverage and documentation/risk-register reconciliation
 
 **Specification:** [docs/MILESTONE_7_5.md](MILESTONE_7_5.md).  
-**Status:** Complete on `feat/m7-5-editor-reliability`; correctness gates and all
-required workflows passed. Performance optimization remains deliberately deferred until
-a measured bottleneck justifies it (`docs/PERFORMANCE_BASELINE.md`).
-**Exit evidence:** documentation reconciliation commit
-`911d91219b3aa20bf429ffda386c5f3a1c7a7e02` passed `verify` run `46105361342`,
-`android-emulator` run `46105361335` (API 29 and API 36), and `native-runtime-ci` run
-`46105361328`. The evidence-only commit recording these IDs is documentation-only and
-reruns the same required gates before milestone completion.
+**Status:** Complete; PR #41 merged into `main` at
+`2424a4c1bc5e30d7837fe5fb8fdab07d7251a148` on 2026-11-28. Performance optimization
+remains deliberately deferred until a measured bottleneck justifies it
+(`docs/PERFORMANCE_BASELINE.md`).
+**Exit evidence:** post-merge `main` runs are green: `verify` `46107316324`,
+`native-runtime-ci` `46107316335`, and `android-emulator` `46107316349` (API 29 and
+API 36). Pre-merge documentation reconciliation commit
+`911d91219b3aa20bf429ffda386c5f3a1c7a7e02` passed `verify` `46105361342`,
+`android-emulator` `46105361335`, and `native-runtime-ci` `46105361328`.
 
 ## Milestone 8 — Package manager and Git
 

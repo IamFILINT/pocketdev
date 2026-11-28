@@ -1,9 +1,10 @@
 # PocketDev — Bootstrap & Storage Layout Design
 
 > Milestone 2 design (prompt §8.3–§8.5). Implemented in `:core` in Milestone 3
-> (`RuntimePaths`, `BootstrapArchive`, `BootstrapHealth`, `BootstrapManager`) and
-> wired into `AppContainer`; the Android downloader/exec wiring lands with the
-> `:runtime` module. Paths are app-private and never on shared/external storage.
+> (`RuntimePaths`, `BootstrapArchive`, `BootstrapHealth`, `BootstrapManager`), wired
+> into `AppContainer`, and connected through the Android downloader/exec wiring in
+> `:runtime`. No bootstrap changes occurred in Milestones 4–7.5. Paths are app-private
+> and never on shared/external storage.
 
 ## 1. Directory layout
 

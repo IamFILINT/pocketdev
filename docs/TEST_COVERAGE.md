@@ -1,6 +1,6 @@
 # PocketDev — Test Coverage Matrix
 
-Maintained per the mandatory testing policy (section 10). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main` or the current PR head. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
+Maintained per the mandatory testing policy ([section 10](TESTING_POLICY.md#10-test-coverage-and-traceability)). Every row points at a real file and a real test. Status reflects the last verified GitHub Actions run, not intent. `Verified` = the test exists and passed in CI on the current `main` or the current PR head. `Pending` = planned/missing; see `docs/TEST_AUDIT.md`.
 
 ## Core (`:core`)
 

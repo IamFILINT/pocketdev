@@ -177,7 +177,7 @@ Follow this sequence:
 
 Do not accumulate multiple unverified commits.
 
-Push each commit separately and wait for its corresponding CI result before creating the next commit. This ensures that every individual commit receives an independent verification run.
+Push each commit separately and wait for its corresponding CI result before creating the next commit; this ensures that every individual commit receives an independent verification run.
 
 A successful workflow for the latest commit does not prove that every earlier commit passed independently.
 
@@ -216,9 +216,7 @@ Such a limitation must remain visible in the project documentation and must not 
 
 7. GITHUB ACTIONS IS THE ONLY BUILD AND TEST ENVIRONMENT
 
-This requirement from the master specification remains unchanged.
-
-All PocketDev build and test operations must run through GitHub Actions.
+This requirement from the master specification remains unchanged: all PocketDev build and test operations must run through GitHub Actions.
 
 This includes:
 
@@ -384,11 +382,12 @@ Recommended documentation:
 
 The coverage matrix should contain:
 
-Component| Expected Behavior| Test Type| Test Location| CI Workflow| Status
-BootstrapManager| Installation and recovery| Unit/Integration| Actual test path| GitHub Actions| Verified/Pending
-RuntimePaths| Correct path resolution| Unit| Actual test path| GitHub Actions| Verified/Pending
-ProjectStore| Project operations| Unit| Actual test path| GitHub Actions| Verified/Pending
-OpenCode Integration| Agent lifecycle| Integration| Actual test path| GitHub Actions| Verified/Pending
+| Component | Expected Behavior | Test Type | Test Location | CI Workflow | Status |
+| --- | --- | --- | --- | --- | --- |
+| BootstrapManager | Installation and recovery | Unit/Integration | Actual test path | GitHub Actions | Verified/Pending |
+| RuntimePaths | Correct path resolution | Unit | Actual test path | GitHub Actions | Verified/Pending |
+| ProjectStore | Project operations | Unit | Actual test path | GitHub Actions | Verified/Pending |
+| OpenCode Integration | Agent lifecycle | Integration | Actual test path | GitHub Actions | Verified/Pending |
 
 Use actual repository paths and actual test names. Do not invent test files or claim tests exist when they do not.
 
@@ -402,7 +401,8 @@ Track test coverage for previously completed milestones as well as new milestone
 
 When a test fails:
 
-1. Stop progression to unrelated implementation work. 2. Inspect the failing GitHub Actions job.
+1. Stop progression to unrelated implementation work.
+2. Inspect the failing GitHub Actions job.
 3. Identify the root cause.
 4. Determine whether the failure is caused by implementation, test logic, environment, or infrastructure.
 5. Fix the actual problem.

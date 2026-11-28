@@ -41,12 +41,12 @@ Required PR checks are `Build, test, lint` (`verify.yml`),
 until it is enabled, these are the recorded exit gates rather than enforced merge
 checks (`docs/CI_CD.md`). `runtime-spike.yml` is manual/opt-in, not a required gate.
 
-`runtime-spike.yml` is manual, not required: it provisions the pinned x86_64
-bootstrap on an API 30 emulator, runs `RuntimeSpikeTest`, and runs
-`TerminalViewModelTest` and `PtyReliabilityTest` with `bionicPty=true` to prove the
-real linker-hop Bionic bash PTY path, exit-status reporting, launch-failure
-propagation, and repeated/concurrent session lifecycle behavior. The PTY tests are
-gated because they download the full bootstrap and prove x86_64 execution only.
+`runtime-spike.yml` provisions the pinned x86_64 bootstrap on an API 30 emulator and
+runs `RuntimeSpikeTest`, `TerminalViewModelTest`, and `PtyReliabilityTest` with
+`bionicPty=true`. It validates the linker-hop Bionic bash PTY path, exit-status
+reporting, launch-failure propagation, and concurrent session lifecycle behavior.
+The job remains opt-in because it downloads the full bootstrap and proves x86_64
+execution only.
 
 ## What is deliberately *not* claimed
 

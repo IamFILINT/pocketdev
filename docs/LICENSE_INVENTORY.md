@@ -26,8 +26,8 @@ a license until that review is complete.
 | `termux-shared` default | MIT | Not linked; only copied if a file is proven necessary |
 | `termux-shared` → `com/termux/shared/termux/*` | **GPLv3-only** (exceptions: `TermuxConstants.java`, `TermuxPropertyConstants.java` = MIT) | **Excluded** — copying would make PocketDev a GPLv3 combined work |
 | `termux-shared` → `file/filesystem/*` | GPLv2 + Classpath exception | Excluded unless required |
-| `terminal-emulator`, `terminal-view` | Apache-2.0 | **Approved for reuse** (ADR-0001) with attribution |
-| `termux-exec` | Apache-2.0 (verify at pinned commit) | Candidate for the exec/LD_PRELOAD chain; vendor only with header preservation |
+| `terminal-emulator`, `terminal-view` | Apache-2.0 | **Approved for reuse** (ADR-0001) with attribution; **not used** — PocketDev uses its own JNI PTY and Compose/Kotlin renderer |
+| `termux-exec` | Apache-2.0 (verify at pinned commit) | **Used** — stock `libtermux-exec.so` from the pinned bootstrap via `LD_PRELOAD` (ADR-0002) |
 | Termux bootstrap archives (release assets) | Built from individually licensed packages | **Downloaded at first run, never bundled in the APK**; pin tag + SHA-256; not redistributed by PocketDev |
 | Individual Termux packages (installed on demand) | Per-package | Installed by the user, never silently (prompt §8.6); repository strategy deferred to ADR-0002 |
 | OpenCode Bionic | MIT (per upstream README) | Audit bundled third-party components independently |
@@ -39,8 +39,8 @@ a license until that review is complete.
 ## Distribution implications
 
 - **No GPLv3 file is planned for reuse**, so PocketDev's own code can remain under a
-  permissive license if desired; the choice stays open until ADR-0002 (next
-  decision, post-M3) confirms the runtime strategy. Copying any GPLv3 `termux-shared` file reverses
+  permissive license if desired; the choice remains open. ADR-0002 confirmed the
+  relocated stock-bootstrap strategy. Copying any GPLv3 `termux-shared` file reverses
   this — treat such a copy as a license decision requiring explicit approval.
 - Bootstrap binaries are fetched from upstream at runtime and stored in app-private
   storage; PocketDev does not redistribute them in the APK. If the distribution

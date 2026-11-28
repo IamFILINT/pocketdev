@@ -1,8 +1,10 @@
 # PocketDev — OpenCode Bionic integration
 
-> Status: Milestone 4. Documents the pinned agent, how it is provisioned,
-> supervised, authenticated and called, plus the honest gaps. Decisions live in
-> `docs/adr/0003-opencode-provisioning.md` and `docs/adr/0004-opencode-server-supervision.md`.
+> Status: Milestone 4 complete; Milestones 5 and 6.5 add the SSE event UI and
+> Keystore-backed credentials. This document records the pinned agent, provisioning,
+> supervision, authentication, API access, and the remaining honest gaps. Decisions
+> live in `docs/adr/0003-opencode-provisioning.md` and
+> `docs/adr/0004-opencode-server-supervision.md`.
 
 ## 1. Pin
 
@@ -88,16 +90,15 @@ main thread.
 Error handling: non-2xx throws `OpenCodeApiException` with the status; malformed JSON
 throws `Json.JsonException`.
 
-**Deferred to Milestone 5:** the SSE stream at `GET /api/event` and mapping events to
-the `TaskState` model. `prompt()` returns the raw body until that exists.
+**Milestone 5:** the SSE stream at `GET /api/event` is mapped to UI state; `prompt()`
+continues to return the raw API body for direct clients.
 
 ## 7. Update procedure
 
 1. Audit the new upstream release (version, size, SHA-256, ABI, minimum API, license).
 2. Replace the metadata in `OpenCodePins` (tag, URL, size, digest, upstream version).
 3. Update the pin table above and `docs/DEPENDENCY_INVENTORY.md`.
-4. Run CI (`verify`, emulator); a static ELF check of the artifact is planned as
-   `native-runtime-ci.yml`.
+4. Run CI (`verify`, emulator, and the static ELF check in `native-runtime-ci.yml`).
 5. Do not auto-upgrade in production; the pin is explicit and reviewed.
 
 ## 8. Gaps
@@ -107,5 +108,5 @@ the `TaskState` model. `prompt()` returns the raw body until that exists.
   and a real loopback HTTP server; device execution is the accepted gap.
 - **Readiness is a text contract**, isolated in one parser with tests; upstream wording
   changes fail loudly rather than hanging (risk R14).
-- **No event stream / tool-permission UI yet** (Milestone 5).
-- **No Keystore-backed secret store yet**: provider API keys are held in memory only.
+- **Event stream and tool-permission UI** are implemented (Milestone 5); provider-specific permission execution against a live ARM64 server remains unverified under R1.
+- **Keystore-backed API-key storage** is implemented (Milestone 6.5); plaintext keys are not persisted, and real-device provider responses remain unverified under R1.

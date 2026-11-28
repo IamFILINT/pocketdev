@@ -7,7 +7,7 @@ version-control real software projects directly on an Android device — with a 
 terminal, an integrated Bionic runtime, a code editor, Git, package management, and an
 AI coding agent (OpenCode Bionic).
 
-> Status: Milestone 7.5 complete — the native code editor now includes stable
+> Status: Milestone 7.5 complete (PR #41, merged 2026-11-28) — the native code editor now includes stable
 > workspace-bound tabs, save-race protection, strict UTF-8/newline fidelity, safe
 > symlink-rejecting writes, conflict-safe draft recovery, language-aware formatting,
 > Unicode/IME-aware input handling, and committed performance baselines. Milestones 5
@@ -29,7 +29,7 @@ AI coding agent (OpenCode Bionic).
 | 5 — AI workspace | Done: SSE events → UI, sessions, prompts, provider/model settings, permission prompts |
 | 6 — Terminal and filesystem | Done: file explorer, shared project identity, and real PTY terminal (PRs #37/#38) |
 | 7 — Code editor | Done: syntax highlighting, tabs, search/replace, undo/redo, external-change recovery (PR #40) |
-| 7.5 — Editor reliability | Done: stable tabs, safe writes, strict decoding, recovery, IME/selection, formatting, baselines |
+| 7.5 — Editor reliability | Done: stable tabs, safe writes, strict decoding, recovery, IME/selection, formatting, baselines (PR #41, merge `2424a4c`) |
 
 ## Principles
 
