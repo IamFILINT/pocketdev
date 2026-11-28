@@ -139,7 +139,11 @@ device execution remains the accepted R1 gap.
 **Status:** Complete on `feat/m7-5-editor-reliability`; correctness gates and all
 required workflows passed. Performance optimization remains deliberately deferred until
 a measured bottleneck justifies it (`docs/PERFORMANCE_BASELINE.md`).
-**Exit evidence:** to be recorded after the final documentation reconciliation run.
+**Exit evidence:** documentation reconciliation commit
+`911d91219b3aa20bf429ffda386c5f3a1c7a7e02` passed `verify` run `46105361342`,
+`android-emulator` run `46105361335` (API 29 and API 36), and `native-runtime-ci` run
+`46105361328`. The evidence-only commit recording these IDs is documentation-only and
+reruns the same required gates before milestone completion.
 
 ## Milestone 8 — Package manager and Git
 
