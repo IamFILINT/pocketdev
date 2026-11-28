@@ -1,16 +1,16 @@
 # PocketDev — Architecture
 
-> Status: Milestone 7 in progress. Domain logic stays in `:core`; `:runtime` holds the
-> Android-only environment, linker-hop process spawn, execution health checks, and
-> OpenCode Bionic provisioning + `serve` supervision. The app shell talks to both
-> through small controller APIs.
+> Status: Milestone 7.5 editor reliability work complete. Domain logic stays in
+> `:core`; `:runtime` holds the Android-only environment, linker-hop process spawn,
+> execution health checks, and OpenCode Bionic provisioning + `serve` supervision.
+> The app shell talks to both through small controller APIs.
 
 ## Module layout
 
 | Module | Type | Purpose |
 | --- | --- | --- |
 | `:app` | Android application (Compose) | UI shell, navigation, screens, Android-specific wiring |
-| `:core` | Pure Kotlin/JVM library | Domain logic with no Android dependencies: validation, path safety, project registry, state machines, redaction, agent pins/installer, serve-output parsing, JSON reader, OpenCode HTTP API client, editor text codec/buffer/search/syntax/formatting |
+| `:core` | Pure Kotlin/JVM library | Domain logic with no Android dependencies: validation, path safety, project registry, state machines, redaction, agent pins/installer, serve-output parsing, JSON reader, OpenCode HTTP API client, editor text codec/buffer/search/syntax/formatting, draft serialization, and JVM performance baselines |
 | `:runtime` | Android library | Bootstrap wiring (environment, linker-hop spawn, preload, execution health) and the OpenCode agent: provisioning, `serve` supervision, connection state |
 
 Keeping `:core` Android-free means its logic is testable on a plain JVM in CI, fast and
@@ -86,26 +86,36 @@ The server state is authoritative: no client is handed out until the process is
 actually `Listening`. The password never leaves the controller except into the
 in-memory client.
 
-## Current data flow (Milestone 7 — code editor)
+## Current data flow (Milestone 7.5 — code editor)
 
 ```
 FilesScreen
   └── onOpenInEditor(FileEntry) -> EditorViewModel.open(relativePath)
+        └── workspaceId + rootPath + relativePath -> EditorDocumentId.key
         └── WorkspaceFiles.readTextFile / writeTextFile
-              ├── TextFileCodec (UTF-8/BOM, LF/CRLF/CR, binary/NUL rejection)
-              ├── FileSignature (stale-write guard)
+              ├── TextFileCodec (strict UTF-8/BOM, mixed-newline fidelity, binary/NUL rejection)
+              ├── FileSignature (content digest + size + timestamp; stale-write guard)
+              ├── PathSafety.resolveWithinNoFollow (rejects symlink components)
               └── truncated > 1 MiB -> read-only snapshot + UI warning
 
 EditorViewModel
-  ├── tabs: path, language, read-only
-  ├── EditorBuffer: text, line map, undo/redo, dirty state
+  ├── tabs keyed by stable EditorDocumentId; project switch cannot retarget an open tab
+  ├── EditorBuffer: text, incremental line map, undo/redo, markSaved(revision, text)
   ├── TextSearch / EditorFormatter / SyntaxHighlighter
-  └── external changes: dirty conflict or clean reload
+  │     └── formatting is language-aware and preserves syntax-significant whitespace
+  ├── external changes: dirty conflict or clean reload; no silent overwrite
+  └── drafts: app-private RuntimePaths.drafts, debounced bytes, schema/version,
+        hash+size match for auto-restore, explicit restore/keep/discard for conflicts
 ```
 
 The editor owns only its in-memory buffers and snapshots; `WorkspaceFiles` remains the
-single filesystem authority. Saves pass the last observed `FileSignature`, so an
-external change fails the save instead of being overwritten.
+single filesystem authority. Saves stage content and commit with
+`Files.move(..., REPLACE_EXISTING, ATOMIC_MOVE)` where the provider supports it, with a
+fallback and temp-file cleanup; the last observed `FileSignature` is still required, so
+an external change fails the save instead of being overwritten. Draft recovery never
+auto-restores a discarded or changed disk file: it requires hash+size equality or an
+explicit user choice. See `docs/PERFORMANCE_BASELINE.md` for the measured baseline and
+`docs/RISK_REGISTER.md` for the remaining provider-specific atomicity limitation.
 
 ## Key decisions
 
@@ -142,11 +152,27 @@ external change fails the save instead of being overwritten.
     editor dependency; editing, syntax, search, history, formatting, encoding, and
     external-change logic stay testable in `:core`. Files larger than 1 MiB are
     opened read-only from the first 1 MiB with an explicit warning.
+11. **Reliability before optimization.** M7.5 binds tabs to stable workspace
+    identity, clears dirty only on exact saved revision+text match, treats content
+    digest as the primary external-change signal, and keeps drafts app-private and
+    conflict-gated. Performance work starts from committed JVM/Android baselines;
+    no file-size limit was reduced and no correctness assertion was weakened.
 
 ## Security boundaries
 
-- `PathSafety` rejects absolute paths, drive letters, `..`, empty segments, and NUL.
+- `PathSafety` rejects absolute paths, drive letters, `..`, empty segments, and NUL;
+  `resolveWithinNoFollow` additionally rejects existing symlink components in editor paths.
 - Project deletion only deletes directories provably inside `projectsRoot`.
-- API keys are not persisted anywhere yet (settings screen states this explicitly).
+- API keys are stored encrypted with Android Keystore AES/GCM with randomized IV; only
+  the `{env:POCKETDEV_API_KEY}` placeholder and redacted values reach logs/config output.
 - `SecretRedaction` provides log-safe redaction utilities for later use.
-- The agent password is per-run, held only in memory (`OpenCodeServerConnection` inside\n  the `StateFlow`), never logged or persisted; it rotates on every server start.\n- The agent binds `127.0.0.1` explicitly and the captured URL is validated as\n  loopback before a connection is accepted; no LAN/internet exposure.
+- The agent password is per-run, held only in memory (`OpenCodeServerConnection` inside
+  the `StateFlow`), never logged or persisted; it rotates on every server start.
+- The agent binds `127.0.0.1` explicitly and the captured URL is validated as
+  loopback before a connection is accepted; no LAN/internet exposure.
+- Editor drafts are app-private versioned byte blobs. Unreadable/unknown versions are
+  retained raw and reported; auto-restore requires disk hash+size equality, and conflicts
+  require explicit `restoreDraft()` or `keepDiskDraft()`.
+- Editor saves stage then commit with atomic move where possible; fallback cleanup and
+  stale-signature rejection prevent partial or silent overwrites. Provider-specific
+  atomicity remains an explicit limitation in `docs/RISK_REGISTER.md`.

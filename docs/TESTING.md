@@ -21,15 +21,25 @@
 `verify.yml` (required gate):
 
 ```
-./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest assembleDebug
+./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest :core:test assembleDebug
 ```
 
-Artifacts: unit-test reports, lint report, debug APK.
+Artifacts: unit-test reports (including core editor benchmark stdout), lint report,
+debug APK.
 
 `android-emulator.yml`: boots x86_64 API 29 and API 36 AVDs and runs
 `connectedDebugAndroidTest` (navigation, Files, loopback HTTP, provider/model
-selection, Keystore-backed API-key persistence, and workspace selected-model flows),
-excluding the opt-in PTY classes that run only in `runtime-spike.yml`.
+selection, Keystore-backed API-key persistence, workspace selected-model flows, editor
+ViewModel/data-integrity tests, editor UI/integration tests, IME/Unicode/selection
+tests, and Android recomposition/frame baselines), excluding the opt-in PTY classes
+that run only in `runtime-spike.yml`.
+
+Required PR checks are `Build, test, lint` (`verify.yml`),
+`Launch and navigation (API 29)` and `Launch and navigation (API 36)`
+(`android-emulator.yml`), and `Verify pinned aarch64 payloads (static, x86_64 runner)`
+(`native-runtime-ci.yml`). Repository branch protection is a manual GitHub setting;
+until it is enabled, these are the recorded exit gates rather than enforced merge
+checks (`docs/CI_CD.md`). `runtime-spike.yml` is manual/opt-in, not a required gate.
 
 `runtime-spike.yml` is manual, not required: it provisions the pinned x86_64
 bootstrap on an API 30 emulator, runs `RuntimeSpikeTest`, and runs
@@ -48,6 +58,11 @@ gated because they download the full bootstrap and prove x86_64 execution only.
   *same* client against a real loopback `com.sun.net.httpserver.HttpServer`. Neither
   proves the aarch64 binary boots on a device.
 - **Instrumentation tests run on x86_64 API 29 and API 36**, so they say nothing about the runtime ABI.
+- **Editor performance baselines are not thresholds.** Core numbers come from JDK 17 on
+  `amd64`; Android numbers come from x86_64 emulators. They are not physical-device or
+  ARM64 measurements, and core/JVM numbers must not be compared with Android numbers.
+- **Editor memory evidence is limited.** `saveEncode` records a JVM heap delta; there is
+  no peak RSS/PSS measurement, and no Android heap-growth threshold is asserted.
 - **The OpenCode env-auth handshake is not proven on a device.** Tests prove the
   `OPENCODE_CONFIG_CONTENT` placeholder, `POCKETDEV_API_KEY` env injection, redacted
   logging, and session/model wire shapes; they do not prove a real provider response.
@@ -67,8 +82,11 @@ gated because they download the full bootstrap and prove x86_64 execution only.
 | Runtime env / preload / launcher / launch plan / ABI / redacted agent config | `runtime/.../*Test.kt`, `runtime/.../RuntimeAgentConfigTest.kt` |
 | Server supervision state machine | `runtime/.../OpenCodeServerTest.kt` |
 | ANSI terminal buffer | `core/.../terminal/AnsiBufferTest.kt` |
-| Editor text codec, buffer, search, syntax, formatting | `core/.../editor/TextFileCodecTest.kt`, `EditorBufferTest.kt`, `TextSearchTest.kt`, `SyntaxHighlighterTest.kt`, `EditorFormatterTest.kt` |
-| Editor workspace IO (BOM/newline round-trip, stale signature, binary/large files) | `core/.../workspace/WorkspaceFilesEditorTest.kt` |
+| Editor text codec, buffer, search, syntax, formatting, drafts, performance baselines | `core/.../editor/TextFileCodecTest.kt`, `EditorBufferTest.kt`, `TextSearchTest.kt`, `SyntaxHighlighterTest.kt`, `EditorFormatterTest.kt`, `EditorDraftStoreTest.kt`, `EditorPerformanceBaselineTest.kt` |
+| Editor workspace IO (strict UTF-8, mixed-newline fidelity, stale signature, atomic staging/fallback, symlink rejection, binary/large files) | `core/.../workspace/WorkspaceFilesEditorTest.kt`, `PathSafetyTest.kt` |
+| Editor ViewModel reliability (stable tabs, save races, external conflicts, drafts, formatting, Unicode) | `app/src/androidTest/.../EditorViewModelTest.kt` |
+| Editor Compose input/IME/selection and instrumentation baselines | `app/src/androidTest/.../EditorInputUiTest.kt` |
+| Editor Files → editor integration | `app/src/androidTest/.../EditorUiTest.kt` |
 | PTY session state and exit decoding | `app/src/test/.../terminal/TerminalSessionTest.kt` |
 | Project-context binding (agent, terminal, files) | `app/src/androidTest/.../AgentWorkspaceViewModelTest.kt`, `FilesViewModelTest.kt`, `TerminalViewModelTest.kt` |
 | Provider/model settings and Keystore API-key status/save/clear | `app/src/androidTest/.../SettingsViewModelTest.kt` |
