@@ -5,27 +5,32 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pocketdev.PocketDevApplication
 import dev.pocketdev.core.editor.EditorBuffer
+import dev.pocketdev.core.editor.EditorDocumentId
+import dev.pocketdev.core.editor.EditorDraft
+import dev.pocketdev.core.editor.EditorDraftRead
+import dev.pocketdev.core.editor.EditorDraftStore
 import dev.pocketdev.core.editor.EditorFormatter
 import dev.pocketdev.core.editor.EditorLanguage
+import dev.pocketdev.core.editor.EditorSaveSnapshot
 import dev.pocketdev.core.editor.FileSignature
 import dev.pocketdev.core.editor.NewlineStyle
 import dev.pocketdev.core.editor.TextEncoding
 import dev.pocketdev.core.editor.TextFileSnapshot
 import dev.pocketdev.core.editor.TextMatch
 import dev.pocketdev.core.editor.TextSearch
-import dev.pocketdev.core.workspace.WorkspaceFiles
 import dev.pocketdev.core.workspace.WorkspaceResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 data class EditorTabState(
@@ -39,6 +44,13 @@ data class ExternalChangeState(
     val path: String,
     val diskSignature: FileSignature,
     val dirty: Boolean,
+)
+
+data class DraftRecoveryState(
+    val path: String,
+    val documentId: EditorDocumentId,
+    val updatedAtEpochMs: Long,
+    val conflict: Boolean,
 )
 
 data class EditorUiState(
@@ -66,14 +78,44 @@ data class EditorUiState(
     val message: String? = null,
     val error: String? = null,
     val externalChange: ExternalChangeState? = null,
+    val draftRecovery: DraftRecoveryState? = null,
     val busyLabel: String? = null,
 )
 
 private sealed interface EditorResult {
-    data class Loaded(val path: String, val snapshot: TextFileSnapshot) : EditorResult
-    data class Saved(val path: String, val signature: FileSignature) : EditorResult
-    data class Reloaded(val path: String, val snapshot: TextFileSnapshot) : EditorResult
-    data class Checked(val path: String, val snapshot: TextFileSnapshot) : EditorResult
+    data class Loaded(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val snapshot: TextFileSnapshot,
+        val draft: EditorDraftRead,
+    ) : EditorResult
+
+    data class DraftRestored(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val draft: EditorDraft,
+    ) : EditorResult
+
+    data class Saved(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val revision: Long,
+        val savedText: String,
+        val signature: FileSignature,
+    ) : EditorResult
+
+    data class Reloaded(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val snapshot: TextFileSnapshot,
+    ) : EditorResult
+
+    data class Checked(
+        val path: String,
+        val documentId: EditorDocumentId,
+        val snapshot: TextFileSnapshot,
+    ) : EditorResult
+
     data class Error(val message: String) : EditorResult
 }
 
@@ -81,6 +123,10 @@ class EditorViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val workspaceGateway: EditorWorkspaceGateway =
+        DefaultEditorWorkspaceGateway((application as PocketDevApplication).container),
+    private val draftRepository: EditorDraftRepository =
+        DefaultEditorDraftRepository((application as PocketDevApplication).container),
 ) : AndroidViewModel(application) {
 
     private val container = (application as PocketDevApplication).container
@@ -90,8 +136,13 @@ class EditorViewModel @JvmOverloads constructor(
     private val buffers = mutableMapOf<String, EditorBuffer>()
     private val snapshots = mutableMapOf<String, TextFileSnapshot>()
     private val selections = mutableMapOf<String, IntRange>()
+    private val documentIds = mutableMapOf<String, EditorDocumentId>()
+    private val draftRecoveries = mutableMapOf<String, DraftRecoveryState?>()
+    private val saveMutexes = mutableMapOf<String, Mutex>()
     private var operationJob: Job? = null
     private var operationGeneration = 0
+    private var activeSaveCount = 0
+    private var draftJob: Job? = null
 
     fun open(relativePath: String) {
         if (relativePath.isBlank()) return
@@ -100,7 +151,9 @@ class EditorViewModel @JvmOverloads constructor(
             checkExternalChanges()
             return
         }
-        runTask("Open $relativePath") { readSnapshot(relativePath) }
+        val documentId = currentDocumentId(relativePath)
+        documentIds[relativePath] = documentId
+        runTask("Open $relativePath") { readSnapshot(relativePath, documentId) }
     }
 
     fun activateTab(path: String) {
@@ -111,6 +164,7 @@ class EditorViewModel @JvmOverloads constructor(
                 activePath = path,
                 selection = selection,
                 externalChange = null,
+                draftRecovery = draftRecoveries[path],
                 message = null,
                 error = null,
             )
@@ -129,6 +183,8 @@ class EditorViewModel @JvmOverloads constructor(
         buffers.remove(path)
         snapshots.remove(path)
         selections.remove(path)
+        documentIds.remove(path)
+        draftRecoveries.remove(path)
         val tabs = _uiState.value.tabs.filterNot { it.path == path }
         val nextPath = tabs.lastOrNull()?.path
         _uiState.update {
@@ -137,6 +193,7 @@ class EditorViewModel @JvmOverloads constructor(
                 activePath = nextPath,
                 selection = nextPath?.let { path -> selections[path] } ?: 0..0,
                 externalChange = null,
+                draftRecovery = nextPath?.let { path -> draftRecoveries[path] },
                 message = null,
                 error = null,
             )
@@ -182,23 +239,69 @@ class EditorViewModel @JvmOverloads constructor(
             _uiState.update { it.copy(error = "Resolve external changes before saving.") }
             return
         }
-        val text = buffer.text
-        val encoding = state.encoding
-        val newlineStyle = state.newlineStyle
-        runTask("Save $path") {
-            withWorkspace { files ->
-                when (
-                    val result = files.writeTextFile(
-                        relativePath = path,
-                        text = text,
-                        encoding = encoding,
-                        newlineStyle = newlineStyle,
-                        expectedSignature = snapshots[path]?.signature,
-                    )
-                ) {
-                    is WorkspaceResult.Success -> EditorResult.Saved(path, result.value)
-                    is WorkspaceResult.Failure -> EditorResult.Error(result.message)
-                    is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
+        if (state.draftRecovery?.conflict == true) {
+            _uiState.update { it.copy(error = "Resolve the recovered draft conflict before saving.") }
+            return
+        }
+        val documentId = documentIds[path] ?: currentDocumentId(path).also { documentIds[path] = it }
+        val request = EditorSaveSnapshot(
+            documentId = documentId,
+            text = buffer.text,
+            revision = buffer.revision,
+            encoding = state.encoding,
+            newlineStyle = state.newlineStyle,
+            newlineStyles = snapshots[path]?.newlineStyles ?: emptyList(),
+            expectedSignature = snapshots[path]?.signature,
+        )
+        enqueueSave(path, documentId, request)
+    }
+
+    private fun enqueueSave(
+        path: String,
+        documentId: EditorDocumentId,
+        request: EditorSaveSnapshot,
+    ) {
+        val mutex = saveMutexes.getOrPut(documentId.key) { Mutex() }
+        val label = "Save $path"
+        activeSaveCount += 1
+        _uiState.update { it.copy(busyLabel = label, message = null, error = null) }
+        viewModelScope.launch(mainDispatcher) {
+            try {
+                val result = mutex.withLock {
+                    withContext(ioDispatcher) {
+                        when (val result = workspaceGateway.writeTextFile(request)) {
+                            is WorkspaceResult.Success -> EditorResult.Saved(
+                                path = path,
+                                documentId = documentId,
+                                revision = request.revision,
+                                savedText = request.text,
+                                signature = result.value,
+                            )
+                            is WorkspaceResult.Failure -> EditorResult.Error(result.message)
+                            is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
+                        }
+                    }
+                }
+                if (documentIds[path] == documentId && buffers.containsKey(path)) {
+                    applyResult(result, label)
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                if (documentIds[path] == documentId) {
+                    _uiState.update {
+                        it.copy(
+                            error = error.message ?: "Editor operation failed",
+                            busyLabel = null,
+                        )
+                    }
+                }
+            } finally {
+                activeSaveCount -= 1
+                if (activeSaveCount == 0) {
+                    _uiState.update {
+                        if (it.busyLabel == label) it.copy(busyLabel = null) else it
+                    }
                 }
             }
         }
@@ -206,14 +309,43 @@ class EditorViewModel @JvmOverloads constructor(
 
     fun checkExternalChanges() {
         val path = _uiState.value.activePath ?: return
-        runTask("Check changes") { readSnapshot(path, forCheck = true) }
+        val documentId = boundDocumentId(path)
+        runTask("Check changes") { readSnapshot(path, documentId, forCheck = true) }
     }
 
-    fun discardChanges() = reloadFromDisk()
+    fun discardChanges() {
+        val path = _uiState.value.activePath
+        if (path != null) deleteDraft(path)
+        reloadFromDisk()
+    }
+
+    fun restoreDraft() {
+        val recovery = _uiState.value.draftRecovery ?: return
+        runTask("Restore draft") {
+            when (val result = draftRepository.load(recovery.documentId)) {
+                is EditorDraftRead.Usable -> EditorResult.DraftRestored(
+                    path = recovery.path,
+                    documentId = recovery.documentId,
+                    draft = result.draft,
+                )
+                is EditorDraftRead.Unreadable -> EditorResult.Error(
+                    "Draft is unreadable: ${result.reason}",
+                )
+                EditorDraftRead.Missing -> EditorResult.Error("Draft is no longer available")
+            }
+        }
+    }
+
+    fun keepDiskDraft() {
+        val recovery = _uiState.value.draftRecovery ?: return
+        deleteDraft(recovery.path)
+        reloadFromDisk()
+    }
 
     fun reloadFromDisk() {
         val path = _uiState.value.activePath ?: return
-        runTask("Reload $path") { readSnapshot(path) }
+        val documentId = boundDocumentId(path)
+        runTask("Reload $path") { readSnapshot(path, documentId) }
     }
 
     fun keepLocalChanges() {
@@ -242,6 +374,10 @@ class EditorViewModel @JvmOverloads constructor(
         val buffer = buffers[path] ?: return
         if (state.readOnly) return
         val language = state.tabs.firstOrNull { it.path == path }?.language ?: EditorLanguage.PLAIN_TEXT
+        if (!EditorFormatter.supportsFormatting(language)) {
+            _uiState.update { it.copy(error = "No safe formatter for ${language.label}.") }
+            return
+        }
         val formatted = EditorFormatter.format(buffer.text, language)
         if (formatted != buffer.text) {
             buffer.replace(0, buffer.text.length, formatted)
@@ -342,39 +478,75 @@ class EditorViewModel @JvmOverloads constructor(
         operationJob = job
     }
 
-    private suspend fun readSnapshot(path: String, forCheck: Boolean = false): EditorResult =
-        when (val result = withWorkspace { files -> files.readTextFile(path) }) {
+    private suspend fun readSnapshot(
+        path: String,
+        documentId: EditorDocumentId,
+        forCheck: Boolean = false,
+    ): EditorResult =
+        when (val result = workspaceGateway.readTextFile(documentId)) {
             is WorkspaceResult.Success -> if (forCheck) {
-                EditorResult.Checked(path, result.value)
+                EditorResult.Checked(path, documentId, result.value)
             } else {
-                EditorResult.Loaded(path, result.value)
+                EditorResult.Loaded(
+                    path = path,
+                    documentId = documentId,
+                    snapshot = result.value,
+                    draft = draftRepository.load(documentId),
+                )
             }
             is WorkspaceResult.Failure -> EditorResult.Error(result.message)
             is WorkspaceResult.PartialFailure -> EditorResult.Error(result.message)
         }
 
-    private suspend fun <T> withWorkspace(block: suspend (WorkspaceFiles) -> T): T {
-        currentCoroutineContext().ensureActive()
+    private fun boundDocumentId(path: String): EditorDocumentId =
+        documentIds[path] ?: currentDocumentId(path).also { documentIds[path] = it }
+
+    private fun currentDocumentId(path: String): EditorDocumentId {
         val selected = container.selectedProject.value
-        val context = runCatching { container.projectContext(selected) }
-        val rootPath = context.getOrNull()?.rootPath ?: container.projectsRoot.absolutePath
-        return block(WorkspaceFiles(container.validatedRootPath(rootPath)))
+        val context = runCatching { container.projectContext(selected) }.getOrNull()
+        return EditorDocumentId(
+            workspaceId = context?.projectId ?: EditorDocumentId.SHARED_WORKSPACE_ID,
+            rootPath = context?.rootPath ?: container.projectsRoot.absolutePath,
+            relativePath = path,
+        )
     }
 
     private fun applyResult(result: EditorResult, label: String) {
         when (result) {
             is EditorResult.Error -> _uiState.update { it.copy(error = result.message) }
-            is EditorResult.Loaded -> applyLoaded(result.path, result.snapshot)
-            is EditorResult.Saved -> applySaved(result.path, result.signature)
-            is EditorResult.Reloaded -> applyReloaded(result.path, result.snapshot)
-            is EditorResult.Checked -> applyChecked(result.path, result.snapshot)
+            is EditorResult.Loaded -> applyLoaded(
+                path = result.path,
+                documentId = result.documentId,
+                snapshot = result.snapshot,
+                draft = result.draft,
+            )
+            is EditorResult.DraftRestored -> applyRestoredDraft(
+                path = result.path,
+                documentId = result.documentId,
+                draft = result.draft,
+            )
+            is EditorResult.Saved -> applySaved(
+                path = result.path,
+                documentId = result.documentId,
+                revision = result.revision,
+                savedText = result.savedText,
+                signature = result.signature,
+            )
+            is EditorResult.Reloaded -> applyReloaded(result.path, result.documentId, result.snapshot)
+            is EditorResult.Checked -> applyChecked(result.path, result.documentId, result.snapshot)
         }
         if (result !is EditorResult.Error) {
             _uiState.update { it.copy(message = "$label complete") }
         }
     }
 
-    private fun applyLoaded(path: String, snapshot: TextFileSnapshot) {
+    private fun applyLoaded(
+        path: String,
+        documentId: EditorDocumentId,
+        snapshot: TextFileSnapshot,
+        draft: EditorDraftRead,
+    ) {
+        if (documentIds[path] != documentId) return
         val tab = EditorTabState(
             path = path,
             name = path.substringAfterLast('/').ifBlank { path },
@@ -384,38 +556,150 @@ class EditorViewModel @JvmOverloads constructor(
         buffers[path] = EditorBuffer(snapshot.text)
         snapshots[path] = snapshot
         selections[path] = 0..0
+        draftRecoveries.remove(path)
         _uiState.update { state ->
             state.copy(
                 tabs = state.tabs.filterNot { it.path == path } + tab,
                 activePath = path,
                 selection = 0..0,
                 externalChange = null,
+                draftRecovery = null,
+            )
+        }
+        when (draft) {
+            EditorDraftRead.Missing -> publishActive()
+            is EditorDraftRead.Unreadable -> {
+                _uiState.update {
+                    it.copy(error = "Unsaved draft is unreadable: ${draft.reason}. Raw bytes were retained.")
+                }
+                publishActive()
+            }
+            is EditorDraftRead.Usable -> applyDraftOnLoad(path, snapshot, draft.draft)
+        }
+    }
+
+    private fun applyDraftOnLoad(
+        path: String,
+        snapshot: TextFileSnapshot,
+        draft: EditorDraft,
+    ) {
+        if (!sameBaseline(draft.baselineSignature, snapshot.signature)) {
+            val recovery = DraftRecoveryState(
+                path = path,
+                documentId = draft.documentId,
+                updatedAtEpochMs = draft.updatedAtEpochMs,
+                conflict = true,
+            )
+            draftRecoveries[path] = recovery
+            _uiState.update {
+                it.copy(
+                    draftRecovery = recovery,
+                    message = "Unsaved draft conflicts with the file on disk. Choose an action.",
+                )
+            }
+            publishActive()
+            _uiState.update { it.copy(draftRecovery = recovery) }
+            return
+        }
+        if (draft.text == snapshot.text) {
+            deleteDraft(path)
+            publishActive()
+            return
+        }
+        val buffer = buffers[path] ?: return
+        buffer.restoreDraft(
+            draftText = draft.text,
+            baselineText = snapshot.text,
+            revision = draft.bufferRevision,
+            persistedRevision = draft.persistedRevision,
+        )
+        val recovery = DraftRecoveryState(
+            path = path,
+            documentId = draft.documentId,
+            updatedAtEpochMs = draft.updatedAtEpochMs,
+            conflict = false,
+        )
+        draftRecoveries[path] = recovery
+        _uiState.update {
+            it.copy(draftRecovery = recovery, message = "Recovered unsaved changes from ${draft.updatedAtEpochMs}.")
+        }
+        publishActive()
+        _uiState.update { it.copy(draftRecovery = recovery) }
+    }
+
+    private fun sameBaseline(left: FileSignature, right: FileSignature): Boolean =
+        left.contentSha256 == right.contentSha256 && left.sizeBytes == right.sizeBytes
+
+    private fun applyRestoredDraft(
+        path: String,
+        documentId: EditorDocumentId,
+        draft: EditorDraft,
+    ) {
+        if (documentIds[path] != documentId) return
+        val buffer = buffers[path] ?: return
+        val snapshot = snapshots[path] ?: return
+        buffer.restoreDraft(
+            draftText = draft.text,
+            baselineText = snapshot.text,
+            revision = draft.bufferRevision,
+            persistedRevision = draft.persistedRevision,
+        )
+        draftRecoveries[path] = draftRecoveries[path]?.copy(conflict = false)
+        _uiState.update {
+            it.copy(
+                draftRecovery = draftRecoveries[path],
+                message = "Draft restored. Save to write it to disk.",
             )
         }
         publishActive()
+        _uiState.update { it.copy(draftRecovery = draftRecoveries[path]) }
     }
 
-    private fun applySaved(path: String, signature: FileSignature) {
+    private fun applySaved(
+        path: String,
+        documentId: EditorDocumentId,
+        revision: Long,
+        savedText: String,
+        signature: FileSignature,
+    ) {
+        if (documentIds[path] != documentId) return
         val buffer = buffers[path] ?: return
-        buffer.markSaved()
+        buffer.markSaved(revision, savedText)
         val snapshot = snapshots[path] ?: return
         snapshots[path] = snapshot.copy(
             signature = signature,
             sizeBytes = signature.sizeBytes,
-            text = buffer.text,
+            text = savedText,
         )
+        deleteDraft(path)
+        draftRecoveries.remove(path)
+        _uiState.update { it.copy(draftRecovery = null) }
         publishActive()
     }
 
-    private fun applyReloaded(path: String, snapshot: TextFileSnapshot) {
+    private fun applyReloaded(
+        path: String,
+        documentId: EditorDocumentId,
+        snapshot: TextFileSnapshot,
+    ) {
+        if (documentIds[path] != documentId) return
         buffers[path] = EditorBuffer(snapshot.text)
         snapshots[path] = snapshot
         selections[path] = 0..0
-        _uiState.update { it.copy(activePath = path, selection = 0..0, externalChange = null) }
+        draftRecoveries.remove(path)
+        _uiState.update {
+            it.copy(activePath = path, selection = 0..0, externalChange = null, draftRecovery = null)
+        }
+        deleteDraft(path)
         publishActive()
     }
 
-    private fun applyChecked(path: String, snapshot: TextFileSnapshot) {
+    private fun applyChecked(
+        path: String,
+        documentId: EditorDocumentId,
+        snapshot: TextFileSnapshot,
+    ) {
+        if (documentIds[path] != documentId) return
         val current = snapshots[path]
         if (current?.signature == snapshot.signature) return
         val buffer = buffers[path]
@@ -430,7 +714,11 @@ class EditorViewModel @JvmOverloads constructor(
         buffers[path] = EditorBuffer(snapshot.text)
         snapshots[path] = snapshot
         selections[path] = 0..0
-        _uiState.update { it.copy(activePath = path, selection = 0..0, externalChange = null) }
+        draftRecoveries.remove(path)
+        _uiState.update {
+            it.copy(activePath = path, selection = 0..0, externalChange = null, draftRecovery = null)
+        }
+        deleteDraft(path)
         publishActive()
     }
 
@@ -478,10 +766,60 @@ class EditorViewModel @JvmOverloads constructor(
                 activeMatch = activeMatch,
             )
         }
+        if (buffer.dirty && !_uiState.value.readOnly) scheduleDraftSave(path)
+    }
+
+    private fun scheduleDraftSave(path: String) {
+        val documentId = documentIds[path] ?: return
+        val snapshot = snapshots[path] ?: return
+        val buffer = buffers[path] ?: return
+        val draft = EditorDraft(
+            schemaVersion = EditorDraftStore.SCHEMA_VERSION,
+            documentId = documentId,
+            text = buffer.text,
+            bufferRevision = buffer.revision,
+            persistedRevision = buffer.persistedRevision,
+            baselineSignature = snapshot.signature,
+            encoding = snapshot.encoding,
+            newlineStyle = snapshot.newlineStyle,
+            newlineStyles = snapshot.newlineStyles,
+            updatedAtEpochMs = System.currentTimeMillis(),
+        )
+        draftJob?.cancel()
+        draftJob = viewModelScope.launch(mainDispatcher) {
+            delay(DRAFT_DEBOUNCE_MS)
+            if (documentIds[path] != documentId || buffers[path] !== buffer || !buffer.dirty) {
+                return@launch
+            }
+            try {
+                withContext(ioDispatcher) { draftRepository.save(draft) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(error = error.message ?: "Could not save unsaved draft")
+                }
+            }
+        }
+    }
+
+    private fun deleteDraft(path: String) {
+        val documentId = documentIds[path] ?: return
+        val pending = draftJob
+        pending?.cancel()
+        viewModelScope.launch(ioDispatcher) {
+            pending?.join()
+            runCatching { draftRepository.delete(documentId) }
+        }
     }
 
     override fun onCleared() {
         operationJob?.cancel()
+        draftJob?.cancel()
         super.onCleared()
+    }
+
+    private companion object {
+        const val DRAFT_DEBOUNCE_MS = 200L
     }
 }

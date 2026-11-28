@@ -12,14 +12,14 @@ class TextSearchTest {
         val wholeWord = TextSearch.findAll(text, "foo", ignoreCase = true, wholeWord = true)
 
         assertEquals(listOf(TextMatch(0, 3), TextMatch(15, 18)), caseSensitive)
-        assertEquals(listOf(TextMatch(0, 3), TextMatch(4, 7), TextMatch(8, 14), TextMatch(15, 18)), insensitive)
+        assertEquals(listOf(TextMatch(0, 3), TextMatch(4, 7), TextMatch(8, 11), TextMatch(15, 18)), insensitive)
         assertEquals(listOf(TextMatch(0, 3), TextMatch(4, 7), TextMatch(15, 18)), wholeWord)
     }
 
     @Test
     fun `findNext wraps after the current offset`() {
         assertEquals(
-            TextMatch(5, 8),
+            TextMatch(8, 11),
             TextSearch.findNext("one two one", "one", fromOffset = 4),
         )
         assertEquals(
@@ -37,7 +37,7 @@ class TextSearchTest {
             ignoreCase = true,
         )
 
-        assertEquals("b B b", text)
+        assertEquals("b b b", text)
         assertEquals(3, count)
     }
 }

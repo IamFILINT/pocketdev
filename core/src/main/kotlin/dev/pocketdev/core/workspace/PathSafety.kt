@@ -1,6 +1,7 @@
 package dev.pocketdev.core.workspace
 
 import java.io.File
+import java.nio.file.Files
 
 /**
  * Guards every filesystem path that originates from user input or the AI agent.
@@ -37,6 +38,24 @@ object PathSafety {
         if (!isSafeRelativePath(relative)) return null
         val rootCanonical = root.canonicalFile
         val target = File(rootCanonical, relative.replace('\\', '/')).canonicalFile
+        val rootPrefix = rootCanonical.path + File.separator
+        return when {
+            target.path == rootCanonical.path -> target
+            target.path.startsWith(rootPrefix) -> target
+            else -> null
+        }
+    }
+
+    fun resolveWithinNoFollow(root: File, relative: String): File? {
+        if (!isSafeRelativePath(relative)) return null
+        val rootCanonical = root.canonicalFile
+        var current = rootCanonical
+        for (segment in relative.replace('\\', '/').split('/')) {
+            val candidate = File(current, segment)
+            if (Files.isSymbolicLink(candidate.toPath())) return null
+            current = candidate
+        }
+        val target = current.canonicalFile
         val rootPrefix = rootCanonical.path + File.separator
         return when {
             target.path == rootCanonical.path -> target

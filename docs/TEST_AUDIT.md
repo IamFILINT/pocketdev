@@ -82,5 +82,22 @@ No defects identified in this audit pass. Re-run after each new test lands.
 ## Phase E (future development)
 
 M5 (SSE events, sessions, provider/model, permissions) proceeds only after the pending items above are tracked; new features follow testing-first, commit-by-commit verification.
-EOF
-echo done
+
+## Milestone 7.5 reconciliation
+
+Required CI executes the critical editor regressions:
+
+- `verify.yml` command is `./gradlew --no-daemon --stacktrace lintDebug testDebugUnitTest :core:test assembleDebug`; it runs codec, buffer/revision, signature, workspace-write, path-safety, search, syntax, formatter, draft-domain, and performance-baseline tests.
+- `android-emulator.yml` runs `connectedDebugAndroidTest` on x86_64 API 29 and 36; it runs `EditorViewModelTest`, `EditorUiTest`, `EditorInputUiTest`, and project-switch isolation tests, excluding only the opt-in PTY classes.
+- `native-runtime-ci.yml` remains a static aarch64 payload check; editor-only changes are not represented as native runtime execution evidence.
+
+Defects reproduced by failing regressions before fixes, then closed with CI evidence:
+
+- D1/D2 stale revision save and unstable tab identity: stable `EditorDocumentId`, exact `markSaved(revision, text)`, late-save and project-switch regressions.
+- D3/D4 unsafe commit and external-change conflict: staged atomic move with fallback/cleanup, content-digest signature, same-size replacement detection, conflict/reload regressions.
+- D5/D6 symlink escape and weak decoding: `resolveWithinNoFollow` component checks and strict UTF-8 decode with mixed-newline round-trip fidelity.
+- D7/D8 IME/Unicode/selection and language-aware formatting: Compose composition/Unicode tests and formatter regressions for syntax-significant whitespace.
+- D9/D10 draft recovery and unreadable/unknown drafts: app-private versioned blobs, raw-byte retention, hash+size auto-restore gate, explicit restore/keep/discard.
+- D11/D12 baseline evidence and documentation drift: deterministic JVM/Android benchmark records in `docs/PERFORMANCE_BASELINE.md` and this reconciliation.
+
+No editor assertion was deleted, skipped, or loosened. The remaining open items are the pre-existing runtime ARM64 gap (R1), provider-specific atomicity (R23), and performance monitoring without thresholds (R25). Latest passing evidence for this reconciliation is recorded in `docs/IMPLEMENTATION_ROADMAP.md`.

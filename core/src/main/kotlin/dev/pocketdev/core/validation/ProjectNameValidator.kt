@@ -48,10 +48,10 @@ object ProjectNameValidator {
             return invalid(ValidationResult.Reason.LEADING_OR_TRAILING_WHITESPACE)
         }
         if (name.length > MAX_LENGTH) return invalid(ValidationResult.Reason.TOO_LONG)
-        if (name.startsWith(".")) return invalid(ValidationResult.Reason.HIDDEN_NAME)
         if (INVALID_CHARACTERS.containsMatchIn(name)) {
             return invalid(ValidationResult.Reason.INVALID_CHARACTERS)
         }
+        if (name.startsWith(".")) return invalid(ValidationResult.Reason.HIDDEN_NAME)
         if (name.lowercase() in RESERVED_NAMES) return invalid(ValidationResult.Reason.RESERVED_NAME)
         return ValidationResult.Valid
     }

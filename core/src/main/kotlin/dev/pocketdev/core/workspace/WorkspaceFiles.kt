@@ -6,19 +6,29 @@ import dev.pocketdev.core.editor.TextEncoding
 import dev.pocketdev.core.editor.TextFileCodec
 import dev.pocketdev.core.editor.TextFileSnapshot
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.StandardCopyOption
 import java.util.ArrayDeque
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
-class WorkspaceFiles(private val root: File) {
+class WorkspaceFiles(
+    private val root: File,
+    private val beforeStagingWrite: () -> Unit = {},
+    private val beforeCommit: () -> Unit = {},
+) {
 
     private val canonicalRoot: File = root.canonicalFile
 
@@ -274,24 +284,66 @@ class WorkspaceFiles(private val root: File) {
         text: String,
         encoding: TextEncoding,
         newlineStyle: NewlineStyle,
+        newlineStyles: List<NewlineStyle> = emptyList(),
         expectedSignature: FileSignature? = null,
-    ): WorkspaceResult<FileSignature> =
-        wrapped {
-            currentCoroutineContext().ensureActive()
-            val target = resolveExisting(relativePath)
-            require(target.isFile) { "Not a file" }
-            require(!Files.isSymbolicLink(target.toPath())) { "Symbolic links cannot be edited" }
-            if (expectedSignature != null) {
-                val current = FileSignature(target.length(), target.lastModified())
-                require(current == expectedSignature) { "File changed on disk" }
+    ): WorkspaceResult<FileSignature> {
+        val lockKey = "${canonicalRoot.path}\u0000${normalize(relativePath)}"
+        val lock = writeLocks.getOrPut(lockKey) { Mutex() }
+        return lock.withLock {
+            wrapped {
+                currentCoroutineContext().ensureActive()
+                val target = resolveExisting(relativePath)
+                require(target.isFile) { "Not a file" }
+                require(!Files.isSymbolicLink(target.toPath())) { "Symbolic links cannot be edited" }
+                if (expectedSignature != null) {
+                    require(signatureOf(target) == expectedSignature) { "File changed on disk" }
+                }
+                val bytes = TextFileCodec.encode(text, encoding, newlineStyle, newlineStyles)
+                val staging = File(
+                    target.parentFile,
+                    ".${target.name}.pocketdev-${UUID.randomUUID()}.tmp",
+                )
+                try {
+                    beforeStagingWrite()
+                    FileOutputStream(staging).use { output ->
+                        output.write(bytes)
+                        output.fd.sync()
+                    }
+                    beforeCommit()
+                    val currentTarget = resolveExisting(relativePath)
+                    require(currentTarget.canonicalFile == target.canonicalFile) {
+                        "Workspace path changed before commit"
+                    }
+                    if (expectedSignature != null) {
+                        require(signatureOf(target) == expectedSignature) {
+                            "File changed on disk"
+                        }
+                    }
+                    try {
+                        Files.move(
+                            staging.toPath(),
+                            target.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING,
+                            StandardCopyOption.ATOMIC_MOVE,
+                        )
+                    } catch (unsupported: AtomicMoveNotSupportedException) {
+                        Files.move(
+                            staging.toPath(),
+                            target.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING,
+                        )
+                    }
+                } finally {
+                    Files.deleteIfExists(staging.toPath())
+                }
+                FileSignature.fromBytes(bytes, target.lastModified())
             }
-            Files.write(target.toPath(), TextFileCodec.encode(text, encoding, newlineStyle))
-            FileSignature(target.length(), target.lastModified())
         }
+    }
 
     private fun resolve(relativeDirectory: String): File {
         if (relativeDirectory.isBlank()) return canonicalRoot
-        return PathSafety.resolveWithin(canonicalRoot, relativeDirectory)
+        return PathSafety.resolveWithinNoFollow(canonicalRoot, relativeDirectory)
             ?: throw IllegalArgumentException("Unsafe path")
     }
 
@@ -301,6 +353,9 @@ class WorkspaceFiles(private val root: File) {
         require(Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) { "Not found" }
         return file
     }
+
+    private fun signatureOf(file: File): FileSignature =
+        FileSignature.fromBytes(Files.readAllBytes(file.toPath()), file.lastModified(), file.length())
 
     private fun requireValidName(name: String) {
         require(name.isNotBlank() && name !in setOf(".", "..")) { "Invalid name" }
@@ -382,7 +437,9 @@ class WorkspaceFiles(private val root: File) {
     companion object {
         const val DEFAULT_MAX_TEXT_BYTES = 1_048_576
         private const val MAX_SEARCH_DEPTH = 12
+        private val writeLocks = ConcurrentHashMap<String, Mutex>()
         private val ENTRY_ORDER = compareByDescending<FileEntry> { it.isDirectory }
+            .thenBy { it.isHidden }
             .thenBy { it.name.lowercase() }
     }
 }

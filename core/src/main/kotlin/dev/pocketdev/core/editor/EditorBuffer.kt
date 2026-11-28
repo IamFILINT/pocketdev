@@ -13,9 +13,13 @@ class EditorBuffer(initialText: String) {
     private var lineStartsCache: List<Int> = TextLines.starts(initialText)
     private val undoStack = ArrayDeque<TextChange>()
     private val redoStack = ArrayDeque<TextChange>()
+    private     var currentRevision: Long = 0
+    private var savedRevision: Long = 0
 
     val text: String get() = value
     val lineStarts: List<Int> get() = lineStartsCache
+    val revision: Long get() = currentRevision
+    val persistedRevision: Long get() = savedRevision
     val dirty: Boolean get() = value != savedValue
     val canUndo: Boolean get() = undoStack.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -57,6 +61,29 @@ class EditorBuffer(initialText: String) {
 
     fun markSaved() {
         savedValue = value
+        savedRevision = currentRevision
+    }
+
+    fun markSaved(savedRevision: Long, savedText: String) {
+        if (savedRevision == currentRevision) {
+            savedValue = savedText
+            this.savedRevision = savedRevision
+        }
+    }
+
+    fun restoreDraft(
+        draftText: String,
+        baselineText: String,
+        revision: Long,
+        persistedRevision: Long,
+    ) {
+        value = draftText
+        savedValue = baselineText
+        currentRevision = revision.coerceAtLeast(persistedRevision)
+        savedRevision = persistedRevision
+        lineStartsCache = TextLines.starts(value)
+        undoStack.clear()
+        redoStack.clear()
     }
 
     fun replaceAllText(replacement: String): Boolean = replace(0, value.length, replacement)
@@ -82,5 +109,6 @@ class EditorBuffer(initialText: String) {
             append(value, change.end, value.length)
         }
         lineStartsCache = TextLines.starts(value)
+        currentRevision += 1
     }
 }

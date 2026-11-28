@@ -122,21 +122,28 @@ device execution remains the accepted R1 gap.
 `45964749127`/`45964755903`, and `native-runtime` `45964749085`/`45964756085`
 (all green). Physical ARM64 device execution remains the accepted R1 gap.
 
-## Milestone 7.5 — Editor reliability, data integrity, and recovery
+## Milestone 7.5 — Editor reliability, data integrity, and recovery ✅
 
-- [ ] Save revision correctness and deterministic save-race regression tests
-- [ ] Stable document identity and workspace-root binding for every editor tab
-- [ ] Safe filesystem commit strategy, concurrent-write handling, and external-change conflicts
-- [ ] Strong content signatures and verified symlink/path-containment policy
-- [ ] Strict text decoding and explicit mixed-newline fidelity policy
-- [ ] Compose IME composition, selection, Persian/Unicode input, and lifecycle tests
-- [ ] Language-aware formatting that preserves syntax-significant whitespace
-- [ ] Unsaved-draft recovery with conflict-safe restoration
-- [ ] Reproducible editor performance baselines and evidence-driven optimization
-- [ ] Required CI coverage and documentation/risk-register reconciliation
+- [x] Save revision correctness and deterministic save-race regression tests
+- [x] Stable document identity and workspace-root binding for every editor tab
+- [x] Safe filesystem commit strategy, concurrent-write handling, and external-change conflicts
+- [x] Strong content signatures and verified symlink/path-containment policy
+- [x] Strict text decoding and explicit mixed-newline fidelity policy
+- [x] Compose IME composition, selection, Persian/Unicode input, and lifecycle tests
+- [x] Language-aware formatting that preserves syntax-significant whitespace
+- [x] Unsaved-draft recovery with conflict-safe restoration
+- [x] Reproducible editor performance baselines (no optimization applied)
+- [x] Required CI coverage and documentation/risk-register reconciliation
 
 **Specification:** [docs/MILESTONE_7_5.md](MILESTONE_7_5.md).  
-**Status:** Planned; M7.5 must be completed before treating the editor foundation as stable for deeper integrations.
+**Status:** Complete on `feat/m7-5-editor-reliability`; correctness gates and all
+required workflows passed. Performance optimization remains deliberately deferred until
+a measured bottleneck justifies it (`docs/PERFORMANCE_BASELINE.md`).
+**Exit evidence:** documentation reconciliation commit
+`911d91219b3aa20bf429ffda386c5f3a1c7a7e02` passed `verify` run `46105361342`,
+`android-emulator` run `46105361335` (API 29 and API 36), and `native-runtime-ci` run
+`46105361328`. The evidence-only commit recording these IDs is documentation-only and
+reruns the same required gates before milestone completion.
 
 ## Milestone 8 — Package manager and Git
 

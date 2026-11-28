@@ -26,7 +26,7 @@ class EditorBufferTest {
 
         buffer.undo()
         assertTrue(buffer.canRedo)
-        assertEquals(">abc!", buffer.text)
+        assertEquals("abc!", buffer.text)
 
         buffer.redo()
         assertEquals(">abc!", buffer.text)
@@ -36,6 +36,21 @@ class EditorBufferTest {
         buffer.undo()
         assertFalse(buffer.dirty)
         assertTrue(buffer.canRedo)
+    }
+
+    @Test
+    fun `older save completion does not clear a newer revision`() {
+        val buffer = EditorBuffer("one")
+
+        buffer.replace(3, 3, "X")
+        val savedRevision = buffer.revision
+        val savedText = buffer.text
+        buffer.replace(4, 4, "Y")
+
+        buffer.markSaved(savedRevision, savedText)
+
+        assertTrue(buffer.dirty)
+        assertEquals("oneXY", buffer.text)
     }
 
     @Test

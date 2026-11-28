@@ -13,6 +13,28 @@ object Json {
 
     class JsonException(message: String) : RuntimeException(message)
 
+    fun escape(text: String): String = buildString(text.length + 8) {
+        append('"')
+        text.forEach { char ->
+            when (char) {
+                '"' -> append("\\\"")
+                '\\' -> append("\\\\")
+                '\b' -> append("\\b")
+                '\u000C' -> append("\\f")
+                '\n' -> append("\\n")
+                '\r' -> append("\\r")
+                '\t' -> append("\\t")
+                else -> if (char < ' ') {
+                    append("\\u")
+                    append(char.code.toString(16).padStart(4, '0'))
+                } else {
+                    append(char)
+                }
+            }
+        }
+        append('"')
+    }
+
     fun parse(text: String): Any? {
         val parser = Parser(text)
         val value = parser.parseValue()
@@ -138,11 +160,12 @@ object Json {
             throw JsonException("unterminated string")
         }
 
-        private fun parseLiteral(literal: String, value: Any?) {
+        private fun parseLiteral(literal: String, value: Any?): Any? {
             if (!text.startsWith(literal, offset)) {
                 throw JsonException("invalid literal at offset $offset")
             }
             offset += literal.length
+            return value
         }
 
         private fun parseNumber(): Any {

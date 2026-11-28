@@ -99,7 +99,9 @@ class BootstrapArtifactTest {
     fun `manifest returns null when no artifact covers the device`() {
         val manifest = BootstrapManifest(
             releaseTag = "r1",
-            artifacts = listOf(artifact(minApiLevel = 34, maxApiLevel = 36)),
+            artifacts = listOf(
+                artifact(releaseTag = "r1", minApiLevel = 34, maxApiLevel = 36),
+            ),
         )
         assertNull(manifest.artifactFor(Abi.AARCH64, 30))
     }

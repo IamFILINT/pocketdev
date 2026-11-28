@@ -9,6 +9,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.Files
 
 class PathSafetyTest {
 
@@ -64,6 +65,54 @@ class PathSafetyTest {
     fun `resolveWithin stays inside root even via traversal with separators`() {
         val root = temporaryFolder.newFolder("root")
         assertNull(PathSafety.resolveWithin(root, "a/../../../b"))
+    }
+
+    @Test
+    fun `resolveWithinNoFollow rejects symlinked files`() {
+        val root = temporaryFolder.newFolder("root")
+        val outside = temporaryFolder.newFolder("outside")
+        val insideTarget = File(root, "inside.txt")
+        insideTarget.writeText("safe")
+        val insideLink = File(root, "inside-link.txt")
+        Files.createSymbolicLink(insideLink.toPath(), insideTarget.toPath())
+        val outsideTarget = File(outside, "secret.txt")
+        outsideTarget.writeText("secret")
+        val outsideLink = File(root, "outside-link.txt")
+        Files.createSymbolicLink(outsideLink.toPath(), outsideTarget.toPath())
+
+        assertNull(PathSafety.resolveWithinNoFollow(root, "inside-link.txt"))
+        assertNull(PathSafety.resolveWithinNoFollow(root, "outside-link.txt"))
+    }
+
+    @Test
+    fun `resolveWithinNoFollow rejects symlinked directory components`() {
+        val root = temporaryFolder.newFolder("root")
+        val outside = temporaryFolder.newFolder("outside")
+        val insideDirectory = File(root, "real")
+        assertTrue(insideDirectory.mkdirs())
+        File(insideDirectory, "inside.txt").writeText("safe")
+        val insideLink = File(root, "inside-dir-link")
+        Files.createSymbolicLink(insideLink.toPath(), insideDirectory.toPath())
+        val outsideLink = File(root, "outside-dir-link")
+        Files.createSymbolicLink(outsideLink.toPath(), outside.toPath())
+
+        assertNull(PathSafety.resolveWithinNoFollow(root, "inside-dir-link/inside.txt"))
+        assertNull(PathSafety.resolveWithinNoFollow(root, "outside-dir-link/secret.txt"))
+    }
+
+    @Test
+    fun `resolveWithinNoFollow accepts regular files and directories`() {
+        val root = temporaryFolder.newFolder("root")
+        val file = File(root, "regular.txt")
+        file.writeText("safe")
+        val directory = File(root, "sub")
+        assertTrue(directory.mkdirs())
+
+        assertEquals(file.canonicalFile.path, PathSafety.resolveWithinNoFollow(root, "regular.txt")!!.path)
+        assertEquals(
+            directory.canonicalFile.path,
+            PathSafety.resolveWithinNoFollow(root, "sub")!!.path,
+        )
     }
 
     @Test

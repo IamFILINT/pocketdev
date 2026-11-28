@@ -19,28 +19,49 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.pocketdev.core.editor.EditorFormatter
 import dev.pocketdev.core.editor.EditorLanguage
 import dev.pocketdev.core.editor.SyntaxHighlighter
 import dev.pocketdev.core.editor.SyntaxTokenType
 
 private const val MAX_HIGHLIGHT_CHARS = 250_000
+
+internal fun preserveEditorTextFieldValue(
+    current: TextFieldValue,
+    syntaxText: AnnotatedString,
+    stateText: String,
+    stateSelection: TextRange,
+): TextFieldValue {
+    val preserveComposition = current.text == stateText && current.composition != null
+    return TextFieldValue(
+        annotatedString = syntaxText,
+        selection = if (preserveComposition) current.selection else stateSelection,
+        composition = if (preserveComposition) current.composition else null,
+    )
+}
 
 @Composable
 fun EditorRoute(viewModel: EditorViewModel) {
@@ -67,6 +88,8 @@ fun EditorRoute(viewModel: EditorViewModel) {
         onReloadDisk = viewModel::reloadFromDisk,
         onKeepLocalChanges = viewModel::keepLocalChanges,
         onDiscardLocalChanges = viewModel::discardChanges,
+        onRestoreDraft = viewModel::restoreDraft,
+        onKeepDiskDraft = viewModel::keepDiskDraft,
         onClearFeedback = viewModel::clearFeedback,
     )
 }
@@ -93,6 +116,8 @@ fun EditorScreen(
     onReloadDisk: () -> Unit,
     onKeepLocalChanges: () -> Unit,
     onDiscardLocalChanges: () -> Unit,
+    onRestoreDraft: () -> Unit,
+    onKeepDiskDraft: () -> Unit,
     onClearFeedback: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -131,6 +156,22 @@ fun EditorScreen(
                 append(line + 1)
             }
         }
+    }
+    val stateSelection = TextRange(
+        state.selection.first.coerceIn(0, state.text.length),
+        state.selection.last.coerceIn(0, state.text.length),
+    )
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(annotatedString = syntaxText, selection = stateSelection))
+    }
+    LaunchedEffect(syntaxText, stateSelection) {
+        val next = preserveEditorTextFieldValue(
+            current = textFieldValue,
+            syntaxText = syntaxText,
+            stateText = state.text,
+            stateSelection = stateSelection,
+        )
+        if (textFieldValue != next) textFieldValue = next
     }
 
     Column(
@@ -195,8 +236,13 @@ fun EditorScreen(
             OutlinedButton(onClick = onRedo, enabled = state.canRedo && state.busyLabel == null) {
                 Text("Redo")
             }
-            OutlinedButton(onClick = onFormat, enabled = state.activePath != null && state.busyLabel == null) {
-                Text("Format")
+            OutlinedButton(
+                onClick = onFormat,
+                enabled = state.activePath != null &&
+                    EditorFormatter.supportsFormatting(language) &&
+                    state.busyLabel == null,
+            ) {
+                Text(if (EditorFormatter.supportsFormatting(language)) "Format" else "Format unavailable")
             }
             OutlinedButton(onClick = onToggleSearch, enabled = state.activePath != null) {
                 Text(if (state.searchVisible) "Hide search" else "Search")
@@ -230,6 +276,36 @@ fun EditorScreen(
                         }
                         TextButton(onClick = onDiscardLocalChanges) {
                             Text("Discard my changes")
+                        }
+                    }
+                }
+            }
+        }
+
+        state.draftRecovery?.let { recovery ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        if (recovery.conflict) {
+                            "An unsaved draft conflicts with the file on disk."
+                        } else {
+                            "Recovered unsaved changes from this draft."
+                        },
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (recovery.conflict) {
+                            Button(onClick = onRestoreDraft) {
+                                Text("Restore draft")
+                            }
+                            Button(onClick = onKeepDiskDraft) {
+                                Text("Keep disk file")
+                            }
+                        }
+                        TextButton(onClick = onDiscardLocalChanges) {
+                            Text("Discard draft")
                         }
                     }
                 }
@@ -323,16 +399,15 @@ fun EditorScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 BasicTextField(
-                    value = TextFieldValue(
-                        annotatedString = syntaxText,
-                        selection = TextRange(state.selection.first, state.selection.last),
-                    ),
+                    value = textFieldValue,
                     onValueChange = { value ->
-                        onTextChanged(value.text, value.selection.start..value.selection.end)
+                        textFieldValue = value
+                        onTextChanged(value.text, value.selection.min..value.selection.max)
                     },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
+                        .testTag("editor_text_field")
                         .onPreviewKeyEvent { event ->
                             if (event.type != KeyEventType.KeyDown || !event.isCtrlPressed) {
                                 return@onPreviewKeyEvent false
@@ -343,7 +418,7 @@ fun EditorScreen(
                                     true
                                 }
                                 Key.Z -> {
-                                    onUndo()
+                                    if (event.isShiftPressed) onRedo() else onUndo()
                                     true
                                 }
                                 Key.Y -> {
